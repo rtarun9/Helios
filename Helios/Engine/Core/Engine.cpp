@@ -10,11 +10,11 @@ namespace helios
 		m_AspectRatio = static_cast<float>(m_Width) / static_cast<float>(m_Height);
 	}
 
-	void Engine::OnKeyDown(uint32_t keycode)
+	void Engine::OnKeyDown(uint8_t keycode)
 	{
 	}
 
-	void Engine::OnKeyUp(uint32_t keycode)
+	void Engine::OnKeyUp(uint8_t keycode)
 	{
 	}
 

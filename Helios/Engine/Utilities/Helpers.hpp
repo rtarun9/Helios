@@ -15,5 +15,5 @@ static inline void ThrowIfFailed(HRESULT hr)
 static inline void ErrorMessage(std::wstring_view message)
 {
 	MessageBoxW(nullptr, message.data(), L"Error!", MB_OK);
-	exit(0);
+	exit(EXIT_FAILURE);
 }

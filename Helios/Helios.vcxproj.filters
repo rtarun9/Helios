@@ -24,7 +24,7 @@
     <ClInclude Include="Engine\d3dx12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\Helpers.hpp">
+    <ClInclude Include="Engine\Utilities\Helpers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\Engine.hpp">

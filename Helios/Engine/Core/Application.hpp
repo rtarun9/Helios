@@ -22,6 +22,7 @@ namespace helios
 		static constexpr wchar_t WINDOW_CLASS_NAME[] = L"Base Window Class";
 		
 		static inline HWND s_WindowHandle{};
+
 		static inline uint32_t s_ClientWidth{};
 		static inline uint32_t s_ClientHeight{};
 	};

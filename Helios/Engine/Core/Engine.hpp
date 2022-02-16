@@ -22,8 +22,8 @@ namespace helios
 		virtual void OnRender() = 0;
 		virtual void OnDestroy() = 0;
 
-		virtual void OnKeyDown(uint32_t keycode);
-		virtual void OnKeyUp(uint32_t keycode);
+		virtual void OnKeyDown(uint8_t keycode);
+		virtual void OnKeyUp(uint8_t keycode);
 
 		uint32_t GetWidth() const;
 		uint32_t GetHeight() const;
