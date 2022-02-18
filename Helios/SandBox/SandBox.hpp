@@ -6,6 +6,12 @@
 
 namespace helios
 {
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT2 texCoord;
+	};
+
 	class SandBox : public Engine
 	{
 	public:
@@ -22,18 +28,20 @@ namespace helios
 	private:
 		void InitRendererCore();
 
+		void LoadContent();
+
 		void EnableDebugLayer();
 		void SelectAdapter();
 		void CreateDevice();
 
 		[[nodiscard]]
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> CreateCommandQueue(D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
-		
+
 		void CheckTearingSupport();
 		void CreateSwapChain();
 
 		[[nodiscard]]
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, uint32_t descriptorCount);
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t descriptorCount);
 
 		void CreateBackBufferRenderTargetViews();
 
@@ -47,7 +55,7 @@ namespace helios
 
 		[[nodiscard]]
 		uint64_t Signal(ID3D12CommandQueue* commandQueue, uint64_t& fenceValue);
-		
+
 		void WaitForFenceValue(uint64_t fenceValue, std::chrono::milliseconds duration = std::chrono::milliseconds::max());
 
 		void Flush(ID3D12CommandQueue* commandQueue, uint64_t& fenceValue);
@@ -68,6 +76,10 @@ namespace helios
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
 		uint32_t m_RTVDescriptorSize{};
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SRVDescriptorHeap;
+		uint32_t m_SRVDescriptorSize{};
+
 		uint32_t m_CurrentBackBufferIndex{};
 
 		// Synchronization objects.
@@ -75,8 +87,22 @@ namespace helios
 		uint64_t m_FenceValue{};
 		std::array<uint64_t, NUMBER_OF_FRAMES> m_FrameFenceValues{};
 		HANDLE m_FenceEvent{};
-
+		
+		// SwapChain / presentation control objects.
 		bool m_VSync{true};
 		bool m_IsTearingSupported{ false };
+
+		// Application Data
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
+		D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView{};
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
+
+		// Root signature & PSO
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
+
+		D3D12_VIEWPORT m_Viewport{};
+		D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 	};
 }

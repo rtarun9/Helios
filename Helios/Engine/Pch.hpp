@@ -20,7 +20,7 @@
 #include <DirectXMath.h>
 
 // D3D12 extension library.
-#include "d3dx12.h"
+#include "Utilities/d3dx12.h"
 
 // For the ComPtr<> template class.
 #include <wrl/client.h>
