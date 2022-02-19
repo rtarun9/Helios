@@ -35,5 +35,7 @@ namespace helios
 		std::wstring m_Title{};
 
 		float m_AspectRatio{};
+
+		uint64_t m_FrameIndex{};
 	};
 }

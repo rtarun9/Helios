@@ -10,10 +10,17 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
 };
 
+struct TransformData
+{
+    matrix MVP;
+};
+
+ConstantBuffer<TransformData> mvpCBuffer : register(b0);
+
 VSOutput VsMain(VSInput input)
 {
     VSOutput output;
-    output.position = float4(input.position, 1.0f);
+    output.position = mul(mvpCBuffer.MVP, float4(input.position, 1.0f));
     output.texCoord = input.texCoord;
 
     return output;

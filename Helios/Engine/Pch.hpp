@@ -20,7 +20,7 @@
 #include <DirectXMath.h>
 
 // D3D12 extension library.
-#include "Utilities/d3dx12.h"
+#include "d3dx12.h"
 
 // For the ComPtr<> template class.
 #include <wrl/client.h>
@@ -34,8 +34,10 @@
 #include <chrono>
 #include <memory>
 #include <array>
+#include <utility>
+#include <span>
 
-#include "Utilities/Helpers.hpp"
+#include "Helpers.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;

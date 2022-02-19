@@ -2,6 +2,8 @@
 
 #include "Pch.hpp"
 
+#include "Timer.hpp"
+
 namespace helios
 {
 	class Engine;
@@ -15,6 +17,9 @@ namespace helios
 		static uint32_t GetClientWidth();
 		static uint32_t GetClientHeight();
 
+		static double GetDeltaTime();
+		static double GetTotalTime();
+
 	private:
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -25,6 +30,8 @@ namespace helios
 
 		static inline uint32_t s_ClientWidth{};
 		static inline uint32_t s_ClientHeight{};
+
+		static inline Timer s_Timer{};
 	};
 
 

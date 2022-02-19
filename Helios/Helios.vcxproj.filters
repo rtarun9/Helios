@@ -21,10 +21,10 @@
     <ClInclude Include="Engine\Core\Application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Utilities\d3dx12.h">
+    <ClInclude Include="Engine\d3dx12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Utilities\Helpers.hpp">
+    <ClInclude Include="Engine\Helpers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\Engine.hpp">
@@ -33,7 +33,10 @@
     <ClInclude Include="SandBox\SandBox.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Utilities\Timer.hpp">
+    <ClInclude Include="Engine\Core\Timer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\Utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,7 +56,7 @@
     <ClCompile Include="SandBox\SandBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Utilities\Timer.cpp">
+    <ClCompile Include="Engine\Core\Timer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

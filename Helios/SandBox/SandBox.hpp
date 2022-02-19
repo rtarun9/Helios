@@ -3,15 +3,10 @@
 #include "Pch.hpp"
 
 #include "Core/Engine.hpp"
+#include "Core/Timer.hpp"
 
 namespace helios
 {
-	struct Vertex
-	{
-		DirectX::XMFLOAT3 position;
-		DirectX::XMFLOAT2 texCoord;
-	};
-
 	class SandBox : public Engine
 	{
 	public:
@@ -44,6 +39,7 @@ namespace helios
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t descriptorCount);
 
 		void CreateBackBufferRenderTargetViews();
+		void CreateDepthBuffer();
 
 		[[nodiscard]]
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -64,7 +60,7 @@ namespace helios
 		// Number of SwapChain backbuffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3;
 
-		// DirectX12 objects
+		// Core DirectX12 objects and data.
 		Microsoft::WRL::ComPtr<ID3D12Device5> m_Device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
 		Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
@@ -74,13 +70,26 @@ namespace helios
 		std::array<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, NUMBER_OF_FRAMES>  m_CommandAllocator{};
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList;
 
+		Microsoft::WRL::ComPtr<ID3D12Debug1> m_DebugInterface;
+
+		D3D12_VIEWPORT m_Viewport{};
+		D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
+
+		// Descriptor heaps and thier respective descriptor size.
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
 		uint32_t m_RTVDescriptorSize{};
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVDescriptorHeap;
+		uint32_t m_DSVDescriptorSize{};
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
 
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SRVDescriptorHeap;
 		uint32_t m_SRVDescriptorSize{};
 
-		uint32_t m_CurrentBackBufferIndex{};
+		// Root signature & PSO.
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
 
 		// Synchronization objects.
 		Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence;
@@ -91,18 +100,21 @@ namespace helios
 		// SwapChain / presentation control objects.
 		bool m_VSync{true};
 		bool m_IsTearingSupported{ false };
+		uint32_t m_CurrentBackBufferIndex{};
 
-		// Application Data
+		// Application Data.
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView{};
 
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
+		D3D12_INDEX_BUFFER_VIEW m_IndexBufferView{};
+
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
 
-		// Root signature & PSO
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
-
-		D3D12_VIEWPORT m_Viewport{};
-		D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
+		// Transform data.
+		float m_FOV{ 45.0f };
+		DirectX::XMMATRIX m_ModelMatrix{};
+		DirectX::XMMATRIX m_ViewMatrix{};
+		DirectX::XMMATRIX m_ProjectionMatrix{};
 	};
 }

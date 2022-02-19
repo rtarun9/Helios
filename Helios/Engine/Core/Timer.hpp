@@ -10,7 +10,6 @@ namespace helios
 		void Start();
 		void Stop();
 
-		// Returns corresponding time in nano seconds.
 		double GetDeltaTime() const;
 		double GetTotalTime() const;
 

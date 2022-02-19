@@ -74,6 +74,8 @@ namespace helios
 		MSG message{};
 		while (message.message != WM_QUIT)
 		{
+			s_Timer.Start();
+
 			if (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
 			{
 				::TranslateMessage(&message);
@@ -82,6 +84,8 @@ namespace helios
 
 			engine->OnUpdate();
 			engine->OnRender();
+
+			s_Timer.Stop();
 		}
 
 		engine->OnDestroy();
@@ -102,6 +106,16 @@ namespace helios
 	uint32_t Application::GetClientHeight()
 	{
 		return s_ClientHeight;
+	}
+
+	double Application::GetDeltaTime()
+	{
+		return s_Timer.GetDeltaTime();
+	}
+
+	double Application::GetTotalTime()
+	{
+		return s_Timer.GetTotalTime();
 	}
 
 	LRESULT CALLBACK Application::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
