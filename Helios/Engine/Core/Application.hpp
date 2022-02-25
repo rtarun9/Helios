@@ -17,10 +17,13 @@ namespace helios
 		static uint32_t GetClientWidth();
 		static uint32_t GetClientHeight();
 
-		static double GetDeltaTime();
-		static double GetTotalTime();
+		static RECT& GetWindowRect();
+
+		static Timer& GetTimer();
 
 	private:
+		static void ToggleFullScreenMode();
+
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
@@ -30,6 +33,9 @@ namespace helios
 
 		static inline uint32_t s_ClientWidth{};
 		static inline uint32_t s_ClientHeight{};
+
+		static inline RECT s_WindowRect{};
+		static inline bool s_IsFullScreen{ false };
 
 		static inline Timer s_Timer{};
 	};

@@ -11,6 +11,7 @@
 #define UNICODE
 #endif
 
+// System includes.
 #include <Windows.h>
 
 // DirectX and DXGI Includes.
@@ -20,7 +21,7 @@
 #include <DirectXMath.h>
 
 // D3D12 extension library.
-#include "d3dx12.h"
+#include "Graphics/d3dx12.h"
 
 // For the ComPtr<> template class.
 #include <wrl/client.h>
@@ -37,12 +38,8 @@
 #include <utility>
 #include <span>
 
-#include "Helpers.hpp"
+#include "Core/Helpers.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;
 namespace dx = DirectX;
-
-// Some of the operator overloads reside in the DirectX namespace. Hence, introducing this to the 
-// global namespace cannot be avoided for now.
-using namespace DirectX;

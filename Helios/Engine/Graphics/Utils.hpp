@@ -23,12 +23,13 @@ namespace helios::gfx::utils
 
 	// Create a GPU buffer that returns two buffers : The final Destination buffer and an intermediate buffer (that is used to transfer data from the CPU to the GPU).
 	// The intermediate buffer needs to be in scope until the command's in the list have finished execution, hence why is it being returned along with destination buffer.
-	inline std::pair<ID3D12Resource*, ID3D12Resource*> CreateGPUBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void * data, size_t numberOfElements, size_t elementSize, D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE)
+	template <typename T>
+	inline std::pair<ID3D12Resource*, ID3D12Resource*> CreateGPUBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::span<const T> bufferData, D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE)
 	{
 		ID3D12Resource* destinationResource{ nullptr };
 		ID3D12Resource* intermediateResource{ nullptr };
 
-		size_t bufferSize = numberOfElements * elementSize;
+		size_t bufferSize = bufferData.size() * sizeof(T);
 
 		// Commited resource that acts as the destination resource.
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperites(D3D12_HEAP_TYPE_DEFAULT);
@@ -43,13 +44,13 @@ namespace helios::gfx::utils
 		// Logic to transfer data from CPU to GPU.
 		D3D12_SUBRESOURCE_DATA subresourceData
 		{
-			.pData = data,
+			.pData = bufferData.data(),
 			.RowPitch = static_cast<long long>(bufferSize),
 			.SlicePitch = static_cast<long long>(bufferSize)
 		};
 
 		UpdateSubresources(commandList, destinationResource, intermediateResource, 0u, 0u, 1u, &subresourceData);
 
-		return { std::move(destinationResource), std::move(intermediateResource)};
+		return { destinationResource, intermediateResource};
 	}
 }

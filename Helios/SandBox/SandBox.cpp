@@ -32,16 +32,16 @@ namespace helios
 
 	void SandBox::OnUpdate()
 	{
-		float angle = static_cast<float>(m_FrameIndex / 100.0f);
+		float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 10.0f;
 
 		static dx::XMVECTOR rotationAxis = dx::XMVectorSet(0.0f, 1.0f, 1.0f, 0.0f);
-		m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, angle);
+		m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
 
-		static dx::XMVECTOR eyePosition = dx::XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f);
-		static dx::XMVECTOR targetPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		static dx::XMVECTOR upDirection = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		static const dx::XMVECTOR EYE_POSITION = dx::XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f);
+		static const dx::XMVECTOR TARGET_POSITION = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		static const dx::XMVECTOR UP_DIRECTION = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-		m_ViewMatrix = dx::XMMatrixLookAtLH(eyePosition, targetPosition, upDirection);
+		m_ViewMatrix = dx::XMMatrixLookAtLH(EYE_POSITION, TARGET_POSITION, UP_DIRECTION);
 
 		m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 100.0f);
 	}
@@ -60,7 +60,7 @@ namespace helios
 		m_CommandList->SetPipelineState(m_PSO.Get());
 		m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 		
-		std::array<ID3D12DescriptorHeap*, 2> descriptorHeaps
+		std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
 		{
 			m_SRVDescriptorHeap.Get(),
 		};
@@ -79,8 +79,7 @@ namespace helios
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBufferIndex, m_RTVDescriptorSize);
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsv(m_DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-		std::array<float, 4> clearColor{ 0.1f, 0.1f, 0.1f, 1.0f };
-		gfx::utils::ClearRTV(m_CommandList.Get(), rtv, clearColor);
+		gfx::utils::ClearRTV(m_CommandList.Get(), rtv, std::array<float, 4>{0.01f, 0.01f, 0.01f, 1.0f});
 		
 		gfx::utils::ClearDepthBuffer(m_CommandList.Get(), dsv);
 
@@ -128,17 +127,37 @@ namespace helios
 		Flush(m_CommandQueue.Get(), m_FenceValue);
 	}
 
-	void SandBox::OnKeyDown(uint8_t keycode)
+	void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 	{
-		if (keycode == VK_SPACE)
+		if (isKeyDown)
 		{
-			m_FOV--;
+			if (keycode == VK_SPACE)
+			{
+				m_FOV -= static_cast<float>(Application::GetTimer().GetDeltaTime() * 10);
+			}
 		}
 	}
 
-	void SandBox::OnKeyUp(uint8_t keycode)
+	void SandBox::OnResize()
 	{
+		if (m_Width != Application::GetClientWidth() || m_Height != Application::GetClientHeight())
+		{
+			Flush(m_CommandQueue.Get(), m_FenceValue);
 
+			for (int i = 0; i < NUMBER_OF_FRAMES; i++)
+			{
+				m_BackBuffers[i].Reset();
+				m_FrameFenceValues[i] = m_FrameFenceValues[m_CurrentBackBufferIndex];
+			}
+			
+			DXGI_SWAP_CHAIN_DESC swapChainDesc{};
+			ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
+			ThrowIfFailed(m_SwapChain->ResizeBuffers(NUMBER_OF_FRAMES, Application::GetClientWidth(), Application::GetClientHeight(), swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+			m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+			CreateBackBufferRenderTargetViews();
+		}
 	}
 
 	void SandBox::InitRendererCore()
@@ -207,7 +226,7 @@ namespace helios
 
 		// Create Root signature.
 		std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> descriptorRanges{};
-		descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 		std::array<CD3DX12_ROOT_PARAMETER1, 2> rootParameters{};
 		rootParameters[0].InitAsDescriptorTable(1u, descriptorRanges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
@@ -227,7 +246,7 @@ namespace helios
 			.MinLOD = 0.0f,
 			.MaxLOD = D3D12_FLOAT32_MAX,
 			.ShaderRegister = 0u,
-			.RegisterSpace = 0u,
+			.RegisterSpace = 1u,
 			.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
 		};
 
@@ -237,15 +256,15 @@ namespace helios
 		wrl::ComPtr<ID3DBlob> rootSignatureBlob;
 		wrl::ComPtr<ID3DBlob> errorBlob;
 
-		ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
+		ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
 		ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 
 		// Create PSO and shaders.
 		wrl::ComPtr<ID3DBlob> vertexShaderBlob;
 		wrl::ComPtr<ID3DBlob> pixelShaderBlob;
 
-		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/VertexShader.cso", &vertexShaderBlob));
-		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PixelShader.cso", &pixelShaderBlob));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &vertexShaderBlob));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &pixelShaderBlob));
 
 		std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDesc
 		{{
@@ -319,7 +338,7 @@ namespace helios
 		};
 
 		wrl::ComPtr<ID3D12Resource> intermediateVertexBuffer;
-		auto vertexBuffer = gfx::utils::CreateGPUBuffer(m_Device.Get(), m_CommandList.Get(), cubeVertices.data(), cubeVertices.size(), sizeof(Vertex));
+		auto vertexBuffer = gfx::utils::CreateGPUBuffer<Vertex>(m_Device.Get(), m_CommandList.Get(), cubeVertices);
 		m_VertexBuffer = vertexBuffer.first;
 		intermediateVertexBuffer = vertexBuffer.second;
 
@@ -344,7 +363,7 @@ namespace helios
 		};
 
 		wrl::ComPtr<ID3D12Resource> intermediateIndexBuffer;
-		auto indexBuffer = gfx::utils::CreateGPUBuffer(m_Device.Get(), m_CommandList.Get(), cubeIndices.data(), cubeIndices.size(), sizeof(uint32_t));
+		auto indexBuffer = gfx::utils::CreateGPUBuffer<uint32_t>(m_Device.Get(), m_CommandList.Get(), cubeIndices);
 		m_IndexBuffer = indexBuffer.first;
 		intermediateVertexBuffer = indexBuffer.second;
 
@@ -357,7 +376,6 @@ namespace helios
 		};
 
 		// This heap is required to be non - null until the GPU finished operating on it.
-		// It is placed outside the scope for this reason.
 		wrl::ComPtr<ID3D12Resource> textureUploadHeap;
 		
 		// Create texture
@@ -406,9 +424,10 @@ namespace helios
 
 		UpdateSubresources(m_CommandList.Get(), m_Texture.Get(), textureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
 		
+		stbi_image_free(data);
+
 		// Transition resource from copy dest to Pixel SRV.
-		CD3DX12_RESOURCE_BARRIER resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		m_CommandList->ResourceBarrier(1, &resourceBarrier);
+		gfx::utils::TransitionResource(m_CommandList.Get(), m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 		// Create SRV for the texture
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
@@ -442,6 +461,7 @@ namespace helios
 		ThrowIfFailed(::D3D12GetDebugInterface(IID_PPV_ARGS(&m_DebugInterface)));
 		m_DebugInterface->EnableDebugLayer();
 		m_DebugInterface->SetEnableGPUBasedValidation(TRUE);
+		m_DebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
 #endif
 	}
 
@@ -485,29 +505,29 @@ namespace helios
 		// Set break points on certain severity levels in debug mode.
 #ifdef _DEBUG
 		wrl::ComPtr<ID3D12InfoQueue> infoQueue;
-		if (SUCCEEDED(m_Device.As(&infoQueue)))
+		ThrowIfFailed(m_Device.As(&infoQueue));
+
+		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+
+		// Configure queue filter to ignore info message severity.
+		std::array<D3D12_MESSAGE_SEVERITY, 1> ignoreMessageSeverities
 		{
-			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+			D3D12_MESSAGE_SEVERITY_INFO
+		};
 
-			// Configure queue filter to ignore info message severity.
-			std::array<D3D12_MESSAGE_SEVERITY, 1> ignoreMessageSeverities
+		D3D12_INFO_QUEUE_FILTER infoQueueFilter
+		{
+			.DenyList
 			{
-				D3D12_MESSAGE_SEVERITY_INFO
-			};
+				.NumSeverities = static_cast<UINT>(ignoreMessageSeverities.size()),
+				.pSeverityList = ignoreMessageSeverities.data()
+			},
+		};
 
-			D3D12_INFO_QUEUE_FILTER infoQueueFilter
-			{
-				.DenyList
-				{
-					.NumSeverities = static_cast<UINT>(ignoreMessageSeverities.size()),
-					.pSeverityList = ignoreMessageSeverities.data()
-				},
-			};
-
-			ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
-		}
+		ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
+		
 #endif
 	}
 
@@ -691,6 +711,7 @@ namespace helios
 	{
 		if (m_Fence->GetCompletedValue() < fenceValue)
 		{
+			auto x = m_Fence->GetCompletedValue();
 			ThrowIfFailed(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
 			::WaitForSingleObject(m_FenceEvent, static_cast<DWORD>(duration.count()));
 		}

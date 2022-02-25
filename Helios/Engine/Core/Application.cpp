@@ -31,7 +31,7 @@ namespace helios
 			ErrorMessage(L"Failed to register window class");
 		}
 
-		RECT windowRect
+		s_WindowRect = 
 		{
 			.left = 0,
 			.top = 0,
@@ -41,10 +41,10 @@ namespace helios
 
 		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-		::AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+		::AdjustWindowRect(&s_WindowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
-		s_ClientWidth = windowRect.right - windowRect.left;
-		s_ClientHeight = windowRect.bottom - windowRect.top;
+		s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
+		s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
 
 		// Get Screen width and height so as to center the window.
 		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
@@ -61,6 +61,8 @@ namespace helios
 		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
 			s_ClientWidth, s_ClientHeight, 0, 0, instance, engine);
 
+		::GetWindowRect(s_WindowHandle, &s_WindowRect);
+
 		if (!s_WindowHandle)
 		{
 			ErrorMessage(L"Failed to create window");
@@ -74,7 +76,7 @@ namespace helios
 		MSG message{};
 		while (message.message != WM_QUIT)
 		{
-			s_Timer.Start();
+			s_Timer.Tick();
 
 			if (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
 			{
@@ -84,8 +86,6 @@ namespace helios
 
 			engine->OnUpdate();
 			engine->OnRender();
-
-			s_Timer.Stop();
 		}
 
 		engine->OnDestroy();
@@ -108,14 +108,57 @@ namespace helios
 		return s_ClientHeight;
 	}
 
-	double Application::GetDeltaTime()
+	RECT& Application::GetWindowRect()
 	{
-		return s_Timer.GetDeltaTime();
+		return s_WindowRect;
 	}
 
-	double Application::GetTotalTime()
+	Timer& Application::GetTimer()
 	{
-		return s_Timer.GetTotalTime();
+		return s_Timer;
+	}
+
+	void Application::ToggleFullScreenMode()
+	{
+		if (!s_IsFullScreen)
+		{
+			::GetWindowRect(s_WindowHandle, &s_WindowRect);
+
+			// Set window style to borderless so entire screen is filled by the client region.
+			UINT fullScreenWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
+			::SetWindowLongW(s_WindowHandle, GWL_STYLE, fullScreenWindowStyle);
+
+			// Get info of the nearest display in case of multi monior setup or primary display in single monitor setup.
+			HMONITOR monitor = ::MonitorFromWindow(s_WindowHandle, MONITOR_DEFAULTTONEAREST);
+			MONITORINFOEXW monitorInfo{};
+			monitorInfo.cbSize = sizeof(MONITORINFOEXW);
+			::GetMonitorInfoW(monitor, &monitorInfo);
+
+			auto width = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+			auto height = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+
+			::SetWindowPos(s_WindowHandle, HWND_TOP,
+				monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
+				width, height, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+
+			::ShowWindow(s_WindowHandle, SW_MAXIMIZE);
+		}
+		else
+		{
+			::SetWindowLong(s_WindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+
+			s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
+			s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
+
+			::SetWindowPos(s_WindowHandle, HWND_NOTOPMOST,
+				s_WindowRect.left, s_WindowRect.top,
+				s_ClientWidth, s_ClientWidth, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+			
+			::ShowWindow(s_WindowHandle, SW_NORMAL);
+		}
+
+		s_IsFullScreen = !s_IsFullScreen;
 	}
 
 	LRESULT CALLBACK Application::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
@@ -134,7 +177,7 @@ namespace helios
 
 			case WM_KEYDOWN:
 			{
-				engine->OnKeyDown(static_cast<uint8_t>(wParam));
+				engine->OnKeyAction(static_cast<uint8_t>(wParam), true);
 
 
 				if (wParam == VK_ESCAPE)
@@ -142,18 +185,38 @@ namespace helios
 					::DestroyWindow(s_WindowHandle);
 				}
 
+				if (wParam == VK_F11)
+				{
+					ToggleFullScreenMode();
+				}
+
 				break;
 			}
 
 			case WM_KEYUP:
 			{
-				engine->OnKeyUp(static_cast<uint8_t>(lParam));
+				engine->OnKeyAction(static_cast<uint8_t>(wParam), false);
 				break;
 			}
 
 			case WM_DESTROY:
 			{
 				::PostQuitMessage(0);
+				break;
+			}
+
+			case WM_SIZE:
+			{
+				// Dont save current window dimensions while switching from FullScreen -> Normal mode.
+				if (s_IsFullScreen)
+				{
+					::GetClientRect(s_WindowHandle, &s_WindowRect);
+
+					s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
+					s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
+
+				}
+
 				break;
 			}
 

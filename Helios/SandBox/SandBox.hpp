@@ -17,8 +17,8 @@ namespace helios
 		virtual void OnRender() override;
 		virtual void OnDestroy() override;
 
-		void OnKeyDown(uint8_t keycode);
-		void OnKeyUp(uint8_t keycode);
+		void OnKeyAction(uint8_t keycode, bool isKeyDown) override;
+		void OnResize() override;
 
 	private:
 		void InitRendererCore();
@@ -101,6 +101,7 @@ namespace helios
 		bool m_VSync{true};
 		bool m_IsTearingSupported{ false };
 		uint32_t m_CurrentBackBufferIndex{};
+		bool m_IsFullScreen{ false };
 
 		// Application Data.
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;

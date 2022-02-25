@@ -6,9 +6,9 @@ namespace helios
 {
 	struct Config
 	{
-		std::wstring title;
-		uint32_t width;
-		uint32_t height;
+		std::wstring title{};
+		uint32_t width{};
+		uint32_t height{};
 	};
 
 	class Engine
@@ -22,8 +22,8 @@ namespace helios
 		virtual void OnRender() = 0;
 		virtual void OnDestroy() = 0;
 
-		virtual void OnKeyDown(uint8_t keycode);
-		virtual void OnKeyUp(uint8_t keycode);
+		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown);
+		virtual void OnResize();
 
 		uint32_t GetWidth() const;
 		uint32_t GetHeight() const;

@@ -4,14 +4,10 @@
 
 namespace helios
 {
-	void Timer::Start()
+	void Timer::Tick()
 	{
 		m_CurrentFrameTime = m_Clock.now();
-	}
-
-	void Timer::Stop()
-	{
-		m_DeltaTime = (m_CurrentFrameTime - m_PreviousFrameTime).count() * 1e-9;
+		m_DeltaTime = (m_CurrentFrameTime - m_PreviousFrameTime).count();
 		m_TotalTime += m_DeltaTime;
 
 		m_PreviousFrameTime = m_CurrentFrameTime;

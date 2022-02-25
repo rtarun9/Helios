@@ -15,7 +15,8 @@ struct TransformData
     matrix MVP;
 };
 
-ConstantBuffer<TransformData> mvpCBuffer : register(b0);
+
+ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
 
 VSOutput VsMain(VSInput input)
 {
