@@ -22,7 +22,7 @@ namespace helios
 			.hCursor = nullptr,
 			.hbrBackground = nullptr,
 			.lpszMenuName = nullptr,
-			.lpszClassName = WINDOW_CLASS_NAME,
+			.lpszClassName = WINDOW_CLASS_NAME.data(),
 			.hIconSm = nullptr
 		};
 
@@ -58,7 +58,7 @@ namespace helios
 		int windowYPos = std::max<int>(0, (screenHeight - s_ClientHeight) / 2);
 
 		// Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc function by reinterpreting the lParam as a LPCREATESTRUCT.
-		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
+		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME.data(), engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
 			s_ClientWidth, s_ClientHeight, 0, 0, instance, engine);
 
 		::GetWindowRect(s_WindowHandle, &s_WindowRect);
@@ -89,6 +89,8 @@ namespace helios
 		}
 
 		engine->OnDestroy();
+
+		::UnregisterClassW(WINDOW_CLASS_NAME.data(), instance);
 
 		return static_cast<char>(message.wParam);
 	}

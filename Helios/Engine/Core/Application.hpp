@@ -27,7 +27,7 @@ namespace helios
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
-		static constexpr wchar_t WINDOW_CLASS_NAME[] = L"Base Window Class";
+		static constexpr std::wstring_view WINDOW_CLASS_NAME{ L"Base Window Class" };
 		
 		static inline HWND s_WindowHandle{};
 

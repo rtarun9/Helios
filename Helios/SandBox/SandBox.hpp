@@ -5,6 +5,8 @@
 #include "Core/Engine.hpp"
 #include "Core/Timer.hpp"
 
+#include "Graphics/Descriptor.hpp"
+
 namespace helios
 {
 	class SandBox : public Engine
@@ -75,17 +77,12 @@ namespace helios
 		D3D12_VIEWPORT m_Viewport{};
 		D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 
-		// Descriptor heaps and thier respective descriptor size.
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RTVDescriptorHeap;
-		uint32_t m_RTVDescriptorSize{};
-
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVDescriptorHeap;
-		uint32_t m_DSVDescriptorSize{};
-
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
 
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SRVDescriptorHeap;
-		uint32_t m_SRVDescriptorSize{};
+		// Descriptor heaps.
+		gfx::Descriptor m_RTVDescriptor{};
+		gfx::Descriptor m_DSVDescriptor{};
+		gfx::Descriptor m_SRVDescriptor{};
 
 		// Root signature & PSO.
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;

@@ -32,7 +32,7 @@ namespace helios
 
 	void SandBox::OnUpdate()
 	{
-		float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 10.0f;
+		float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 40.0f;
 
 		static dx::XMVECTOR rotationAxis = dx::XMVectorSet(0.0f, 1.0f, 1.0f, 0.0f);
 		m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
@@ -60,13 +60,13 @@ namespace helios
 		m_CommandList->SetPipelineState(m_PSO.Get());
 		m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 		
-		std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
+		std::array descriptorHeaps
 		{
-			m_SRVDescriptorHeap.Get(),
+			m_SRVDescriptor.GetDescriptorHeap()
 		};
 		
-		m_CommandList->SetDescriptorHeaps(1u, descriptorHeaps.data());
-		m_CommandList->SetGraphicsRootDescriptorTable(0, m_SRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		m_CommandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
+		m_CommandList->SetGraphicsRootDescriptorTable(0u, m_SRVDescriptor.GetGPUDescriptorHandle());
 		
 		m_CommandList->RSSetViewports(1u, &m_Viewport);
 		m_CommandList->RSSetScissorRects(1u, &m_ScissorRect);
@@ -76,10 +76,10 @@ namespace helios
 		gfx::utils::TransitionResource(m_CommandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		// Record rendering commands
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBufferIndex, m_RTVDescriptorSize);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsv(m_DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptor.GetCPUDescriptorHandle(), m_CurrentBackBufferIndex, m_RTVDescriptor.GetDescriptorSize());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsv(m_DSVDescriptor.GetCPUDescriptorHandle());
 
-		gfx::utils::ClearRTV(m_CommandList.Get(), rtv, std::array<float, 4>{0.01f, 0.01f, 0.01f, 1.0f});
+		gfx::utils::ClearRTV(m_CommandList.Get(), rtv, std::array{0.01f, 0.01f, 0.01f, 1.0f});
 		
 		gfx::utils::ClearDepthBuffer(m_CommandList.Get(), dsv);
 
@@ -93,7 +93,7 @@ namespace helios
 		dx::XMMATRIX mvpMatrix = dx::XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 		mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
 
-		m_CommandList->SetGraphicsRoot32BitConstants(1u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0);
+		m_CommandList->SetGraphicsRoot32BitConstants(1u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
 
 		m_CommandList->DrawIndexedInstanced(36, 1u, 0u, 0u, 0u);
 	
@@ -125,6 +125,8 @@ namespace helios
 	void SandBox::OnDestroy()
 	{
 		Flush(m_CommandQueue.Get(), m_FenceValue);
+
+		::CloseHandle(m_FenceEvent);
 	}
 
 	void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
@@ -156,7 +158,11 @@ namespace helios
 
 			m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
+			m_Width = Application::GetClientWidth();
+			m_Height = Application::GetClientHeight();
+
 			CreateBackBufferRenderTargetViews();
+
 		}
 	}
 
@@ -171,14 +177,11 @@ namespace helios
 		CheckTearingSupport();
 		CreateSwapChain();
 
-		m_RTVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NUMBER_OF_FRAMES);
-		m_RTVDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NUMBER_OF_FRAMES);
+		
+		m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u);
 
-		m_DSVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1);
-		m_DSVDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
-		m_SRVDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1u);
-		m_SRVDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_SRVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1u);
 
 		CreateBackBufferRenderTargetViews();
 		CreateDepthBuffer();
@@ -251,7 +254,7 @@ namespace helios
 		};
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc{};
-		rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), 1, &staticSamplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), 1u, &staticSamplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		wrl::ComPtr<ID3DBlob> rootSignatureBlob;
 		wrl::ComPtr<ID3DBlob> errorBlob;
@@ -354,18 +357,19 @@ namespace helios
 
 		std::array<uint32_t, 36> cubeIndices
 		{
-			0, 1, 2, 0, 2, 3,
-			4, 6, 5, 4, 7, 6,
-			4, 5, 1, 4, 1, 0,
-			3, 2, 6, 3, 6, 7,
-			1, 5, 6, 1, 6, 2,
-			4, 0, 3, 4, 3, 7
+			0u, 1u, 2u, 0u, 2u, 3u,
+			4u, 6u, 5u, 4u, 7u, 6u,
+			4u, 5u, 1u, 4u, 1u, 0u,
+			3u, 2u, 6u, 3u, 6u, 7u,
+			1u, 5u, 6u, 1u, 6u, 2u,
+			4u, 0u, 3u, 4u, 3u, 7u
 		};
 
 		wrl::ComPtr<ID3D12Resource> intermediateIndexBuffer;
 		auto indexBuffer = gfx::utils::CreateGPUBuffer<uint32_t>(m_Device.Get(), m_CommandList.Get(), cubeIndices);
 		m_IndexBuffer = indexBuffer.first;
 		intermediateVertexBuffer = indexBuffer.second;
+
 
 		// Initialize Index buffer view.
 		m_IndexBufferView =
@@ -441,7 +445,7 @@ namespace helios
 			}
 		};
 
-		m_Device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, m_SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		m_Device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, m_SRVDescriptor.GetCPUDescriptorHandle());
 
 		// Close command list and execute it (for the initial setup).
 		ThrowIfFailed(m_CommandList->Close());
@@ -622,7 +626,7 @@ namespace helios
 
 	void SandBox::CreateBackBufferRenderTargetViews()
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RTVDescriptor.GetCPUDescriptorHandle());
 
 		for (int i = 0; i < NUMBER_OF_FRAMES; ++i)
 		{
@@ -633,7 +637,7 @@ namespace helios
 
 			m_BackBuffers[i] = backBuffer;
 
-			rtvHandle.Offset(m_RTVDescriptorSize);
+			rtvHandle.Offset(m_RTVDescriptor.GetDescriptorSize());
 		}
 	}
 
@@ -666,7 +670,7 @@ namespace helios
 			}
 		};
 
-		m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, m_DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, m_DSVDescriptor.GetCPUDescriptorHandle());
 	}
 
 	wrl::ComPtr<ID3D12CommandAllocator> SandBox:: CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE commandListType)
@@ -711,7 +715,6 @@ namespace helios
 	{
 		if (m_Fence->GetCompletedValue() < fenceValue)
 		{
-			auto x = m_Fence->GetCompletedValue();
 			ThrowIfFailed(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
 			::WaitForSingleObject(m_FenceEvent, static_cast<DWORD>(duration.count()));
 		}
