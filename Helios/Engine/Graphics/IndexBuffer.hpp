@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Utils.hpp"
+#include "GFXUtils.hpp"
 
 namespace helios::gfx
 {

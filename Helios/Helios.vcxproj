@@ -160,16 +160,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Camera.hpp" />
+    <ClInclude Include="Engine\Graphics\ConstantBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\Descriptor.hpp" />
     <ClInclude Include="Engine\Core\Application.hpp" />
     <ClInclude Include="Engine\Core\Engine.hpp" />
     <ClInclude Include="Engine\Graphics\IndexBuffer.hpp" />
-    <ClInclude Include="Engine\Graphics\Utils.hpp" />
+    <ClInclude Include="Engine\Graphics\GFXUtils.hpp" />
     <ClInclude Include="Engine\Core\Helpers.hpp" />
     <ClInclude Include="Engine\Graphics\d3dx12.h" />
     <ClInclude Include="Engine\Helios.hpp" />
     <ClInclude Include="Engine\Pch.hpp" />
     <ClInclude Include="Engine\Core\Timer.hpp" />
+    <ClInclude Include="Engine\Model\Model.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
     <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
   </ItemGroup>
@@ -187,6 +189,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Engine\Core\Timer.cpp" />
+    <ClCompile Include="Engine\Model\Model.cpp" />
     <ClCompile Include="SandBox\SandBox.cpp" />
   </ItemGroup>
   <ItemGroup>

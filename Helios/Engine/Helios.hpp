@@ -7,7 +7,10 @@
 #include "Core/Timer.hpp"
 #include "Core/Camera.hpp"
 
-#include "Graphics/Utils.hpp"
+#include "Graphics/GFXUtils.hpp"
 #include "Graphics/Descriptor.hpp"
 #include "Graphics/IndexBuffer.hpp"
 #include "Graphics/VertexBuffer.hpp"
+#include "Graphics/ConstantBuffer.hpp"
+
+#include "Model/Model.hpp"

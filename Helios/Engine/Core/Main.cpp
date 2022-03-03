@@ -12,7 +12,7 @@ int WINAPI wWinMain(HINSTANCE instance, [[maybe_unused]] HINSTANCE prevInstance,
 		.height = 1080,
 	};
 
-	helios::SandBox sandBox{ config };
+	SandBox sandBox{ config };
 
 	return helios::Application::Run(&sandBox, instance);
 }

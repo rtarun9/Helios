@@ -29,7 +29,7 @@ namespace helios::gfx::utils
 		ID3D12Resource* destinationResource{ nullptr };
 		ID3D12Resource* intermediateResource{ nullptr };
 
-		size_t bufferSize = bufferData.size() * sizeof(T);
+		size_t bufferSize = bufferData.size_bytes();
 
 		// Commited resource that acts as the destination resource.
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperites(D3D12_HEAP_TYPE_DEFAULT);
