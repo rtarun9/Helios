@@ -2,11 +2,6 @@
 
 #include "SandBox.hpp"
 
-#include "Core/Application.hpp"
-#include "Core/Timer.hpp"
-
-#include "Graphics/Utils.hpp"
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -32,6 +27,8 @@ namespace helios
 
 	void SandBox::OnUpdate()
 	{
+		m_Camera.Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
+
 		float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 40.0f;
 
 		static dx::XMVECTOR rotationAxis = dx::XMVectorSet(0.0f, 1.0f, 1.0f, 0.0f);
@@ -41,7 +38,7 @@ namespace helios
 		static const dx::XMVECTOR TARGET_POSITION = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		static const dx::XMVECTOR UP_DIRECTION = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-		m_ViewMatrix = dx::XMMatrixLookAtLH(EYE_POSITION, TARGET_POSITION, UP_DIRECTION);
+		m_ViewMatrix = m_Camera.GetViewMatrix();
 
 		m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 100.0f);
 	}
@@ -85,9 +82,16 @@ namespace helios
 
 		m_CommandList->OMSetRenderTargets(1u, &rtv, FALSE, &dsv);
 
+		// Remove after testing.
+
+		auto vertexBufferView = m_VertexBuffer.GetBufferView();
+		auto indexBufferView = m_IndexBuffer.GetBufferView();
+
+		// --------------------------
+		
 		m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_CommandList->IASetVertexBuffers(0u, 1u, &m_VertexBufferView);
-		m_CommandList->IASetIndexBuffer(&m_IndexBufferView);
+		m_CommandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
+		m_CommandList->IASetIndexBuffer(&indexBufferView);
 	
 		// Update the MVP matrix
 		dx::XMMATRIX mvpMatrix = dx::XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
@@ -138,6 +142,8 @@ namespace helios
 				m_FOV -= static_cast<float>(Application::GetTimer().GetDeltaTime() * 10);
 			}
 		}
+
+		m_Camera.HandleInput(keycode, isKeyDown);
 	}
 
 	void SandBox::OnResize()
@@ -340,18 +346,7 @@ namespace helios
 			Vertex{.position =  dx::XMFLOAT3(1.0f, -1.0f,  1.0f),	.texCoord = dx::XMFLOAT2(1.0f, 1.0f) }  // 7
 		};
 
-		wrl::ComPtr<ID3D12Resource> intermediateVertexBuffer;
-		auto vertexBuffer = gfx::utils::CreateGPUBuffer<Vertex>(m_Device.Get(), m_CommandList.Get(), cubeVertices);
-		m_VertexBuffer = vertexBuffer.first;
-		intermediateVertexBuffer = vertexBuffer.second;
-
-		// Initialize Vertex buffer view.
-		m_VertexBufferView =
-		{
-			.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress(),
-			.SizeInBytes = sizeof(cubeVertices),
-			.StrideInBytes = sizeof(Vertex)
-		};
+		m_VertexBuffer.Init<Vertex>(m_Device.Get(), m_CommandList.Get(), cubeVertices);
 
 		// Create index buffer for cube
 
@@ -365,19 +360,7 @@ namespace helios
 			4u, 0u, 3u, 4u, 3u, 7u
 		};
 
-		wrl::ComPtr<ID3D12Resource> intermediateIndexBuffer;
-		auto indexBuffer = gfx::utils::CreateGPUBuffer<uint32_t>(m_Device.Get(), m_CommandList.Get(), cubeIndices);
-		m_IndexBuffer = indexBuffer.first;
-		intermediateVertexBuffer = indexBuffer.second;
-
-
-		// Initialize Index buffer view.
-		m_IndexBufferView =
-		{
-			.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress(),
-			.SizeInBytes = sizeof(cubeIndices),
-			.Format = DXGI_FORMAT_R32_UINT
-		};
+		m_IndexBuffer.Init(m_Device.Get(), m_CommandList.Get(), cubeIndices);
 
 		// This heap is required to be non - null until the GPU finished operating on it.
 		wrl::ComPtr<ID3D12Resource> textureUploadHeap;

@@ -1,11 +1,6 @@
 #pragma once
 
-#include "Pch.hpp"
-
-#include "Core/Engine.hpp"
-#include "Core/Timer.hpp"
-
-#include "Graphics/Descriptor.hpp"
+#include "Helios.hpp"
 
 namespace helios
 {
@@ -101,13 +96,12 @@ namespace helios
 		bool m_IsFullScreen{ false };
 
 		// Application Data.
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
-		D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView{};
-
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
-		D3D12_INDEX_BUFFER_VIEW m_IndexBufferView{};
+		gfx::VertexBuffer m_VertexBuffer{};
+		gfx::IndexBuffer m_IndexBuffer{};
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
+
+		Camera m_Camera{};
 
 		// Transform data.
 		float m_FOV{ 45.0f };

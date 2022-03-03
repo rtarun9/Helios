@@ -159,21 +159,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Core\Camera.hpp" />
     <ClInclude Include="Engine\Graphics\Descriptor.hpp" />
     <ClInclude Include="Engine\Core\Application.hpp" />
     <ClInclude Include="Engine\Core\Engine.hpp" />
+    <ClInclude Include="Engine\Graphics\IndexBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\Utils.hpp" />
     <ClInclude Include="Engine\Core\Helpers.hpp" />
     <ClInclude Include="Engine\Graphics\d3dx12.h" />
+    <ClInclude Include="Engine\Helios.hpp" />
     <ClInclude Include="Engine\Pch.hpp" />
     <ClInclude Include="Engine\Core\Timer.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
+    <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Core\Camera.cpp" />
     <ClCompile Include="Engine\Graphics\Descriptor.cpp" />
     <ClCompile Include="Engine\Core\Application.cpp" />
     <ClCompile Include="Engine\Core\Engine.cpp" />
     <ClCompile Include="Engine\Core\Main.cpp" />
+    <ClCompile Include="Engine\Graphics\IndexBuffer.cpp" />
     <ClCompile Include="Engine\Pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
