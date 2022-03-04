@@ -53,7 +53,7 @@ namespace helios::gfx
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Buffer;
 		D3D12_CONSTANT_BUFFER_VIEW_DESC m_BufferView{};
-
+ 
 		T m_BufferData{};
 
 		void* m_Data{ nullptr };

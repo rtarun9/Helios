@@ -41,86 +41,71 @@ void SandBox::OnUpdate()
 
 void SandBox::OnRender()
 {
-	wrl::ComPtr<ID3D12CommandAllocator> commandAllocator = m_CommandAllocator[m_CurrentBackBufferIndex];
+	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
-
-	ThrowIfFailed(commandAllocator->Reset());
-
-	ThrowIfFailed(m_CommandList->Reset(commandAllocator.Get(), m_PSO.Get()));
 
 	// Set the necessary states
 
-	m_CommandList->SetPipelineState(m_PSO.Get());
-	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
+	commandList->SetPipelineState(m_PSO.Get());
+	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 	
 	std::array descriptorHeaps
 	{
 		m_SRV_CBV_Descriptor.GetDescriptorHeap()
 	};
 	
-	m_CommandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
-	m_CommandList->SetGraphicsRootDescriptorTable(0u, m_SRV_CBV_Descriptor.GetGPUDescriptorHandle());
+	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
+	commandList->SetGraphicsRootDescriptorTable(0u, m_SRV_CBV_Descriptor.GetGPUDescriptorHandle());
 
-	m_CommandList->RSSetViewports(1u, &m_Viewport);
-	m_CommandList->RSSetScissorRects(1u, &m_ScissorRect);
+	commandList->RSSetViewports(1u, &m_Viewport);
+	commandList->RSSetScissorRects(1u, &m_ScissorRect);
 	
 
 	// Inidicate back buffer will be used as RTV.
-	gfx::utils::TransitionResource(m_CommandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Record rendering commands
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptor.GetCPUDescriptorHandle(), m_CurrentBackBufferIndex, m_RTVDescriptor.GetDescriptorSize());
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsv(m_DSVDescriptor.GetCPUDescriptorHandle());
 
-	gfx::utils::ClearRTV(m_CommandList.Get(), rtv, std::array{0.01f, 0.01f, 0.01f, 1.0f});
+	gfx::utils::ClearRTV(commandList.Get(), rtv, std::array{0.01f, 0.01f, 0.01f, 1.0f});
 	
-	gfx::utils::ClearDepthBuffer(m_CommandList.Get(), dsv);
+	gfx::utils::ClearDepthBuffer(commandList.Get(), dsv);
 
-	m_CommandList->OMSetRenderTargets(1u, &rtv, FALSE, &dsv);
+	commandList->OMSetRenderTargets(1u, &rtv, FALSE, &dsv);
 
 	auto vertexBufferView = m_Cube.GetVertexBufferView();
 	
-	m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_CommandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
 	
 	// Update the MVP matrix
 	dx::XMMATRIX mvpMatrix = dx::XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
 
-	m_CommandList->SetGraphicsRoot32BitConstants(1u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
+	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
 
-	m_CommandList->DrawInstanced(36u, 1u, 0u, 0u);
+	commandList->DrawInstanced(36u, 1u, 0u, 0u);
 
-	gfx::utils::TransitionResource(m_CommandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-	ThrowIfFailed(m_CommandList->Close());
-
-	std::array<ID3D12CommandList*, 1> commandLists
-	{
-		m_CommandList.Get()
-	};
-
-	m_CommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), commandLists.data());
+	m_FrameFenceValues[m_CurrentBackBufferIndex] = m_CommandQueue.ExecuteCommandList(commandList.Get());
 
 	uint32_t syncInterval = m_VSync ? 1u : 0u;
 	uint32_t presentFlags = m_IsTearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0u;
 
 	ThrowIfFailed(m_SwapChain->Present(syncInterval, presentFlags));
 
-	m_FrameFenceValues[m_CurrentBackBufferIndex] = Signal(m_CommandQueue.Get(), m_FenceValue);
-
 	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	WaitForFenceValue(m_FrameFenceValues[m_CurrentBackBufferIndex]);
-
+	m_CommandQueue.WaitForFenceValue(m_FrameFenceValues[m_CurrentBackBufferIndex]);
+	
 	m_FrameIndex++;
 }
 
 void SandBox::OnDestroy()
 {
-	Flush(m_CommandQueue.Get(), m_FenceValue);
-
-	::CloseHandle(m_FenceEvent);
+	m_CommandQueue.FlushQueue();
 }
 
 void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
@@ -140,7 +125,7 @@ void SandBox::OnResize()
 {
 	if (m_Width != Application::GetClientWidth() || m_Height != Application::GetClientHeight())
 	{
-		Flush(m_CommandQueue.Get(), m_FenceValue);
+		m_CommandQueue.FlushQueue();
 
 		for (int i = 0; i < NUMBER_OF_FRAMES; i++)
 		{
@@ -168,7 +153,7 @@ void SandBox::InitRendererCore()
 	SelectAdapter();
 	CreateDevice();
 
-	m_CommandQueue = CreateCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_CommandQueue.Init(m_Device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 
 	CheckTearingSupport();
 	CreateSwapChain();
@@ -181,16 +166,6 @@ void SandBox::InitRendererCore()
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
-
-	for (wrl::ComPtr<ID3D12CommandAllocator>& commandAllocator : m_CommandAllocator)
-	{
-		commandAllocator = CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	}
-
-	m_CommandList = CreateCommandList(m_CommandAllocator[m_CurrentBackBufferIndex].Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-	CreateFence();
-	CreateEventHandle();
 
 	m_Viewport =
 	{
@@ -206,8 +181,7 @@ void SandBox::InitRendererCore()
 void SandBox::LoadContent()
 {
 	// Reset command list and allocator for initial setup.
-	ThrowIfFailed(m_CommandAllocator[m_CurrentBackBufferIndex].Get()->Reset());
-	ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator[m_CurrentBackBufferIndex].Get(), nullptr));
+	auto commandList = m_CommandQueue.GetCommandList();
 
 	// Check for highest available version for root signature.
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData =
@@ -234,10 +208,10 @@ void SandBox::LoadContent()
 	// Create static sampler.
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc
 	{
-		.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.MipLODBias = 0.0f,
 		.MaxAnisotropy = 0u,
 		.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
@@ -259,13 +233,13 @@ void SandBox::LoadContent()
 	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 
 	// Create PSO and shaders.
-	wrl::ComPtr<ID3DBlob> vertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> pixelShaderBlob;
+	wrl::ComPtr<ID3DBlob> testVertexShaderBlob;
+	wrl::ComPtr<ID3DBlob> testPixelShaderBlob;
 
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &vertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &pixelShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &testVertexShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &testPixelShaderBlob));
 
-	std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDesc
+	std::array<D3D12_INPUT_ELEMENT_DESC, 3> inputElementDesc
 	{{
 		{
 			.SemanticName = "POSITION",
@@ -278,11 +252,21 @@ void SandBox::LoadContent()
 		},
 
 		{
+			.SemanticName = "NORMAL",
+			.SemanticIndex = 0,
+			.Format = DXGI_FORMAT_R32G32B32_FLOAT,
+			.InputSlot = 0,
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			.InstanceDataStepRate = 0
+		},
+
+		{	
 			.SemanticName = "TEXCOORD",
 			.SemanticIndex = 0,
 			.Format = DXGI_FORMAT_R32G32_FLOAT,
 			.InputSlot = 0,
-			.AlignedByteOffset = sizeof(dx::XMFLOAT3),
+			.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 			.InstanceDataStepRate = 0
 		}
@@ -292,8 +276,8 @@ void SandBox::LoadContent()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
 	{
 		.pRootSignature = m_RootSignature.Get(),
-		.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob.Get()),
-		.PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob.Get()),
+		.VS = CD3DX12_SHADER_BYTECODE(testVertexShaderBlob.Get()),
+		.PS = CD3DX12_SHADER_BYTECODE(testPixelShaderBlob.Get()),
 		.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
 		.SampleMask = UINT_MAX,
 		.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
@@ -322,7 +306,7 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-	m_Cube.Init(m_Device.Get(), m_CommandList.Get(), L"Assets/Models/Cube/Cube.obj");
+	m_Cube.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
 
 	// This heap is required to be non - null until the GPU finished operating on it.
 	wrl::ComPtr<ID3D12Resource> textureUploadHeap;
@@ -332,11 +316,12 @@ void SandBox::LoadContent()
 	int height{};
 	int pixelChannels{};
 
-	void* data = stbi_load("Assets/Textures/TestTexture.png", &width, &height, &pixelChannels, 0);
+	m_TextureData = stbi_load("Assets/Textures/TestTexture.jpg", &width, &height, &pixelChannels, 4);
 
 	D3D12_RESOURCE_DESC textureDesc
 	{
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Alignment = 0u,
 		.Width = static_cast<UINT>(width),
 		.Height = static_cast<UINT>(height),
 		.DepthOrArraySize = 1,
@@ -347,6 +332,7 @@ void SandBox::LoadContent()
 			.Count = 1,
 			.Quality = 0
 		},
+		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = D3D12_RESOURCE_FLAG_NONE
 	};
 
@@ -366,17 +352,17 @@ void SandBox::LoadContent()
 	// Copy data from intermediate buffer to the upload heap.
 	D3D12_SUBRESOURCE_DATA textureSubresourceData
 	{
-		.pData = data,
+		.pData = m_TextureData,
 		.RowPitch = width * pixelChannels,
-		.SlicePitch = width * pixelChannels * height
+		.SlicePitch = height * width * pixelChannels
 	};
 
-	UpdateSubresources(m_CommandList.Get(), m_Texture.Get(), textureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
+	UpdateSubresources(commandList.Get(), m_Texture.Get(), textureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
 	
-	stbi_image_free(data);
+	//stbi_image_free(data);
 
 	// Transition resource from copy dest to Pixel SRV.
-	gfx::utils::TransitionResource(m_CommandList.Get(), m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfx::utils::TransitionResource(commandList.Get(), m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	// Create SRV for the texture
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
@@ -393,18 +379,10 @@ void SandBox::LoadContent()
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
 	m_Device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDsvHandle);
-	srvDsvHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
 
 	// Close command list and execute it (for the initial setup).
-	ThrowIfFailed(m_CommandList->Close());
-	std::array<ID3D12CommandList*, 1> commandLists
-	{
-		m_CommandList.Get()
-	};
-
-	m_CommandQueue->ExecuteCommandLists(static_cast<uint32_t>(commandLists.size()), commandLists.data());
-
-	Flush(m_CommandQueue.Get(), m_FenceValue);
+	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
+	m_CommandQueue.FlushQueue();
 }
 
 void SandBox::EnableDebugLayer()
@@ -483,23 +461,6 @@ void SandBox::CreateDevice()
 #endif
 }
 
-wrl::ComPtr<ID3D12CommandQueue> SandBox::CreateCommandQueue(D3D12_COMMAND_LIST_TYPE)
-{
-	wrl::ComPtr<ID3D12CommandQueue> commandQueue;
-
-	D3D12_COMMAND_QUEUE_DESC commandQueueDesc
-	{
-		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
-		.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-		.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-		.NodeMask = 0,
-	};
-
-	ThrowIfFailed(m_Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue)));
-
-	return commandQueue;
-}
-
 void SandBox::CheckTearingSupport()
 {
 	BOOL allowTearing = TRUE;
@@ -545,7 +506,7 @@ void SandBox::CreateSwapChain()
 	};
 
 	wrl::ComPtr<IDXGISwapChain1> swapChain1;
-	ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(m_CommandQueue.Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
+	ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
 
 	// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
 	ThrowIfFailed(dxgiFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
@@ -619,58 +580,5 @@ void SandBox::CreateDepthBuffer()
 	};
 
 	m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, m_DSVDescriptor.GetCPUDescriptorHandle());
-}
-
-wrl::ComPtr<ID3D12CommandAllocator> SandBox:: CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE commandListType)
-{
-	wrl::ComPtr<ID3D12CommandAllocator> commandAllocator;
-	ThrowIfFailed(m_Device->CreateCommandAllocator(commandListType, IID_PPV_ARGS(&commandAllocator)));
-
-	return commandAllocator;
-}
-
-wrl::ComPtr<ID3D12GraphicsCommandList> SandBox::CreateCommandList(ID3D12CommandAllocator* commandAllocator, D3D12_COMMAND_LIST_TYPE commandListType)
-{
-	wrl::ComPtr<ID3D12GraphicsCommandList> graphicsCommandList;
-	ThrowIfFailed(m_Device->CreateCommandList(0, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&graphicsCommandList)));
-
-	// Closing the command list as they are created in recording state adn for first iteration of render loop it is needed to be reset.
-	ThrowIfFailed(graphicsCommandList->Close());
-
-	return graphicsCommandList;
-}
-
-void SandBox::CreateFence()
-{
-	ThrowIfFailed(m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
-}
-
-void SandBox::CreateEventHandle()
-{
-	m_FenceEvent = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
-}
-
-uint64_t SandBox::Signal(ID3D12CommandQueue* commandQueue, uint64_t& fenceValue)
-{
-	uint64_t fenceValueForSignal = ++fenceValue;
-
-	ThrowIfFailed(commandQueue->Signal(m_Fence.Get(), fenceValueForSignal));
-	
-	return fenceValueForSignal;
-}
-
-void SandBox::WaitForFenceValue(uint64_t fenceValue, std::chrono::milliseconds duration)
-{
-	if (m_Fence->GetCompletedValue() < fenceValue)
-	{
-		ThrowIfFailed(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
-		::WaitForSingleObject(m_FenceEvent, static_cast<DWORD>(duration.count()));
-	}
-}
-
-void SandBox::Flush(ID3D12CommandQueue* commandQueue, uint64_t& fenceValue)
-{
-	uint64_t fenceValueForSignal = Signal(commandQueue, fenceValue);
-	WaitForFenceValue(fenceValueForSignal);
 }
 

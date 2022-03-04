@@ -10,5 +10,4 @@ SamplerState textureSampler : register(s0, space1);
 float4 PsMain(VSOutput input) : SV_Target
 {
     return testTexture.Sample(textureSampler, input.texCoord);
-
 }

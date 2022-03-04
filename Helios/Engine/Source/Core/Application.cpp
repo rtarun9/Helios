@@ -1,7 +1,7 @@
 #include "Pch.hpp"
 
-#include "Application.hpp"
-#include "Engine.hpp"
+#include "Include/Core/Application.hpp"
+#include "Include/Core/Engine.hpp"
 
 namespace helios
 {

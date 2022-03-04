@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Graphics/VertexBuffer.hpp"
+#include "Include/Graphics/VertexBuffer.hpp"
 
 namespace helios
 {
@@ -11,6 +11,11 @@ namespace helios
 		DirectX::XMFLOAT3 position{};
 		DirectX::XMFLOAT3 normal{};
 		DirectX::XMFLOAT2 textureCoord{};
+	};
+
+	struct Transform
+	{
+		DirectX::XMMATRIX modelMatrix;
 	};
 
 	// This class is temporary. In the future, a GLTF loader will be created which will be mainly used for model loading.

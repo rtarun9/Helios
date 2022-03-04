@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Model.hpp"
+#include "Include/Model/Model.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION 
 #define TINYOBJLOADER_USE_MAPBOX_EARCUT
@@ -59,7 +59,7 @@ namespace helios
                                                attrib.normals[3 * size_t(idx.normal_index) + 2]),
 
                         .textureCoord = dx::XMFLOAT2(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0], 
-                                                     attrib.texcoords[2 * size_t(idx.texcoord_index) + 1])
+                                                     1.0f - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1])
                     };
 
                     vertices.push_back(std::move(vertex));
@@ -70,8 +70,6 @@ namespace helios
         }
 
         m_VertexBuffer.Init<Vertex>(device, commandList, vertices);
-
-        //5vertices.clear();
 	}
 
     D3D12_VERTEX_BUFFER_VIEW Model::GetVertexBufferView()

@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Camera.hpp"
+#include "Include/Core/Camera.hpp"
 
 // Some of the operator overloads are in this namespace, hence needed to include the namespace here.
 using namespace DirectX;
