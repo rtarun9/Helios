@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Include/Core/Timer.hpp"
+#include "Timer.hpp"
 
 namespace helios
 {

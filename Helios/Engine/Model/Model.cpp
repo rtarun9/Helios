@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Include/Model/Model.hpp"
+#include "Model.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION 
 #define TINYOBJLOADER_USE_MAPBOX_EARCUT

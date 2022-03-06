@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Include/Graphics/Descriptor.hpp"
+#include "Descriptor.hpp"
 
 namespace helios::gfx
 {

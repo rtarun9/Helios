@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Include/Graphics/IndexBuffer.hpp"
+#include "IndexBuffer.hpp"
 
 namespace helios::gfx
 {

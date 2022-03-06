@@ -2,7 +2,8 @@
 
 #include "Pch.hpp"
 
-#include "Include/Graphics/VertexBuffer.hpp"
+#include "Graphics/VertexBuffer.hpp"
+#include "Graphics/ConstantBuffer.hpp"
 
 namespace helios
 {
@@ -15,7 +16,9 @@ namespace helios
 
 	struct Transform
 	{
-		DirectX::XMMATRIX modelMatrix;
+		DirectX::XMMATRIX modelMatrix{};
+		DirectX::XMMATRIX inverseModelMatrix{};
+		DirectX::XMMATRIX projectionViewMatrix{};
 	};
 
 	// This class is temporary. In the future, a GLTF loader will be created which will be mainly used for model loading.

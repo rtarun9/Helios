@@ -18,49 +18,52 @@
     <ClInclude Include="Engine\Pch.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Core\Application.hpp">
+    <ClInclude Include="Engine\Core\Application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\d3dx12.h">
+    <ClInclude Include="Engine\Graphics\d3dx12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Core\Helpers.hpp">
+    <ClInclude Include="Engine\Core\Helpers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Core\Engine.hpp">
+    <ClInclude Include="Engine\Core\Engine.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SandBox\SandBox.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Core\Timer.hpp">
+    <ClInclude Include="Engine\Core\Timer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\GFXUtils.hpp">
+    <ClInclude Include="Engine\Graphics\GFXUtils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\Descriptor.hpp">
+    <ClInclude Include="Engine\Graphics\Descriptor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\VertexBuffer.hpp">
+    <ClInclude Include="Engine\Graphics\VertexBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\IndexBuffer.hpp">
+    <ClInclude Include="Engine\Graphics\IndexBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Helios.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Core\Camera.hpp">
+    <ClInclude Include="Engine\Core\Camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\ConstantBuffer.hpp">
+    <ClInclude Include="Engine\Graphics\ConstantBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Model\Model.hpp">
+    <ClInclude Include="Engine\Model\Model.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Include\Graphics\CommandQueue.hpp">
+    <ClInclude Include="Engine\Graphics\CommandQueue.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\GraphicsPipelineState.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -68,39 +71,41 @@
     <ClCompile Include="Engine\Pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Application.cpp">
+    <ClCompile Include="Engine\Core\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Main.cpp">
+    <ClCompile Include="Engine\Core\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Engine.cpp">
+    <ClCompile Include="Engine\Core\Engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SandBox\SandBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Timer.cpp">
+    <ClCompile Include="Engine\Core\Timer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Graphics\Descriptor.cpp">
+    <ClCompile Include="Engine\Graphics\Descriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Graphics\IndexBuffer.cpp">
+    <ClCompile Include="Engine\Graphics\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Camera.cpp">
+    <ClCompile Include="Engine\Core\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Model\Model.cpp">
+    <ClCompile Include="Engine\Model\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Graphics\CommandQueue.cpp">
+    <ClCompile Include="Engine\Graphics\CommandQueue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\TestVS.hlsl" />
     <FxCompile Include="Shaders\TestPS.hlsl" />
+    <FxCompile Include="Shaders\LightPS.hlsl" />
+    <FxCompile Include="Shaders\LightVS.hlsl" />
   </ItemGroup>
 </Project>

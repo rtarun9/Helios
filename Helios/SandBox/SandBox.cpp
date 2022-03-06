@@ -7,10 +7,10 @@
 
 using namespace helios;
 
-struct Vertex
+struct LightingData
 {
-	DirectX::XMFLOAT3 position;
-	DirectX::XMFLOAT2 texCoord;
+	dx::XMFLOAT4 lightPosition;
+	dx::XMVECTOR cameraPosition;
 };
 
 SandBox::SandBox(Config& config)
@@ -31,12 +31,16 @@ void SandBox::OnUpdate()
 
 	float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 40.0f;
 
-	static dx::XMVECTOR rotationAxis = dx::XMVectorSet(0.0f, 1.0f, 1.0f, 0.0f);
+	static dx::XMVECTOR rotationAxis = dx::XMVectorSet(1.0f, 1.0f, 0.5f, 0.0f);
 	m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
 
 	m_ViewMatrix = m_Camera.GetViewMatrix();
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 100.0f);
+
+	m_LightPosition.z = sin(Application::GetTimer().GetTotalTime()) * 5.0f;
+
+	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
 }
 
 void SandBox::OnRender()
@@ -74,7 +78,7 @@ void SandBox::OnRender()
 
 	commandList->OMSetRenderTargets(1u, &rtv, FALSE, &dsv);
 
-	auto vertexBufferView = m_Cube.GetVertexBufferView();
+	auto vertexBufferView = m_IcoSphere.GetVertexBufferView();
 	
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
@@ -83,9 +87,37 @@ void SandBox::OnRender()
 	dx::XMMATRIX mvpMatrix = dx::XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
 
-	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
+	m_IcoSphereTransform.modelMatrix = m_ModelMatrix;
+	m_IcoSphereTransform.inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_ModelMatrix);
+	m_IcoSphereTransform.projectionViewMatrix = m_ViewMatrix * m_ProjectionMatrix;
+
+	LightingData lightingData
+	{
+		.lightPosition = m_LightPosition,
+		.cameraPosition = m_Camera.m_CameraPosition
+	};
+
+	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(Transform) / 4, &m_IcoSphereTransform, 0u);
+	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
+
+	commandList->DrawInstanced(8400u, 1u, 0u, 0u);
+
+	// Draw the light source
+	commandList->SetPipelineState(m_LightPSO.Get());
+	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
+	
+	auto lightVertexBufferView = m_LightSource.GetVertexBufferView();
+
+	commandList->IASetVertexBuffers(0u, 1u, &lightVertexBufferView);
+	mvpMatrix = dx::XMMatrixIdentity();
+
+	mvpMatrix = dx::XMMatrixMultiply(m_LightModelMatrix, m_ViewMatrix);
+	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+
+	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
 
 	commandList->DrawInstanced(36u, 1u, 0u, 0u);
+
 
 	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -197,14 +229,17 @@ void SandBox::LoadContent()
 		};
 	}
 
+	// Load content for cube.
+
 	// Create Root signature.
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> descriptorRanges{};
 	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	
-	std::array<CD3DX12_ROOT_PARAMETER1, 2> rootParameters{};
+
+	std::array<CD3DX12_ROOT_PARAMETER1, 3> rootParameters{};
 	rootParameters[0].InitAsDescriptorTable(1u, &descriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	rootParameters[1].InitAsConstants(sizeof(dx::XMMATRIX) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
-	
+	rootParameters[1].InitAsConstants(sizeof(Transform) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[2].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
+
 	// Create static sampler.
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc
 	{
@@ -240,7 +275,7 @@ void SandBox::LoadContent()
 	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &testPixelShaderBlob));
 
 	std::array<D3D12_INPUT_ELEMENT_DESC, 3> inputElementDesc
-	{{
+	{ {
 		{
 			.SemanticName = "POSITION",
 			.SemanticIndex = 0,
@@ -261,7 +296,7 @@ void SandBox::LoadContent()
 			.InstanceDataStepRate = 0
 		},
 
-		{	
+		{
 			.SemanticName = "TEXCOORD",
 			.SemanticIndex = 0,
 			.Format = DXGI_FORMAT_R32G32_FLOAT,
@@ -270,7 +305,7 @@ void SandBox::LoadContent()
 			.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 			.InstanceDataStepRate = 0
 		}
-	}};
+	} };
 
 	// Create PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
@@ -284,6 +319,7 @@ void SandBox::LoadContent()
 		.DepthStencilState
 		{
 			.DepthEnable = TRUE,
+			.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
 			.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE
 		},
@@ -306,11 +342,11 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-	m_Cube.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
+	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/IcoSphere/Icosphere.obj");
 
 	// This heap is required to be non - null until the GPU finished operating on it.
 	wrl::ComPtr<ID3D12Resource> textureUploadHeap;
-	
+
 	// Create texture
 	int width{};
 	int height{};
@@ -339,7 +375,7 @@ void SandBox::LoadContent()
 	// Create intermediate resoruce to place texture in GPU accesible memory.
 	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 	ThrowIfFailed(m_Device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_Texture)));
-	
+
 	// Create GPU buffer for texture
 
 	const uint64_t uploadBufferSize = GetRequiredIntermediateSize(m_Texture.Get(), 0u, 1u);
@@ -358,8 +394,6 @@ void SandBox::LoadContent()
 	};
 
 	UpdateSubresources(commandList.Get(), m_Texture.Get(), textureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
-	
-	//stbi_image_free(data);
 
 	// Transition resource from copy dest to Pixel SRV.
 	gfx::utils::TransitionResource(commandList.Get(), m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -379,6 +413,66 @@ void SandBox::LoadContent()
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
 	m_Device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDsvHandle);
+
+	// Load data for Light cube.
+
+	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
+
+	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
+
+	// Root signature
+	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
+	lightRootParameters[0].InitAsConstants(sizeof(dx::XMMATRIX) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC lightRootSignatureDesc{};
+	lightRootSignatureDesc.Init_1_1(static_cast<UINT>(lightRootParameters.size()), lightRootParameters.data(), 0u, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	wrl::ComPtr<ID3DBlob> lightRootSignatureErrorBlob;
+	wrl::ComPtr<ID3DBlob> lightRootSignature;
+
+	ThrowIfFailed(::D3D12SerializeVersionedRootSignature(&lightRootSignatureDesc, &lightRootSignature, &lightRootSignatureErrorBlob));
+	ThrowIfFailed(m_Device->CreateRootSignature(0u, lightRootSignature->GetBufferPointer(), lightRootSignature->GetBufferSize(), IID_PPV_ARGS(&m_LightRootSignature)));
+
+	wrl::ComPtr<ID3DBlob> lightVertexShaderBlob;
+	wrl::ComPtr<ID3DBlob> lightPixelShaderBlob;
+
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightVS.cso", &lightVertexShaderBlob));
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &lightPixelShaderBlob));
+	
+	// Create PSO
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc
+	{
+		.pRootSignature = m_LightRootSignature.Get(),
+		.VS = CD3DX12_SHADER_BYTECODE(lightVertexShaderBlob.Get()),
+		.PS = CD3DX12_SHADER_BYTECODE(lightPixelShaderBlob.Get()),
+		.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
+		.SampleMask = UINT_MAX,
+		.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
+		.DepthStencilState
+		{
+			.DepthEnable = TRUE,
+	        .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
+			.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+			.StencilEnable = FALSE
+		},
+		.InputLayout =
+		{
+			.pInputElementDescs = inputElementDesc.data(),
+			.NumElements = static_cast<UINT>(inputElementDesc.size()),
+		},
+		.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		.NumRenderTargets = 1u,
+		.RTVFormats = {DXGI_FORMAT_R8G8B8A8_UNORM},
+		.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
+		.SampleDesc
+		{
+			.Count = 1u,
+			.Quality = 0u
+		},
+		.NodeMask = 0u,
+	};
+
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());

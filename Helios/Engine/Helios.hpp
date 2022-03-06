@@ -2,16 +2,16 @@
 
 #include "Pch.hpp"
 
-#include "Include/Core/Application.hpp"
-#include "Include/Core/Engine.hpp"
-#include "Include/Core/Timer.hpp"
-#include "Include/Core/Camera.hpp"
+#include "Core/Application.hpp"
+#include "Core/Engine.hpp"
+#include "Core/Timer.hpp"
+#include "Core/Camera.hpp"
 
-#include "Include/Graphics/GFXUtils.hpp"
-#include "Include/Graphics/Descriptor.hpp"
-#include "Include/Graphics/IndexBuffer.hpp"
-#include "Include/Graphics/VertexBuffer.hpp"
-#include "Include/Graphics/ConstantBuffer.hpp"
-#include "Include/Graphics/CommandQueue.hpp"
+#include "Graphics/GFXUtils.hpp"
+#include "Graphics/Descriptor.hpp"
+#include "Graphics/IndexBuffer.hpp"
+#include "Graphics/VertexBuffer.hpp"
+#include "Graphics/ConstantBuffer.hpp"
+#include "Graphics/CommandQueue.hpp"
 
-#include "Include/Model/Model.hpp"
+#include "Model/Model.hpp"

@@ -98,6 +98,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dxguid.lib;d3dcompiler.lib;d3d12.lib;dxgi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>6.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -119,6 +123,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dxguid.lib;d3dcompiler.lib;d3d12.lib;dxgi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>6.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -136,6 +144,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dxguid.lib;d3dcompiler.lib;d3d12.lib;dxgi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>6.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -157,44 +169,77 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dxguid.lib;d3dcompiler.lib;d3d12.lib;dxgi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>6.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Include\Core\Camera.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\CommandQueue.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\ConstantBuffer.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\Descriptor.hpp" />
-    <ClInclude Include="Engine\Include\Core\Application.hpp" />
-    <ClInclude Include="Engine\Include\Core\Engine.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\IndexBuffer.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\GFXUtils.hpp" />
-    <ClInclude Include="Engine\Include\Core\Helpers.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\d3dx12.h" />
+    <ClInclude Include="Engine\Core\Camera.hpp" />
+    <ClInclude Include="Engine\Graphics\CommandQueue.hpp" />
+    <ClInclude Include="Engine\Graphics\ConstantBuffer.hpp" />
+    <ClInclude Include="Engine\Graphics\Descriptor.hpp" />
+    <ClInclude Include="Engine\Core\Application.hpp" />
+    <ClInclude Include="Engine\Core\Engine.hpp" />
+    <ClInclude Include="Engine\Graphics\GraphicsPipelineState.hpp" />
+    <ClInclude Include="Engine\Graphics\IndexBuffer.hpp" />
+    <ClInclude Include="Engine\Graphics\GFXUtils.hpp" />
+    <ClInclude Include="Engine\Core\Helpers.hpp" />
+    <ClInclude Include="Engine\Graphics\d3dx12.h" />
     <ClInclude Include="Engine\Helios.hpp" />
     <ClInclude Include="Engine\Pch.hpp" />
-    <ClInclude Include="Engine\Include\Core\Timer.hpp" />
-    <ClInclude Include="Engine\Include\Model\Model.hpp" />
+    <ClInclude Include="Engine\Core\Timer.hpp" />
+    <ClInclude Include="Engine\Model\Model.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
-    <ClInclude Include="Engine\Include\Graphics\VertexBuffer.hpp" />
+    <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Source\Core\Camera.cpp" />
-    <ClCompile Include="Engine\Source\Graphics\CommandQueue.cpp" />
-    <ClCompile Include="Engine\Source\Graphics\Descriptor.cpp" />
-    <ClCompile Include="Engine\Source\Core\Application.cpp" />
-    <ClCompile Include="Engine\Source\Core\Engine.cpp" />
-    <ClCompile Include="Engine\Source\Core\Main.cpp" />
-    <ClCompile Include="Engine\Source\Graphics\IndexBuffer.cpp" />
+    <ClCompile Include="Engine\Core\Camera.cpp" />
+    <ClCompile Include="Engine\Graphics\CommandQueue.cpp" />
+    <ClCompile Include="Engine\Graphics\Descriptor.cpp" />
+    <ClCompile Include="Engine\Core\Application.cpp" />
+    <ClCompile Include="Engine\Core\Engine.cpp" />
+    <ClCompile Include="Engine\Core\Main.cpp" />
+    <ClCompile Include="Engine\Graphics\IndexBuffer.cpp" />
     <ClCompile Include="Engine\Pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Core\Timer.cpp" />
-    <ClCompile Include="Engine\Source\Model\Model.cpp" />
+    <ClCompile Include="Engine\Core\Timer.cpp" />
+    <ClCompile Include="Engine\Model\Model.cpp" />
     <ClCompile Include="SandBox\SandBox.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\LightPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PsMain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PsMain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PsMain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PsMain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Shaders\LightVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">VsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">VsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VsMain</EntryPointName>
+    </FxCompile>
     <FxCompile Include="Shaders\TestPS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>

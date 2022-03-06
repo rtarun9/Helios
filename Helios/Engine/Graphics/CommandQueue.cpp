@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Include/Graphics/CommandQueue.hpp"
+#include "CommandQueue.hpp"
 
 namespace helios::gfx
 {

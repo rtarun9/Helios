@@ -58,10 +58,6 @@ private:
 	helios::gfx::Descriptor m_DSVDescriptor{};
 	helios::gfx::Descriptor m_SRV_CBV_Descriptor{};
 
-	// Root signature & PSO.
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
-
 	// Synchronization objects.
 	std::array<uint64_t, NUMBER_OF_FRAMES> m_FrameFenceValues{};
 	
@@ -78,11 +74,27 @@ private:
 
 	// Transform data.
 	float m_FOV{ 45.0f };
+	
+	// Cube data.
 	DirectX::XMMATRIX m_ModelMatrix{};
 	DirectX::XMMATRIX m_ViewMatrix{};
 	DirectX::XMMATRIX m_ProjectionMatrix{};
 
-	helios::Model m_Cube{};
+	helios::Transform m_IcoSphereTransform{};
+
+	helios::Model m_IcoSphere{};
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
 
 	unsigned char* m_TextureData{ nullptr };
+
+	// Light source data.
+	DirectX::XMMATRIX m_LightModelMatrix{DirectX::XMMatrixIdentity()};
+	DirectX::XMFLOAT4 m_LightPosition{ DirectX::XMFLOAT4(1.5f, 0.5f, 0.f, 1.0f) };
+
+	helios::Model m_LightSource{};
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;
 };

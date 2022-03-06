@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Include/Core/Application.hpp"
+#include "Application.hpp"
 #include "SandBox.hpp"
 
 int WINAPI wWinMain(HINSTANCE instance, [[maybe_unused]] HINSTANCE prevInstance, [[maybe_unused]] LPWSTR commandLine, [[maybe_unused]] INT commandShow)
