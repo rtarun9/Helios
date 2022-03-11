@@ -2,8 +2,6 @@
 
 #include "SandBox.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 using namespace helios;
 
@@ -100,7 +98,35 @@ void SandBox::OnRender()
 	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(Transform) / 4, &m_IcoSphereTransform, 0u);
 	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
 
-	commandList->DrawInstanced(8400u, 1u, 0u, 0u);
+	auto tex = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
+
+	commandList->SetGraphicsRootDescriptorTable(0u, tex);
+	m_IcoSphere.Draw(commandList.Get());
+
+	// Draw floor
+	vertexBufferView = m_Floor.GetVertexBufferView();
+
+	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
+
+	// Update the MVP matrix
+	auto modelMatrix = dx::XMMatrixScaling(10.0f, 0.1f, 10.0f) * dx::XMMatrixTranslation(0.0f, -5.0f, 0.0f);
+	mvpMatrix = dx::XMMatrixMultiply(modelMatrix, m_ViewMatrix);
+	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+
+
+	m_FloorTransform.modelMatrix = modelMatrix;
+	m_FloorTransform.inverseModelMatrix = dx::XMMatrixInverse(nullptr, modelMatrix);
+	m_FloorTransform.projectionViewMatrix = m_ViewMatrix * m_ProjectionMatrix;
+
+	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(Transform) / 4, &m_FloorTransform, 0u);
+	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
+
+	tex.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
+
+	commandList->SetGraphicsRootDescriptorTable(0u, tex);
+
+	m_Floor.Draw(commandList.Get());
+
 
 	// Draw the light source
 	commandList->SetPipelineState(m_LightPSO.Get());
@@ -116,8 +142,7 @@ void SandBox::OnRender()
 
 	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
 
-	commandList->DrawInstanced(36u, 1u, 0u, 0u);
-
+	m_LightSource.Draw(commandList.Get());
 
 	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -194,7 +219,7 @@ void SandBox::InitRendererCore()
 	
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u);
 
-	m_SRV_CBV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 2u);
+	m_SRV_CBV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 4u);
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
@@ -243,13 +268,13 @@ void SandBox::LoadContent()
 	// Create static sampler.
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc
 	{
-		.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		.Filter = D3D12_FILTER_ANISOTROPIC,
 		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.MipLODBias = 0.0f,
 		.MaxAnisotropy = 0u,
-		.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
+		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
 		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 		.MinLOD = 0.0f,
 		.MaxLOD = D3D12_FLOAT32_MAX,
@@ -344,81 +369,20 @@ void SandBox::LoadContent()
 
 	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/IcoSphere/Icosphere.obj");
 
-	// This heap is required to be non - null until the GPU finished operating on it.
-	wrl::ComPtr<ID3D12Resource> textureUploadHeap;
-
-	// Create texture
-	int width{};
-	int height{};
-	int pixelChannels{};
-
-	m_TextureData = stbi_load("Assets/Textures/TestTexture.jpg", &width, &height, &pixelChannels, 4);
-
-	D3D12_RESOURCE_DESC textureDesc
-	{
-		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Alignment = 0u,
-		.Width = static_cast<UINT>(width),
-		.Height = static_cast<UINT>(height),
-		.DepthOrArraySize = 1,
-		.MipLevels = 1,
-		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.SampleDesc
-		{
-			.Count = 1,
-			.Quality = 0
-		},
-		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		.Flags = D3D12_RESOURCE_FLAG_NONE
-	};
-
-	// Create intermediate resoruce to place texture in GPU accesible memory.
-	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	ThrowIfFailed(m_Device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_Texture)));
-
-	// Create GPU buffer for texture
-
-	const uint64_t uploadBufferSize = GetRequiredIntermediateSize(m_Texture.Get(), 0u, 1u);
-
-	CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-
-	ThrowIfFailed(m_Device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &uploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&textureUploadHeap)));
-
-	// Copy data from intermediate buffer to the upload heap.
-	D3D12_SUBRESOURCE_DATA textureSubresourceData
-	{
-		.pData = m_TextureData,
-		.RowPitch = width * pixelChannels,
-		.SlicePitch = height * width * pixelChannels
-	};
-
-	UpdateSubresources(commandList.Get(), m_Texture.Get(), textureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
-
-	// Transition resource from copy dest to Pixel SRV.
-	gfx::utils::TransitionResource(commandList.Get(), m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-	// Create SRV for the texture
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
-	{
-		.Format = textureDesc.Format,
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2D
-		{
-			.MipLevels = 1
-		}
-	};
-
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
-	m_Device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDsvHandle);
+	m_Texture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/TestTexture.jpg");
+	srvDsvHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
+
+	m_FloorTexture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/Floor.jpg");
 
 	// Load data for Light cube.
 
 	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
 
 	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
+
+	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
 
 	// Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};

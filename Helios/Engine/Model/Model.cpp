@@ -59,7 +59,7 @@ namespace helios
                                                attrib.normals[3 * size_t(idx.normal_index) + 2]),
 
                         .textureCoord = dx::XMFLOAT2(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0], 
-                                                     1.0f - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1])
+                                                    1.0f - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1])
                     };
 
                     vertices.push_back(std::move(vertex));
@@ -69,6 +69,7 @@ namespace helios
             }
         }
 
+        m_VertexSize = vertices.size();
         m_VertexBuffer.Init<Vertex>(device, commandList, vertices);
 	}
 
@@ -76,4 +77,10 @@ namespace helios
     {
         return m_VertexBuffer.GetBufferView();
     }
+
+    void Model::Draw(ID3D12GraphicsCommandList* commandList)
+    {
+        commandList->DrawInstanced(m_VertexSize, 1u, 0u, 0u);
+    }
+
 }

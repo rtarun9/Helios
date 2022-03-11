@@ -192,6 +192,7 @@
     <ClInclude Include="Engine\Model\Model.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
     <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
+    <ClInclude Include="Engine\Graphics\Texture.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Camera.cpp" />
@@ -210,6 +211,7 @@
     <ClCompile Include="Engine\Core\Timer.cpp" />
     <ClCompile Include="Engine\Model\Model.cpp" />
     <ClCompile Include="SandBox\SandBox.cpp" />
+    <ClCompile Include="Engine\Graphics\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\LightPS.hlsl">

@@ -13,5 +13,6 @@
 #include "Graphics/VertexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
 #include "Graphics/CommandQueue.hpp"
+#include "Graphics/Texture.hpp"
 
 #include "Model/Model.hpp"

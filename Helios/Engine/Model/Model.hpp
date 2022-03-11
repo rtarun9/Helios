@@ -30,8 +30,12 @@ namespace helios
 
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
 
+		void Draw(ID3D12GraphicsCommandList* commandList);
+
 	private:
 		gfx::VertexBuffer m_VertexBuffer{};
+
+		uint32_t m_VertexSize{};
 	};
 }
 

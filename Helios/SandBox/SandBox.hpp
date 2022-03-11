@@ -68,7 +68,6 @@ private:
 	bool m_IsFullScreen{ false };
 
 	// Application Data.
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
 
 	helios::Camera m_Camera{};
 
@@ -81,19 +80,22 @@ private:
 	DirectX::XMMATRIX m_ProjectionMatrix{};
 
 	helios::Transform m_IcoSphereTransform{};
+	helios::Transform m_FloorTransform{};
 
 	helios::Model m_IcoSphere{};
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
 
-	unsigned char* m_TextureData{ nullptr };
+	helios::gfx::Texture m_Texture{};
+	helios::gfx::Texture m_FloorTexture{};
 
 	// Light source data.
 	DirectX::XMMATRIX m_LightModelMatrix{DirectX::XMMatrixIdentity()};
 	DirectX::XMFLOAT4 m_LightPosition{ DirectX::XMFLOAT4(1.5f, 0.5f, 0.f, 1.0f) };
 
 	helios::Model m_LightSource{};
+	helios::Model m_Floor{};
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;
