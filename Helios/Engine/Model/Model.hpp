@@ -3,6 +3,7 @@
 #include "Pch.hpp"
 
 #include "Graphics/VertexBuffer.hpp"
+#include "Graphics/IndexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
 
 namespace helios
@@ -34,8 +35,12 @@ namespace helios
 
 	private:
 		gfx::VertexBuffer m_VertexBuffer{};
+		gfx::IndexBuffer m_IndexBuffer{};
 
-		uint32_t m_VertexSize{};
+		std::vector<uint32_t> m_Indices{};
+
+		uint32_t m_VerticesCount{};
+		uint32_t m_IndicesCount{};
 	};
 }
 

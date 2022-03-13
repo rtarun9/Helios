@@ -30,11 +30,12 @@ void SandBox::OnUpdate()
 	float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 40.0f;
 
 	static dx::XMVECTOR rotationAxis = dx::XMVectorSet(1.0f, 1.0f, 0.5f, 0.0f);
-	m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
+	//m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
+	m_ModelMatrix = dx::XMMatrixScaling(0.5f, 0.5f, 0.5f);
 
 	m_ViewMatrix = m_Camera.GetViewMatrix();
 
-	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 100.0f);
+	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 
 	m_LightPosition.z = sin(Application::GetTimer().GetTotalTime()) * 5.0f;
 
@@ -367,7 +368,7 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/IcoSphere/Icosphere.obj");
+	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sponza/glTF/Sponza.gltf");
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
@@ -378,11 +379,11 @@ void SandBox::LoadContent()
 
 	// Load data for Light cube.
 
-	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
+	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf");
 
 	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
 
-	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.obj");
+	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf");
 
 	// Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
