@@ -15,32 +15,43 @@ namespace helios
 		DirectX::XMFLOAT2 textureCoord{};
 	};
 
-	struct Transform
+	struct alignas(256) Transform
 	{
 		DirectX::XMMATRIX modelMatrix{};
 		DirectX::XMMATRIX inverseModelMatrix{};
 		DirectX::XMMATRIX projectionViewMatrix{};
 	};
 
-	// This class is temporary. In the future, a GLTF loader will be created which will be mainly used for model loading.
-	// Temporarily using tinyobjloader and the .obj format.
+	struct TransformComponent
+	{
+		DirectX::XMFLOAT3 rotation{};
+		DirectX::XMFLOAT3 scale{};
+		DirectX::XMFLOAT3 translate{};
+	};
+
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle);
 
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
+		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
+
+		TransformComponent& GetTransform();
+
+		void UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix);
 
 		void Draw(ID3D12GraphicsCommandList* commandList);
 
 	private:
 		gfx::VertexBuffer m_VertexBuffer{};
 		gfx::IndexBuffer m_IndexBuffer{};
-
-		std::vector<uint32_t> m_Indices{};
+		gfx::ConstantBuffer<Transform> m_TransformConstantBuffer{};
 
 		uint32_t m_VerticesCount{};
 		uint32_t m_IndicesCount{};
+
+		TransformComponent m_TransformData{};
 	};
 }
 

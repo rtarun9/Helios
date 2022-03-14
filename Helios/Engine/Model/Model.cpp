@@ -9,9 +9,12 @@
 
 #include "tiny_gltf.h"
 
+// Some operator overloads are in the namespace, hence declaring it in global namespace here.
+using namespace DirectX;
+
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath)
+	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle)
 	{
         auto modelPathStr = WstringToString(modelPath);
 
@@ -38,88 +41,126 @@ namespace helios
         // Build meshes.
 
         std::vector<Vertex> vertices{};
+		std::vector<uint32_t> indices{};
 
-		tinygltf::Scene const& scene = model.scenes[model.defaultScene];
+		tinygltf::Scene& scene = model.scenes[model.defaultScene];
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
-			tinygltf::Node const& node = model.nodes[scene.nodes[i]]; 
-			if (node.mesh < 0 || node.mesh >= model.meshes.size()) continue;
+			tinygltf::Node& node = model.nodes[scene.nodes[i]]; 
+			if (node.mesh < 0 || node.mesh >= model.meshes.size())
+			{
+				continue;
+			}
 
-			tinygltf::Mesh const& node_mesh = model.meshes[node.mesh];
+			tinygltf::Mesh& node_mesh = model.meshes[node.mesh];
 			for (size_t i = 0; i < node_mesh.primitives.size(); ++i)
 			{
+				// Get Accesor, buffer view and buffer for each attribute (position, textureCoord, normal).
 				tinygltf::Primitive primitive = node_mesh.primitives[i];
-				tinygltf::Accessor const& index_accessor = model.accessors[primitive.indices];
+				tinygltf::Accessor& indexAccesor = model.accessors[primitive.indices];
 
+				// Position data.
+				tinygltf::Accessor& positionAccesor = model.accessors[primitive.attributes["POSITION"]];
+				tinygltf::BufferView& positionBufferView= model.bufferViews[positionAccesor.bufferView];
+				tinygltf::Buffer& positionBuffer = model.buffers[positionBufferView.buffer];
+				
+				int positionByteStride = positionAccesor.ByteStride(positionBufferView);
+				uint8_t* positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
 
-				tinygltf::Accessor const& position_accessor = model.accessors[primitive.attributes["POSITION"]];
-				tinygltf::BufferView const& position_buffer_view = model.bufferViews[position_accessor.bufferView];
-				tinygltf::Buffer const& position_buffer = model.buffers[position_buffer_view.buffer];
-				int const position_byte_stride = position_accessor.ByteStride(position_buffer_view);
-				uint8_t const* positions = &position_buffer.data[position_buffer_view.byteOffset + position_accessor.byteOffset];
+				// TextureCoord data.
+				tinygltf::Accessor& textureCoordAccesor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+				tinygltf::BufferView& textureCoordBufferView = model.bufferViews[textureCoordAccesor.bufferView];
+				tinygltf::Buffer& textureCoordBuffer = model.buffers[textureCoordBufferView.buffer];
+				int textureCoordBufferStride = textureCoordAccesor.ByteStride(textureCoordBufferView);
+				uint8_t* texcoords = &textureCoordBuffer.data[textureCoordBufferView.byteOffset + textureCoordAccesor.byteOffset];
 
-				tinygltf::Accessor const& texcoord_accessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
-				tinygltf::BufferView const& texcoord_buffer_view = model.bufferViews[texcoord_accessor.bufferView];
-				tinygltf::Buffer const& texcoord_buffer = model.buffers[texcoord_buffer_view.buffer];
-				int const texcoord_byte_stride = texcoord_accessor.ByteStride(texcoord_buffer_view);
-				uint8_t  const* texcoords = &texcoord_buffer.data[texcoord_buffer_view.byteOffset + texcoord_accessor.byteOffset];
+				// Normal data.
+				tinygltf::Accessor& normalAccesor = model.accessors[primitive.attributes["NORMAL"]];
+				tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccesor.bufferView];
+				tinygltf::Buffer& normalBuffer = model.buffers[normalBufferView.buffer];
+				int normalByteStride = normalAccesor.ByteStride(normalBufferView);
+				uint8_t* normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
 
-				tinygltf::Accessor const& normal_accessor = model.accessors[primitive.attributes["NORMAL"]];
-				tinygltf::BufferView const& normal_buffer_view = model.bufferViews[normal_accessor.bufferView];
-				tinygltf::Buffer const& normal_buffer = model.buffers[normal_buffer_view.buffer];
-				int const normal_byte_stride = normal_accessor.ByteStride(normal_buffer_view);
-				uint8_t  const* normals = &normal_buffer.data[normal_buffer_view.byteOffset + normal_accessor.byteOffset];
+				// Tangent and BITangent data (commented out for now).
+				tinygltf::Accessor& tangentAccesor = model.accessors[primitive.attributes["TANGENT"]];
+				tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccesor.bufferView];
+				tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
+				int tangentByteStride = tangentAccesor.ByteStride(tangentBufferView);
+				uint8_t  const* tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
 
-				tinygltf::Accessor const& tangent_accessor = model.accessors[primitive.attributes["TANGENT"]];
-				tinygltf::BufferView const& tangent_buffer_view = model.bufferViews[tangent_accessor.bufferView];
-				tinygltf::Buffer const& tangent_buffer = model.buffers[tangent_buffer_view.buffer];
-				int const tangent_byte_stride = tangent_accessor.ByteStride(tangent_buffer_view);
-				uint8_t  const* tangents = &tangent_buffer.data[tangent_buffer_view.byteOffset + tangent_accessor.byteOffset];
-
-				for (size_t i = 0; i < position_accessor.count; ++i)
+				// Fill in the vertices array.
+				for (size_t i = 0; i < positionAccesor.count; ++i)
 				{
 					Vertex vertex{};
 
-					vertex.position.x = (reinterpret_cast<float const*>(positions + (i * position_byte_stride)))[0];
-					vertex.position.y = (reinterpret_cast<float const*>(positions + (i * position_byte_stride)))[1];
-					vertex.position.z = (reinterpret_cast<float const*>(positions + (i * position_byte_stride)))[2];
+					vertex.position.x = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0];
+					vertex.position.y = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1];
+					vertex.position.z = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2];
 
-					vertex.textureCoord.x = (reinterpret_cast<float const*>(texcoords + (i * texcoord_byte_stride)))[0];
-					vertex.textureCoord.y = (reinterpret_cast<float const*>(texcoords + (i * texcoord_byte_stride)))[1];
+					vertex.textureCoord.x = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0];
+					vertex.textureCoord.y = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1];
 					vertex.textureCoord.y = 1.0f - vertex.textureCoord.y;
 
-					vertex.normal.x = (reinterpret_cast<float const*>(normals + (i * normal_byte_stride)))[0];
-					vertex.normal.y = (reinterpret_cast<float const*>(normals + (i * normal_byte_stride)))[1];
-					vertex.normal.z = (reinterpret_cast<float const*>(normals + (i * normal_byte_stride)))[2];
+					vertex.normal.x = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0];
+					vertex.normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
+					vertex.normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
 
 					vertices.push_back(vertex);
 				}
 
-				tinygltf::BufferView const& index_buffer_view = model.bufferViews[index_accessor.bufferView];
-				tinygltf::Buffer const& index_buffer = model.buffers[index_buffer_view.buffer];
-				int const index_byte_stride = index_accessor.ByteStride(index_buffer_view);
-				uint8_t const* indexes = index_buffer.data.data() + index_buffer_view.byteOffset + index_accessor.byteOffset;
+				// Get the index buffer data.
+				tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccesor.bufferView];
+				tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
+				int indexByteStride = indexAccesor.ByteStride(indexBufferView);
+				uint8_t* indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
-				for (size_t i = 0; i < index_accessor.count; ++i)
+				// Fill indices array.
+				for (size_t i = 0; i < indexAccesor.count; ++i)
 				{
-					uint32_t index = (uint32_t)(reinterpret_cast<uint16_t const*>(indexes + (i * index_byte_stride)))[0];
+					uint32_t index = (uint32_t)(reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0];
 	
-					m_Indices.push_back(index);
+					indices.push_back(index);
 				}
 			}
 		}
 
 		m_VerticesCount = vertices.size();
-		m_IndicesCount = m_Indices.size();
+		m_IndicesCount = indices.size();
 
 		m_VertexBuffer.Init<Vertex>(device, commandList, vertices);
-		m_IndexBuffer.Init(device, commandList, m_Indices);
+		m_IndexBuffer.Init(device, commandList, indices);
+		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
+			cbCPUDescriptorHandle);
 	}
 
     D3D12_VERTEX_BUFFER_VIEW Model::GetVertexBufferView()
     {
         return m_VertexBuffer.GetBufferView();
     }
+
+	D3D12_GPU_VIRTUAL_ADDRESS Model::GetTransformCBufferVirtualAddress()
+	{
+		auto bufferView = m_TransformConstantBuffer.GetBufferView();
+		return bufferView.BufferLocation;
+	}
+
+	TransformComponent& Model::GetTransform()
+	{
+		return m_TransformData;
+	}
+	
+	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix)
+	{
+		auto scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);
+		auto rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
+		auto translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
+
+		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixTranslationFromVector(translationVector) * dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixScalingFromVector(scalingVector);
+		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix);
+		m_TransformConstantBuffer.GetBufferData().projectionViewMatrix = projectionViewMatrix;
+
+		m_TransformConstantBuffer.Update();
+	}
 
     void Model::Draw(ID3D12GraphicsCommandList* commandList)
     {

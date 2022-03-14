@@ -27,25 +27,20 @@ void SandBox::OnUpdate()
 {
 	m_Camera.Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
 
-	float angle = static_cast<float>(Application::GetTimer().GetTotalTime()) * 40.0f;
-
-	static dx::XMVECTOR rotationAxis = dx::XMVectorSet(1.0f, 1.0f, 0.5f, 0.0f);
-	//m_ModelMatrix = dx::XMMatrixRotationAxis(rotationAxis, dx::XMConvertToRadians(angle));
-	m_ModelMatrix = dx::XMMatrixScaling(0.5f, 0.5f, 0.5f);
-
 	m_ViewMatrix = m_Camera.GetViewMatrix();
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 
-	m_LightPosition.z = sin(Application::GetTimer().GetTotalTime()) * 5.0f;
-
-	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
+	m_LightSource.GetTransform().translate.z = sin(Application::GetTimer().GetTotalTime()) * 5.0f;
+	m_LightSource.GetTransform().scale = { 0.1f, 0.1f, 0.1f };
 }
 
 void SandBox::OnRender()
 {
 	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
+
+	D3D12_GPU_DESCRIPTOR_HANDLE cbufferGPUDescriptorHandle = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
 
 	// Set the necessary states
 
@@ -82,21 +77,17 @@ void SandBox::OnRender()
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
 	
-	// Update the MVP matrix
-	dx::XMMATRIX mvpMatrix = dx::XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-
-	m_IcoSphereTransform.modelMatrix = m_ModelMatrix;
-	m_IcoSphereTransform.inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_ModelMatrix);
-	m_IcoSphereTransform.projectionViewMatrix = m_ViewMatrix * m_ProjectionMatrix;
-
 	LightingData lightingData
 	{
-		.lightPosition = m_LightPosition,
+		.lightPosition = {m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f},
 		.cameraPosition = m_Camera.m_CameraPosition
 	};
 
-	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(Transform) / 4, &m_IcoSphereTransform, 0u);
+	commandList->SetGraphicsRootConstantBufferView(1u, m_IcoSphere.GetTransformCBufferVirtualAddress());
+
+	commandList->SetGraphicsRootDescriptorTable(1u, cbufferGPUDescriptorHandle);
+	cbufferGPUDescriptorHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
+
 	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
 
 	auto tex = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
@@ -110,16 +101,9 @@ void SandBox::OnRender()
 	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
 
 	// Update the MVP matrix
-	auto modelMatrix = dx::XMMatrixScaling(10.0f, 0.1f, 10.0f) * dx::XMMatrixTranslation(0.0f, -5.0f, 0.0f);
-	mvpMatrix = dx::XMMatrixMultiply(modelMatrix, m_ViewMatrix);
-	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+	commandList->SetGraphicsRootDescriptorTable(1u, cbufferGPUDescriptorHandle);
+	cbufferGPUDescriptorHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
 
-
-	m_FloorTransform.modelMatrix = modelMatrix;
-	m_FloorTransform.inverseModelMatrix = dx::XMMatrixInverse(nullptr, modelMatrix);
-	m_FloorTransform.projectionViewMatrix = m_ViewMatrix * m_ProjectionMatrix;
-
-	commandList->SetGraphicsRoot32BitConstants(1u, sizeof(Transform) / 4, &m_FloorTransform, 0u);
 	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
 
 	tex.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
@@ -136,12 +120,8 @@ void SandBox::OnRender()
 	auto lightVertexBufferView = m_LightSource.GetVertexBufferView();
 
 	commandList->IASetVertexBuffers(0u, 1u, &lightVertexBufferView);
-	mvpMatrix = dx::XMMatrixIdentity();
 
-	mvpMatrix = dx::XMMatrixMultiply(m_LightModelMatrix, m_ViewMatrix);
-	mvpMatrix = dx::XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-
-	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(dx::XMMATRIX) / 4, &mvpMatrix, 0u);
+	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(Transform) / 4, &m_LightSource.GetTransform(), 0u);
 
 	m_LightSource.Draw(commandList.Get());
 
@@ -258,12 +238,13 @@ void SandBox::LoadContent()
 	// Load content for cube.
 
 	// Create Root signature.
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> descriptorRanges{};
+	std::array<CD3DX12_DESCRIPTOR_RANGE1, 2> descriptorRanges{};
 	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 	std::array<CD3DX12_ROOT_PARAMETER1, 3> rootParameters{};
 	rootParameters[0].InitAsDescriptorTable(1u, &descriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	rootParameters[1].InitAsConstants(sizeof(Transform) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
+	//rootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_DESCRIPTOR_FLAG_)
 	rootParameters[2].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// Create static sampler.
@@ -368,10 +349,13 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sponza/glTF/Sponza.gltf");
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
+	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
+	cbHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
+	
 	m_Texture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/TestTexture.jpg");
 	srvDsvHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
 
@@ -379,15 +363,16 @@ void SandBox::LoadContent()
 
 	// Load data for Light cube.
 
-	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf");
+	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
+	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_LightModelMatrix = dx::XMMatrixScaling(0.1f, 0.1f, 0.1f) * dx::XMMatrixTranslation(m_LightPosition.x, m_LightPosition.y, m_LightPosition.z);
+	cbHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
 
-	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf");
+	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
 
 	// Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
-	lightRootParameters[0].InitAsConstants(sizeof(dx::XMMATRIX) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
+	lightRootParameters[0].InitAsConstants(sizeof(Transform) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC lightRootSignatureDesc{};
 	lightRootSignatureDesc.Init_1_1(static_cast<UINT>(lightRootParameters.size()), lightRootParameters.data(), 0u, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);

@@ -75,12 +75,8 @@ private:
 	float m_FOV{ 45.0f };
 	
 	// Cube data.
-	DirectX::XMMATRIX m_ModelMatrix{};
 	DirectX::XMMATRIX m_ViewMatrix{};
 	DirectX::XMMATRIX m_ProjectionMatrix{};
-
-	helios::Transform m_IcoSphereTransform{};
-	helios::Transform m_FloorTransform{};
 
 	helios::Model m_IcoSphere{};
 
@@ -91,9 +87,6 @@ private:
 	helios::gfx::Texture m_FloorTexture{};
 
 	// Light source data.
-	DirectX::XMMATRIX m_LightModelMatrix{DirectX::XMMatrixIdentity()};
-	DirectX::XMFLOAT4 m_LightPosition{ DirectX::XMFLOAT4(1.5f, 0.5f, 0.f, 1.0f) };
-
 	helios::Model m_LightSource{};
 	helios::Model m_Floor{};
 

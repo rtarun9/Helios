@@ -39,7 +39,6 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 shadedColor = (specular * float3(1.0f, 1.0f, 1.0f) + surfaceColor * angle) * 1.0f / lightDistance + ambientColor;
 
     float4 result = float4(shadedColor, 1.0f);
-    return float4(surfaceColor, 1.0f);
 
     return result;
 }

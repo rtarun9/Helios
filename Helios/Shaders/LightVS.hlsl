@@ -13,15 +13,19 @@ struct VSOutput
 
 struct TransformData
 {
-    matrix MVP;
+    matrix modelMatrix;
+    matrix inverseModelMatrix;
+    matrix projectionViewMatrix;
 };
 
 ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
 
 VSOutput VsMain(VSInput input)
 {
+    matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
+
     VSOutput output;
-    output.position = mul(mvpCBuffer.MVP, float4(input.position, 1.0f));
+    output.position = mul(mvpMatrix, float4(input.position, 1.0f));
     output.texCoord = input.texCoord;
 
     return output;

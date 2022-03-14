@@ -42,6 +42,8 @@ namespace helios::gfx::utils
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &intermediateResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&intermediateResource)));
 
 		// Logic to transfer data from CPU to GPU.
+
+		// TODo : Possible UB, since bufferData is not in scope while the commadn list is being executed, need to check this UB soon.
 		D3D12_SUBRESOURCE_DATA subresourceData
 		{
 			.pData = bufferData.data(),
