@@ -124,8 +124,8 @@ namespace helios
 			}
 		}
 
-		m_VerticesCount = vertices.size();
-		m_IndicesCount = indices.size();
+		m_VerticesCount = static_cast<uint32_t>(vertices.size());
+		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
 		m_VertexBuffer.Init<Vertex>(device, commandList, vertices);
 		m_IndexBuffer.Init(device, commandList, indices);
@@ -155,7 +155,7 @@ namespace helios
 		auto rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
 		auto translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
 
-		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixTranslationFromVector(translationVector) * dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixScalingFromVector(scalingVector);
+		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixScalingFromVector(scalingVector) *  dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixTranslationFromVector(translationVector);
 		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix);
 		m_TransformConstantBuffer.GetBufferData().projectionViewMatrix = projectionViewMatrix;
 
@@ -164,7 +164,10 @@ namespace helios
 
     void Model::Draw(ID3D12GraphicsCommandList* commandList)
     {
+		auto vertexBufferView = m_VertexBuffer.GetBufferView();
 		auto indexBufferView = m_IndexBuffer.GetBufferView();
+
+		commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
 		commandList->IASetIndexBuffer(&indexBufferView);
 
 		commandList->DrawIndexedInstanced(m_IndicesCount, 1u, 0u, 0u, 0u);

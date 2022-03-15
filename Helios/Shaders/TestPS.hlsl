@@ -23,21 +23,21 @@ float4 PsMain(VSOutput input) : SV_Target
 {
     float3 pixelToLightDir = normalize(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz);
     float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
+    float3 halfWayDir = normalize(pixelToLightDir + viewDir);
 
     float angle = max(dot(input.normal, pixelToLightDir), 0.0f);
 
     float3 surfaceColor = testTexture.Sample(textureSampler, input.texCoord).xyz;
     surfaceColor = float3(0.95f, 0.95f, 0.95);
 
-    float3 ambientColor = surfaceColor * 0.5f;
+    float3 ambientColor = surfaceColor * 0.1f;
 
-    float3 reflectedDir = (reflect(-pixelToLightDir, input.normal));
-    float specular = pow(max(dot(reflectedDir, viewDir), 0.0f), 64);
+    float specular = pow(max(dot(halfWayDir, input.normal), 0.0f), 128);
 
     float lightDistance = length(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz);
 
     float3 shadedColor = (specular * float3(1.0f, 1.0f, 1.0f) + surfaceColor * angle) * 1.0f / lightDistance + ambientColor;
-
+    
     float4 result = float4(shadedColor, 1.0f);
 
     return result;

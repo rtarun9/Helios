@@ -38,4 +38,14 @@ namespace helios::gfx
 	{
 		return m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 	}
+
+	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+	{
+		handle.ptr += m_DescriptorSize;
+	}
+
+	void Descriptor::Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle)
+	{
+		handle.ptr += m_DescriptorSize;
+	}
 }

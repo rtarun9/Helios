@@ -4,19 +4,6 @@
 
 namespace helios
 {
-	enum class Keys : uint8_t
-	{
-		W,
-		A,
-		S,
-		D,
-		AUp,
-		ALeft,
-		ADown,
-		ARight,
-		TotalKeyCount
-	};
-
 	class Camera
 	{
 	public:
@@ -50,6 +37,6 @@ namespace helios
 		float m_Yaw{ 0.0f };
 		float m_Pitch{ 0.0f };
 
-		std::array<bool, static_cast<size_t>(Keys::TotalKeyCount)> m_KeyStates{false};
+		std::array<bool, EnumClassValue(Keys::TotalKeyCount)> m_KeyStates{false};
 	};
 }

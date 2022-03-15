@@ -31,19 +31,26 @@ void SandBox::OnUpdate()
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 
-	m_LightSource.GetTransform().translate.z = sin(Application::GetTimer().GetTotalTime()) * 5.0f;
-	m_LightSource.GetTransform().scale = { 0.1f, 0.1f, 0.1f };
+	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime()) * 2.0f);
+	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime()) * 2.0f);
 }
 
 void SandBox::OnRender()
 {
 	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
+	
+	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
 
-	D3D12_GPU_DESCRIPTOR_HANDLE cbufferGPUDescriptorHandle = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
+	// TODO : Move to OnUpdate soon.
+	for (auto& [objectName, gameObject] : m_GameObjects)
+	{
+		gameObject.UpdateTransformData(commandList.Get(), projectionView);
+	}
+
+	m_LightSource.UpdateTransformData(commandList.Get(), projectionView);
 
 	// Set the necessary states
-
 	commandList->SetPipelineState(m_PSO.Get());
 	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 	
@@ -58,7 +65,6 @@ void SandBox::OnRender()
 	commandList->RSSetViewports(1u, &m_Viewport);
 	commandList->RSSetScissorRects(1u, &m_ScissorRect);
 	
-
 	// Inidicate back buffer will be used as RTV.
 	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -72,56 +78,32 @@ void SandBox::OnRender()
 
 	commandList->OMSetRenderTargets(1u, &rtv, FALSE, &dsv);
 
-	auto vertexBufferView = m_IcoSphere.GetVertexBufferView();
-	
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
-	
+
 	LightingData lightingData
 	{
 		.lightPosition = {m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f},
 		.cameraPosition = m_Camera.m_CameraPosition
 	};
 
-	commandList->SetGraphicsRootConstantBufferView(1u, m_IcoSphere.GetTransformCBufferVirtualAddress());
-
-	commandList->SetGraphicsRootDescriptorTable(1u, cbufferGPUDescriptorHandle);
-	cbufferGPUDescriptorHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
-
-	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
-
 	auto tex = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
-
-	commandList->SetGraphicsRootDescriptorTable(0u, tex);
-	m_IcoSphere.Draw(commandList.Get());
-
-	// Draw floor
-	vertexBufferView = m_Floor.GetVertexBufferView();
-
-	commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
-
-	// Update the MVP matrix
-	commandList->SetGraphicsRootDescriptorTable(1u, cbufferGPUDescriptorHandle);
-	cbufferGPUDescriptorHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
-
-	commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
-
-	tex.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
-
 	commandList->SetGraphicsRootDescriptorTable(0u, tex);
 
-	m_Floor.Draw(commandList.Get());
+	for (auto& [objectName, gameObject] : m_GameObjects)
+	{
+		commandList->SetGraphicsRootConstantBufferView(1u, gameObject.GetTransformCBufferVirtualAddress());
+		commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
+		commandList->SetGraphicsRootDescriptorTable(0u, tex);
 
+		gameObject.Draw(commandList.Get());
+	}
 
 	// Draw the light source
 	commandList->SetPipelineState(m_LightPSO.Get());
 	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
-	
-	auto lightVertexBufferView = m_LightSource.GetVertexBufferView();
 
-	commandList->IASetVertexBuffers(0u, 1u, &lightVertexBufferView);
-
-	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(Transform) / 4, &m_LightSource.GetTransform(), 0u);
+	m_LightSource.UpdateTransformData(commandList.Get(), projectionView);
+	commandList->SetGraphicsRootConstantBufferView(0u, m_LightSource.GetTransformCBufferVirtualAddress());
 
 	m_LightSource.Draw(commandList.Get());
 
@@ -200,7 +182,7 @@ void SandBox::InitRendererCore()
 	
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u);
 
-	m_SRV_CBV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 4u);
+	m_SRV_CBV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 5u);
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
@@ -243,8 +225,8 @@ void SandBox::LoadContent()
 	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 	std::array<CD3DX12_ROOT_PARAMETER1, 3> rootParameters{};
-	rootParameters[0].InitAsDescriptorTable(1u, &descriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	//rootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_DESCRIPTOR_FLAG_)
+	rootParameters[0].InitAsDescriptorTable(1u, descriptorRanges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 	rootParameters[2].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// Create static sampler.
@@ -349,30 +331,32 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-
+	// Load data and textures.
 	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
 
-	m_IcoSphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
-	cbHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
-	
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_SRV_CBV_Descriptor.Offset(cbHandle);
+
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
+	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
+
+	m_SRV_CBV_Descriptor.Offset(cbHandle);
+
+	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+	m_SRV_CBV_Descriptor.Offset(cbHandle);
+
 	m_Texture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/TestTexture.jpg");
-	srvDsvHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
+	m_SRV_CBV_Descriptor.Offset(srvDsvHandle);
 
 	m_FloorTexture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/Floor.jpg");
-
-	// Load data for Light cube.
-
-	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
-	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
-
-	cbHandle.ptr += m_SRV_CBV_Descriptor.GetDescriptorSize();
-
-	m_Floor.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Box/Cube.gltf", cbHandle);
+	m_SRV_CBV_Descriptor.Offset(srvDsvHandle);
 
 	// Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
-	lightRootParameters[0].InitAsConstants(sizeof(Transform) / 4, 0u, 0u, D3D12_SHADER_VISIBILITY_VERTEX);
+	lightRootParameters[0].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC lightRootSignatureDesc{};
 	lightRootSignatureDesc.Init_1_1(static_cast<UINT>(lightRootParameters.size()), lightRootParameters.data(), 0u, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);

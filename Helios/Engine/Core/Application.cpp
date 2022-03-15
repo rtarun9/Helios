@@ -216,7 +216,6 @@ namespace helios
 
 					s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
 					s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
-
 				}
 
 				break;

@@ -16,6 +16,9 @@ namespace helios::gfx
 		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle();
 		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle();
 
+		void Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle);
+		void Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle);
+
 	private:
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescriptorHeap;
 		uint32_t m_DescriptorSize{};

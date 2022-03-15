@@ -10,23 +10,23 @@ namespace helios
 {
 	struct Vertex
 	{
-		DirectX::XMFLOAT3 position{};
-		DirectX::XMFLOAT3 normal{};
-		DirectX::XMFLOAT2 textureCoord{};
+		DirectX::XMFLOAT3 position{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
+		DirectX::XMFLOAT3 normal{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
+		DirectX::XMFLOAT2 textureCoord{ DirectX::XMFLOAT2(0.0f, 0.0f) };
 	};
 
 	struct alignas(256) Transform
 	{
-		DirectX::XMMATRIX modelMatrix{};
-		DirectX::XMMATRIX inverseModelMatrix{};
-		DirectX::XMMATRIX projectionViewMatrix{};
+		DirectX::XMMATRIX modelMatrix{DirectX::XMMatrixIdentity()};
+		DirectX::XMMATRIX inverseModelMatrix{ DirectX::XMMatrixIdentity() };
+		DirectX::XMMATRIX projectionViewMatrix{ DirectX::XMMatrixIdentity() };
 	};
 
 	struct TransformComponent
 	{
-		DirectX::XMFLOAT3 rotation{};
-		DirectX::XMFLOAT3 scale{};
-		DirectX::XMFLOAT3 translate{};
+		DirectX::XMFLOAT3 rotation{DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f)};
+		DirectX::XMFLOAT3 scale{ DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f) };
+		DirectX::XMFLOAT3 translate{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
 	};
 
 	class Model

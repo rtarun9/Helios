@@ -9,95 +9,48 @@ namespace helios
 {
 	void Camera::HandleInput(uint8_t keycode, bool isKeyDown)
 	{
-		switch (keycode)
+		if (INPUT_MAP.find(keycode) != end(INPUT_MAP))
 		{
-		case 'W':
-		{
-			m_KeyStates[static_cast<size_t>(Keys::W)] = isKeyDown;
-			break;
-		}
-
-		case 'A':
-		{
-			m_KeyStates[static_cast<size_t>(Keys::A)] = isKeyDown;
-			break;
-		}
-
-		case 'S':
-		{
-			m_KeyStates[static_cast<size_t>(Keys::S)] = isKeyDown;
-			break;
-		}
-
-		case 'D':
-		{
-			m_KeyStates[static_cast<size_t>(Keys::D)] = isKeyDown;
-			break;
-		}
-
-		case VK_UP:
-		{
-			m_KeyStates[static_cast<size_t>(Keys::AUp)] = isKeyDown;
-			break;
-		}
-
-		case VK_LEFT:
-		{
-			m_KeyStates[static_cast<size_t>(Keys::ALeft)] = isKeyDown;
-			break;
-		}
-
-		case VK_DOWN:
-		{
-			m_KeyStates[static_cast<size_t>(Keys::ADown)] = isKeyDown;
-			break;
-		}
-
-		case VK_RIGHT:
-		{
-			m_KeyStates[static_cast<size_t>(Keys::ARight)] = isKeyDown;
-			break;
-		}
+			m_KeyStates[EnumClassValue(INPUT_MAP[keycode])] = isKeyDown;
 		}
 	}
-
 
 	void Camera::Update(float deltaTime)
 	{
 		float movementSpeed = deltaTime * m_MovementSpeed / 10.0f;
 
-		if (m_KeyStates[static_cast<size_t>(Keys::W)])
+		if (m_KeyStates[EnumClassValue(Keys::W)])
 		{
 			m_CameraPosition += m_CameraFront * movementSpeed;
 		}
-		else if (m_KeyStates[static_cast<size_t>(Keys::S)])
+		else if (m_KeyStates[EnumClassValue(Keys::S)])
 		{
 			m_CameraPosition -= m_CameraFront * movementSpeed;
 		}
 
-		if (m_KeyStates[static_cast<size_t>(Keys::A)])
+		if (m_KeyStates[EnumClassValue(Keys::A)])
 		{
 			m_CameraPosition -= m_CameraRight * movementSpeed;
 		}
-		else if (m_KeyStates[static_cast<size_t>(Keys::D)])
+		else if (m_KeyStates[EnumClassValue(Keys::D)])
 		{
 			m_CameraPosition += m_CameraRight * movementSpeed;
 		}
 
-		if (m_KeyStates[static_cast<size_t>(Keys::AUp)])
+		if (m_KeyStates[EnumClassValue(Keys::AUp)])
 		{
 			m_Pitch -= m_RotationSpeed;
 		}
-		else if (m_KeyStates[static_cast<size_t>(Keys::ADown)])
+		else if (m_KeyStates[EnumClassValue(Keys::ADown)])
 		{
 			m_Pitch += m_RotationSpeed;
 		}
 
-		if (m_KeyStates[static_cast<size_t>(Keys::ALeft)])
+		if (m_KeyStates[EnumClassValue(Keys::ALeft)])
 		{
 			m_Yaw -= m_RotationSpeed;
 		}
-		else if (m_KeyStates[static_cast<size_t>(Keys::ARight)])
+		else if (m_KeyStates[EnumClassValue(Keys::ARight)])
 		{
 			m_Yaw += m_RotationSpeed;
 		}

@@ -23,3 +23,35 @@ static inline constexpr std::string WstringToString(std::wstring_view inputWStri
 	std::string result{ begin(inputWString), end(inputWString) };
 	return result;
 }
+
+static enum class Keys : uint8_t
+{
+	W,
+	A,
+	S,
+	D,
+	AUp,
+	ALeft,
+	ADown,
+	ARight,
+	TotalKeyCount
+};
+
+// TODO : See a way to make this constexpr (the EnumClassValue function is constexpr, but making INPUT_MAP also constexpr would be preferrable).
+static std::map<uint8_t, Keys> INPUT_MAP 
+{
+	{'W', Keys::W},
+	{'A', Keys::A},
+	{'S', Keys::S},
+	{'D', Keys::D},
+	{VK_UP, Keys::AUp},
+	{VK_LEFT, Keys::ALeft},
+	{VK_DOWN, Keys::ADown},
+	{VK_RIGHT, Keys::ARight}
+};
+
+// Currently this only works for enum class Keys, will be templated in the future.
+static constexpr uint32_t EnumClassValue(const Keys& value)
+{
+	return static_cast<uint32_t>(value);
+}

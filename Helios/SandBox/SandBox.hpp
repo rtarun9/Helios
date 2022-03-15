@@ -60,25 +60,24 @@ private:
 
 	// Synchronization objects.
 	std::array<uint64_t, NUMBER_OF_FRAMES> m_FrameFenceValues{};
-	
+
 	// SwapChain / presentation control objects.
-	bool m_VSync{true};
+	bool m_VSync{ true };
 	bool m_IsTearingSupported{ false };
 	uint32_t m_CurrentBackBufferIndex{};
 	bool m_IsFullScreen{ false };
 
 	// Application Data.
-
 	helios::Camera m_Camera{};
 
 	// Transform data.
 	float m_FOV{ 45.0f };
-	
-	// Cube data.
+
+	// Gameobject data.
 	DirectX::XMMATRIX m_ViewMatrix{};
 	DirectX::XMMATRIX m_ProjectionMatrix{};
 
-	helios::Model m_IcoSphere{};
+	std::map<std::wstring_view, helios::Model> m_GameObjects{};
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
@@ -88,7 +87,6 @@ private:
 
 	// Light source data.
 	helios::Model m_LightSource{};
-	helios::Model m_Floor{};
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;

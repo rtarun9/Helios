@@ -18,7 +18,7 @@ namespace helios::gfx::utils
 
 	inline void ClearDepthBuffer(ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE dsv, float depthClearValue = 1.0f)
 	{
-		commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 1.0f, 0u, nullptr);
+		commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 1u, 0u, nullptr);
 	}
 
 	// Create a GPU buffer that returns two buffers : The final Destination buffer and an intermediate buffer (that is used to transfer data from the CPU to the GPU).
