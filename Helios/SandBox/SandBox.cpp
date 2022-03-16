@@ -56,11 +56,11 @@ void SandBox::OnRender()
 	
 	std::array descriptorHeaps
 	{
-		m_SRV_CBV_Descriptor.GetDescriptorHeap()
+		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
 	};
 	
 	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
-	commandList->SetGraphicsRootDescriptorTable(0u, m_SRV_CBV_Descriptor.GetGPUDescriptorHandle());
+	commandList->SetGraphicsRootDescriptorTable(0u, m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle());
 
 	commandList->RSSetViewports(1u, &m_Viewport);
 	commandList->RSSetScissorRects(1u, &m_ScissorRect);
@@ -86,16 +86,18 @@ void SandBox::OnRender()
 		.cameraPosition = m_Camera.m_CameraPosition
 	};
 
-	auto tex = m_SRV_CBV_Descriptor.GetGPUDescriptorHandle();
-	commandList->SetGraphicsRootDescriptorTable(0u, tex);
+	auto texture = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
+
 
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
+		commandList->SetGraphicsRootDescriptorTable(0u, texture);
 		commandList->SetGraphicsRootConstantBufferView(1u, gameObject.GetTransformCBufferVirtualAddress());
 		commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
-		commandList->SetGraphicsRootDescriptorTable(0u, tex);
 
 		gameObject.Draw(commandList.Get());
+
+		m_SRV_CBV_UAV_Descriptor.Offset(texture);
 	}
 
 	// Draw the light source
@@ -182,7 +184,7 @@ void SandBox::InitRendererCore()
 	
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u);
 
-	m_SRV_CBV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 5u);
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 10u);
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
@@ -229,10 +231,10 @@ void SandBox::LoadContent()
 	rootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 	rootParameters[2].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	// Create static sampler.
-	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc
+	// Create samplers.
+	D3D12_STATIC_SAMPLER_DESC clampStaticSamplerDesc
 	{
-		.Filter = D3D12_FILTER_ANISOTROPIC,
+		.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
 		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
@@ -247,8 +249,31 @@ void SandBox::LoadContent()
 		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
 	};
 
+	D3D12_STATIC_SAMPLER_DESC wrapStaticSamplerDesc
+	{
+		.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
+		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		.MipLODBias = 0.0f,
+		.MaxAnisotropy = 0u,
+		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		.MinLOD = 0.0f,
+		.MaxLOD = D3D12_FLOAT32_MAX,
+		.ShaderRegister = 1u,
+		.RegisterSpace = 1u,
+		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
+	};
+
+	std::array samplers
+	{
+		clampStaticSamplerDesc,
+		wrapStaticSamplerDesc
+	};
+
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc{};
-	rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), 1u, &staticSamplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	wrl::ComPtr<ID3DBlob> rootSignatureBlob;
 	wrl::ComPtr<ID3DBlob> errorBlob;
@@ -332,27 +357,29 @@ void SandBox::LoadContent()
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
 	// Load data and textures.
-	D3D12_CPU_DESCRIPTOR_HANDLE srvDsvHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE uavHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+
+	m_GenerateMipsPSO.Init(m_Device.Get(), uavHandle);
 
 	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
-	m_SRV_CBV_Descriptor.Offset(cbHandle);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
 
 	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
 
-	m_SRV_CBV_Descriptor.Offset(cbHandle);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
 
 	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
-	m_SRV_CBV_Descriptor.Offset(cbHandle);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
 
-	m_Texture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/TestTexture.jpg");
-	m_SRV_CBV_Descriptor.Offset(srvDsvHandle);
+	m_TestTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/TestTexture.png");
+	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
 
-	m_FloorTexture.Init(m_Device.Get(), commandList.Get(), srvDsvHandle, L"Assets/Textures/Floor.jpg");
-	m_SRV_CBV_Descriptor.Offset(srvDsvHandle);
+	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/Marble.jpg");
 
 	// Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};

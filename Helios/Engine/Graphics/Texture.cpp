@@ -10,8 +10,9 @@ namespace helios::gfx
 {
 	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, std::wstring_view texturePath)
 	{
-		m_TextureData = stbi_loadf(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4);
-
+		m_TextureData = stbi_load(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
+		m_ComponentCount = 4;
+		
 		D3D12_RESOURCE_DESC textureDesc
 		{
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -20,7 +21,7 @@ namespace helios::gfx
 			.Height = static_cast<UINT>(m_Height),
 			.DepthOrArraySize = 1,
 			.MipLevels = 1,
-			.Format = DXGI_FORMAT_R32G32B32A32_FLOAT,
+			.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
 			.SampleDesc
 			{
 				.Count = 1,

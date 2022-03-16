@@ -9,7 +9,8 @@ struct VSOutput
 Texture2D testTexture : register(t0, space1);
 Texture2D floorTexture : register(t1, space1);
 
-SamplerState textureSampler : register(s0, space1);
+SamplerState clampSampler : register(s0, space1);
+SamplerState wrapSampler : register(s1, space1);
 
 struct LightingData
 {
@@ -27,8 +28,7 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float angle = max(dot(input.normal, pixelToLightDir), 0.0f);
 
-    float3 surfaceColor = testTexture.Sample(textureSampler, input.texCoord).xyz;
-    surfaceColor = float3(0.95f, 0.95f, 0.95);
+    float3 surfaceColor = testTexture.Sample(wrapSampler, input.texCoord).xyz;
 
     float3 ambientColor = surfaceColor * 0.1f;
 
@@ -36,7 +36,7 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float lightDistance = length(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz);
 
-    float3 shadedColor = (specular * float3(1.0f, 1.0f, 1.0f) + surfaceColor * angle) * 1.0f / lightDistance + ambientColor;
+    float3 shadedColor = (specular * float3(1.0f, 1.0f, 1.0f) + surfaceColor * angle) + ambientColor;
     
     float4 result = float4(shadedColor, 1.0f);
 

@@ -56,7 +56,7 @@ private:
 	// Descriptor heaps.
 	helios::gfx::Descriptor m_RTVDescriptor{};
 	helios::gfx::Descriptor m_DSVDescriptor{};
-	helios::gfx::Descriptor m_SRV_CBV_Descriptor{};
+	helios::gfx::Descriptor m_SRV_CBV_UAV_Descriptor{};
 
 	// Synchronization objects.
 	std::array<uint64_t, NUMBER_OF_FRAMES> m_FrameFenceValues{};
@@ -82,8 +82,11 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
 
-	helios::gfx::Texture m_Texture{};
-	helios::gfx::Texture m_FloorTexture{};
+	helios::gfx::Texture m_TestTexture{};
+	helios::gfx::Texture m_MarbleTexture{};
+
+	// For mip map generation using compute shader.
+	helios::gfx::GenerateMipsPSO m_GenerateMipsPSO{};
 
 	// Light source data.
 	helios::Model m_LightSource{};

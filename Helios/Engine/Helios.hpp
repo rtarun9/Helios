@@ -14,5 +14,6 @@
 #include "Graphics/ConstantBuffer.hpp"
 #include "Graphics/CommandQueue.hpp"
 #include "Graphics/Texture.hpp"
+#include "Graphics/GenerateMipsPSO.hpp"
 
 #include "Model/Model.hpp"

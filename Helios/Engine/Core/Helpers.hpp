@@ -50,8 +50,8 @@ static std::map<uint8_t, Keys> INPUT_MAP
 	{VK_RIGHT, Keys::ARight}
 };
 
-// Currently this only works for enum class Keys, will be templated in the future.
-static constexpr uint32_t EnumClassValue(const Keys& value)
+template <typename T>
+static constexpr uint32_t EnumClassValue(const T& value)
 {
 	return static_cast<uint32_t>(value);
 }

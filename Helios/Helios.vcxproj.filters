@@ -69,6 +69,9 @@
     <ClInclude Include="Engine\Graphics\Texture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Graphics\GenerateMipsPSO.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Pch.cpp">
@@ -107,11 +110,15 @@
     <ClCompile Include="Engine\Graphics\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\GenerateMipsPSO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\TestVS.hlsl" />
     <FxCompile Include="Shaders\TestPS.hlsl" />
     <FxCompile Include="Shaders\LightPS.hlsl" />
     <FxCompile Include="Shaders\LightVS.hlsl" />
+    <FxCompile Include="Shaders\GenerateMipsCS.hlsl" />
   </ItemGroup>
 </Project>

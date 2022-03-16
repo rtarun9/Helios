@@ -190,6 +190,7 @@
     <ClInclude Include="Engine\Pch.hpp" />
     <ClInclude Include="Engine\Core\Timer.hpp" />
     <ClInclude Include="Engine\Model\Model.hpp" />
+    <ClInclude Include="Engine\Graphics\GenerateMipsPSO.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
     <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\Texture.hpp" />
@@ -210,10 +211,25 @@
     </ClCompile>
     <ClCompile Include="Engine\Core\Timer.cpp" />
     <ClCompile Include="Engine\Model\Model.cpp" />
+    <ClCompile Include="Engine\Graphics\GenerateMipsPSO.cpp" />
     <ClCompile Include="SandBox\SandBox.cpp" />
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\GenerateMipsCS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CsMain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CsMain</EntryPointName>
+    </FxCompile>
     <FxCompile Include="Shaders\LightPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PsMain</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">6.0</ShaderModel>
