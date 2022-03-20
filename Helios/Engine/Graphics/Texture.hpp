@@ -8,7 +8,7 @@ namespace helios::gfx
 	class Texture
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, std::wstring_view path);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, std::wstring_view path, bool isSRGB = true);
 
 		ID3D12Resource* GetTextureResource();
 

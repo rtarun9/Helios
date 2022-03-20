@@ -4,6 +4,15 @@
 
 class SandBox : public helios::Engine
 {
+	struct alignas(256) MaterialData
+	{
+		DirectX::XMFLOAT3 albedo;
+		float metallicFactor;
+		float roughnessFactor;
+		float ao;
+		DirectX::XMFLOAT2 padding;
+	};
+
 public:
 	SandBox(helios::Config& config);
 
@@ -81,8 +90,15 @@ private:
 
 	std::map<std::wstring_view, helios::Model> m_GameObjects{};
 
+	// Data for PBR object.
+	helios::Model m_Sphere{};
+	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
+
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_PBRRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PBRPSO;
 
 	helios::gfx::Texture m_TestTexture{};
 	helios::gfx::Texture m_MarbleTexture{};

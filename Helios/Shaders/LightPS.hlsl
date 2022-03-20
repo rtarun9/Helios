@@ -4,7 +4,10 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
 };
 
+static const float GAMMA_CORRECTION = 0.454545455f;
+
 float4 PsMain(VSOutput input) : SV_Target
 {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    float3 lightColor = float3(1.0f, 1.0f, 1.0f);
+    return float4(pow(lightColor, GAMMA_CORRECTION), 1.0f);
 }

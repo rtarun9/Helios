@@ -48,7 +48,7 @@ namespace helios
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
 			tinygltf::Node& node = model.nodes[scene.nodes[i]]; 
-			if (node.mesh < 0 || node.mesh >= model.meshes.size())
+			if (node.mesh < 0)
 			{
 				continue;
 			}

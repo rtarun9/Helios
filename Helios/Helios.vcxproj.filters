@@ -126,6 +126,8 @@
     <FxCompile Include="Shaders\LightPS.hlsl" />
     <FxCompile Include="Shaders\LightVS.hlsl" />
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl" />
+    <FxCompile Include="Shaders\PBRVertex.hlsl" />
+    <FxCompile Include="Shaders\PBRPixel.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

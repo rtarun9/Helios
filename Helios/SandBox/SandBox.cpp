@@ -50,6 +50,17 @@ void SandBox::OnRender()
 		gameObject.UpdateTransformData(commandList.Get(), projectionView);
 	}
 
+	ImGui::Begin("Sphere");
+	m_Sphere.UpdateData(L"Sphere");
+	m_Sphere.UpdateTransformData(commandList.Get(), projectionView);
+	ImGui::End();
+
+	ImGui::Begin("Material Data");
+	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
+	ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
+	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
+	ImGui::End();
+
 	m_LightSource.UpdateTransformData(commandList.Get(), projectionView);
 
 	// Set the necessary states
@@ -106,6 +117,21 @@ void SandBox::OnRender()
 
 		m_SRV_CBV_UAV_Descriptor.Offset(texture);
 	}
+
+	texture = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
+	m_SRV_CBV_UAV_Descriptor.Offset(texture);
+
+	// Draw sphere (for PBR Test).
+	commandList->SetPipelineState(m_PBRPSO.Get());
+	commandList->SetGraphicsRootSignature(m_PBRRootSignature.Get());
+
+	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
+	commandList->SetGraphicsRootDescriptorTable(0u, texture);
+	commandList->SetGraphicsRootConstantBufferView(1u, m_Sphere.GetTransformCBufferVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(2u, pbrMaterialGPUVirutalAddress);
+	commandList->SetGraphicsRoot32BitConstants(3u, sizeof(LightingData) / 4, &lightingData, 0u);
+
+	m_Sphere.Draw(commandList.Get());
 
 	// Draw the light source
 	commandList->SetPipelineState(m_LightPSO.Get());
@@ -196,7 +222,7 @@ void SandBox::InitRendererCore()
 	
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u);
 
-	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 10u);
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 11u);
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
@@ -233,9 +259,7 @@ void SandBox::LoadContent()
 		};
 	}
 
-	// Load content for cube.
-
-	// Create Root signature.
+	// Create General Root signature.
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 2> descriptorRanges{};
 	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
@@ -295,7 +319,7 @@ void SandBox::LoadContent()
 	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
 	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 
-	// Create PSO and shaders.
+	// Create general PSO and shaders.
 	wrl::ComPtr<ID3DBlob> testVertexShaderBlob;
 	wrl::ComPtr<ID3DBlob> testPixelShaderBlob;
 
@@ -335,7 +359,7 @@ void SandBox::LoadContent()
 		}
 	} };
 
-	// Create PSO
+	// Create general PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
 	{
 		.pRootSignature = m_RootSignature.Get(),
@@ -370,34 +394,7 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-	// Load data and textures.
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE uavHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
-
-	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
-
-	m_GenerateMipsPSO.Init(m_Device.Get(), uavHandle);
-
-	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
-	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
-
-	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
-	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
-	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
-
-	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
-
-	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
-	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
-	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
-
-	m_TestTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/TestTexture.png");
-	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
-
-	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/Marble.jpg");
-
-	// Root signature
+	// Light Root signature
 	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
 	lightRootParameters[0].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 
@@ -415,8 +412,8 @@ void SandBox::LoadContent()
 
 	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightVS.cso", &lightVertexShaderBlob));
 	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &lightPixelShaderBlob));
-	
-	// Create PSO
+
+	// Create Light PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc
 	{
 		.pRootSignature = m_LightRootSignature.Get(),
@@ -428,7 +425,7 @@ void SandBox::LoadContent()
 		.DepthStencilState
 		{
 			.DepthEnable = TRUE,
-	        .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
+			.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
 			.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE
 		},
@@ -449,7 +446,102 @@ void SandBox::LoadContent()
 		.NodeMask = 0u,
 	};
 
+
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
+
+	// Create PBR Root signature.
+	std::array<CD3DX12_DESCRIPTOR_RANGE1, 2> pbrDescriptorRanges{};
+	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+
+	std::array<CD3DX12_ROOT_PARAMETER1, 4> pbrRootParameters{};
+	pbrRootParameters[0].InitAsDescriptorTable(1u, descriptorRanges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
+	pbrRootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	pbrRootParameters[2].InitAsConstantBufferView(1u, 1u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL);
+	pbrRootParameters[3].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC pbrRootSignatureDesc{};
+	pbrRootSignatureDesc.Init_1_1(static_cast<uint32_t>(pbrRootParameters.size()), pbrRootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&pbrRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
+	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_PBRRootSignature)));
+
+	// Create PBR PSO and shaders.
+	wrl::ComPtr<ID3DBlob> pbrVertexShaderBlob;
+	wrl::ComPtr<ID3DBlob> pbrPixelShaderBlob;
+
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRVertex.cso", &pbrVertexShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPixel.cso", &pbrPixelShaderBlob));
+
+
+	// Create general PSO
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc
+	{
+		.pRootSignature = m_PBRRootSignature.Get(),
+		.VS = CD3DX12_SHADER_BYTECODE(pbrVertexShaderBlob.Get()),
+		.PS = CD3DX12_SHADER_BYTECODE(pbrPixelShaderBlob.Get()),
+		.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
+		.SampleMask = UINT_MAX,
+		.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
+		.DepthStencilState
+		{
+			.DepthEnable = TRUE,
+			.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
+			.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+			.StencilEnable = FALSE
+		},
+		.InputLayout =
+		{
+			.pInputElementDescs = inputElementDesc.data(),
+			.NumElements = static_cast<UINT>(inputElementDesc.size()),
+		},
+		.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		.NumRenderTargets = 1u,
+		.RTVFormats = {DXGI_FORMAT_R8G8B8A8_UNORM},
+		.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
+		.SampleDesc
+		{
+			.Count = 1u,
+			.Quality = 0u
+		},
+		.NodeMask = 0u,
+	};
+
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
+
+	// Load data and textures.
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE uavHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+
+	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
+
+	m_GenerateMipsPSO.Init(m_Device.Get(), uavHandle);
+
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
+
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
+	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
+
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
+
+	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
+
+	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", cbHandle);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
+
+	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, cbHandle);
+	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
+
+	m_TestTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/TestTexture.png");
+	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
+
+	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/Marble.jpg");
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
