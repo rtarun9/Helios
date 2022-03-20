@@ -19,6 +19,7 @@ namespace helios
 	{
 		float movementSpeed = deltaTime * m_MovementSpeed / 10.0f;
 
+
 		if (m_KeyStates[EnumClassValue(Keys::W)])
 		{
 			m_CameraPosition += m_CameraFront * movementSpeed;

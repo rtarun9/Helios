@@ -194,6 +194,7 @@
     <ClInclude Include="SandBox\SandBox.hpp" />
     <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\Texture.hpp" />
+    <ClInclude Include="Engine\Core\UIManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Camera.cpp" />
@@ -214,6 +215,7 @@
     <ClCompile Include="Engine\Graphics\GenerateMipsPSO.cpp" />
     <ClCompile Include="SandBox\SandBox.cpp" />
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
+    <ClCompile Include="Engine\Core\UIManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl">
@@ -302,6 +304,9 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Helios\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

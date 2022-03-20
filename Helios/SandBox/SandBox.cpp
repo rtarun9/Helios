@@ -2,7 +2,6 @@
 
 #include "SandBox.hpp"
 
-
 using namespace helios;
 
 struct LightingData
@@ -40,11 +39,14 @@ void SandBox::OnRender()
 	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
 	
+	m_UIManager.FrameStart();
+	
 	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
 
 	// TODO : Move to OnUpdate soon.
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
+		gameObject.UpdateData(objectName);
 		gameObject.UpdateTransformData(commandList.Get(), projectionView);
 	}
 
@@ -72,7 +74,12 @@ void SandBox::OnRender()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(m_RTVDescriptor.GetCPUDescriptorHandle(), m_CurrentBackBufferIndex, m_RTVDescriptor.GetDescriptorSize());
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsv(m_DSVDescriptor.GetCPUDescriptorHandle());
 
-	gfx::utils::ClearRTV(commandList.Get(), rtv, std::array{0.01f, 0.01f, 0.01f, 1.0f});
+	m_UIManager.Begin();
+
+	static std::array<float, 4> clearColor{0.01f, 0.01f, 0.01f, 1.0f};
+	m_UIManager.SetClearColor(clearColor);
+
+	gfx::utils::ClearRTV(commandList.Get(), rtv, clearColor);
 	
 	gfx::utils::ClearDepthBuffer(commandList.Get(), dsv);
 
@@ -87,7 +94,7 @@ void SandBox::OnRender()
 	};
 
 	auto texture = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
-
+	m_SRV_CBV_UAV_Descriptor.Offset(texture);
 
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
@@ -109,6 +116,9 @@ void SandBox::OnRender()
 
 	m_LightSource.Draw(commandList.Get());
 
+	m_UIManager.End();
+	m_UIManager.FrameEnd(commandList.Get());
+
 	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 	m_FrameFenceValues[m_CurrentBackBufferIndex] = m_CommandQueue.ExecuteCommandList(commandList.Get());
@@ -128,6 +138,8 @@ void SandBox::OnRender()
 void SandBox::OnDestroy()
 {
 	m_CommandQueue.FlushQueue();
+
+	m_UIManager.ShutDown();
 }
 
 void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
@@ -198,6 +210,8 @@ void SandBox::InitRendererCore()
 		.MinDepth = 0.0f,
 		.MaxDepth = 1.0f
 	};
+
+	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 }
 
 void SandBox::LoadContent()
@@ -360,6 +374,8 @@ void SandBox::LoadContent()
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE uavHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+
+	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
 
 	m_GenerateMipsPSO.Init(m_Device.Get(), uavHandle);
 

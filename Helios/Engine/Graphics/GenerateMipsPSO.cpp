@@ -6,17 +6,18 @@ namespace helios::gfx
 {
 	void GenerateMipsPSO::Init(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE uavHandle)
 	{
-		wrl::ComPtr<ID3DBlob> rootSignatureBlob;
+		// The root signature is defined in the shader itself.
+		wrl::ComPtr<ID3DBlob> rootSignatureShaderBlob;
 
-		D3DReadFileToBlob(L"Shaders/GenerateMipsCS.cso", &rootSignatureBlob);
-		ThrowIfFailed(device->CreateRootSignature(0u, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
+		D3DReadFileToBlob(L"Shaders/GenerateMipsCS.cso", &rootSignatureShaderBlob);
+		ThrowIfFailed(device->CreateRootSignature(0u, rootSignatureShaderBlob->GetBufferPointer(), rootSignatureShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 
 
 		// Create the PSO.
 		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc
 		{
 			.pRootSignature = m_RootSignature.Get(),
-			.CS = CD3DX12_SHADER_BYTECODE(rootSignatureBlob.Get()),
+			.CS = CD3DX12_SHADER_BYTECODE(rootSignatureShaderBlob.Get()),
 			.NodeMask = 0u,
 			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
 		};

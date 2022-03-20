@@ -1,6 +1,7 @@
 #include "Pch.hpp"
 
 #include "Model.hpp"
+#include "Core/UIManager.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
@@ -149,6 +150,16 @@ namespace helios
 		return m_TransformData;
 	}
 	
+	void Model::UpdateData(std::wstring_view objectName)
+	{
+		ImGui::Begin(WstringToString(objectName.data()).c_str());
+
+		ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("Rotate", &m_TransformData.rotation.x, -90.0f, 90.0f);
+
+		ImGui::End();
+	}
+
 	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix)
 	{
 		auto scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);

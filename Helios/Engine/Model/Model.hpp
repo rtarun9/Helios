@@ -38,6 +38,7 @@ namespace helios
 		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
 
 		TransformComponent& GetTransform();
+		void UpdateData(std::wstring_view objectName);
 
 		void UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix);
 

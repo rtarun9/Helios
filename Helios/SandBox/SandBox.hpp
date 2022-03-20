@@ -70,6 +70,8 @@ private:
 	// Application Data.
 	helios::Camera m_Camera{};
 
+	helios::UIManager m_UIManager{};
+
 	// Transform data.
 	float m_FOV{ 45.0f };
 
