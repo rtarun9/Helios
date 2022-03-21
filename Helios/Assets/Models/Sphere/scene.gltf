@@ -5,14 +5,14 @@
       "componentType": 5126,
       "count": 32514,
       "max": [
-        10.0,
-        10.0,
-        20.0
+        10,
+        10,
+        20
       ],
       "min": [
-        -10.0,
-        -10.0,
-        0.0
+        -10,
+        -10,
+        0
       ],
       "type": "VEC3"
     },
@@ -22,14 +22,14 @@
       "componentType": 5126,
       "count": 32514,
       "max": [
-        1.0,
-        0.9999416470527649,
-        0.9999415874481201
+        1,
+        0.99994164705276489,
+        0.99994158744812012
       ],
       "min": [
-        -1.0,
-        -0.9999416470527649,
-        -0.9999415874481201
+        -1,
+        -0.99994164705276489,
+        -0.99994158744812012
       ],
       "type": "VEC3"
     },
@@ -37,6 +37,12 @@
       "bufferView": 0,
       "componentType": 5125,
       "count": 195072,
+      "max": [
+        32513
+      ],
+      "min": [
+        0
+      ],
       "type": "SCALAR"
     }
   ],
@@ -47,13 +53,14 @@
       "source": "https://sketchfab.com/3d-models/sphere-b31b12ffa93a40f48c9d991b6f168f4d",
       "title": "Sphere"
     },
-    "generator": "Sketchfab-12.66.0",
+    "generator": "Sketchfab-4.44.0",
     "version": "2.0"
   },
   "bufferViews": [
     {
       "buffer": 0,
       "byteLength": 780288,
+      "byteOffset": 0,
       "name": "floatBufferViews",
       "target": 34963
     },
@@ -77,14 +84,19 @@
       "doubleSided": true,
       "name": "Scene_-_Root",
       "pbrMetallicRoughness": {
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.6
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.59999999999999998
       }
     }
   ],
   "meshes": [
     {
-      "name": "Object_0",
       "primitives": [
         {
           "attributes": {
@@ -103,44 +115,39 @@
       "children": [
         1
       ],
-      "matrix": [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        2.220446049250313e-16,
-        -1.0,
-        0.0,
-        0.0,
-        1.0,
-        2.220446049250313e-16,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0
-      ],
-      "name": "Sketchfab_model"
+      "name": "RootNode (gltf orientation matrix)",
+      "rotation": [
+        -0.70710678118654746,
+        -0,
+        -0,
+        0.70710678118654757
+      ]
     },
     {
       "children": [
         2
       ],
+      "name": "RootNode (model correction matrix)"
+    },
+    {
+      "children": [
+        3
+      ],
       "name": "spheree.stl.cleaner.materialmerger.gles"
     },
     {
       "mesh": 0,
-      "name": "Object_2"
+      "name": ""
     }
   ],
   "scene": 0,
   "scenes": [
     {
-      "name": "Sketchfab_Scene",
+      "name": "OSG_Scene",
       "nodes": [
         0
       ]
     }
   ]
 }
+

@@ -15,7 +15,7 @@ using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle)
+	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle, Material material)
 	{
         auto modelPathStr = WstringToString(modelPath);
 
@@ -50,7 +50,7 @@ namespace helios
 			tinygltf::Node& node = model.nodes[scene.nodes[i]]; 
 			if (node.mesh < 0)
 			{
-				continue;
+				node.mesh = 0;
 			}
 
 			tinygltf::Mesh& node_mesh = model.meshes[node.mesh];
@@ -132,6 +132,8 @@ namespace helios
 		m_IndexBuffer.Init(device, commandList, indices);
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
 			cbCPUDescriptorHandle);
+
+		m_Material = material;
 	}
 
     D3D12_VERTEX_BUFFER_VIEW Model::GetVertexBufferView()
@@ -143,6 +145,11 @@ namespace helios
 	{
 		auto bufferView = m_TransformConstantBuffer.GetBufferView();
 		return bufferView.BufferLocation;
+	}
+
+	Material Model::GetMaterial()
+	{
+		return m_Material;
 	}
 
 	TransformComponent& Model::GetTransform()

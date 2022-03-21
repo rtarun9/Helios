@@ -30,8 +30,13 @@ void SandBox::OnUpdate()
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 
-	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime()) * 2.0f);
-	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime()) * 2.0f);
+	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 1.0f) * 2.0f);
+	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 1.0f) * 2.0f);
+	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime()));
+
+	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+
+	m_PBRMaterial.Update();
 }
 
 void SandBox::OnRender()
@@ -104,29 +109,35 @@ void SandBox::OnRender()
 		.cameraPosition = m_Camera.m_CameraPosition
 	};
 
-	auto texture = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
-	m_SRV_CBV_UAV_Descriptor.Offset(texture);
-
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
-		commandList->SetGraphicsRootDescriptorTable(0u, texture);
+		auto textureGPUHandle = gameObject.GetMaterial().m_BaseColorDescriptorHandle;
+		if (!textureGPUHandle.ptr)
+		{
+			// In future add a default texture (black or white) here.
+		}
+
+		textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
+
+		commandList->SetGraphicsRootDescriptorTable(0u, textureGPUHandle);
 		commandList->SetGraphicsRootConstantBufferView(1u, gameObject.GetTransformCBufferVirtualAddress());
 		commandList->SetGraphicsRoot32BitConstants(2u, sizeof(LightingData) / 4, &lightingData, 0u);
 
 		gameObject.Draw(commandList.Get());
-
-		m_SRV_CBV_UAV_Descriptor.Offset(texture);
 	}
-
-	texture = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
-	m_SRV_CBV_UAV_Descriptor.Offset(texture);
 
 	// Draw sphere (for PBR Test).
 	commandList->SetPipelineState(m_PBRPSO.Get());
 	commandList->SetGraphicsRootSignature(m_PBRRootSignature.Get());
+	
+	std::array pbrMaterialDescriptorHandles
+	{
+		m_SphereBaseColor.GetGPUDescriptorHandle(),
+		m_SphereMetalRough.GetGPUDescriptorHandle()
+	};
 
 	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
-	commandList->SetGraphicsRootDescriptorTable(0u, texture);
+	commandList->SetGraphicsRootDescriptorTable(0u, m_SphereBaseColor.GetGPUDescriptorHandle());
 	commandList->SetGraphicsRootConstantBufferView(1u, m_Sphere.GetTransformCBufferVirtualAddress());
 	commandList->SetGraphicsRootConstantBufferView(2u, pbrMaterialGPUVirutalAddress);
 	commandList->SetGraphicsRoot32BitConstants(3u, sizeof(LightingData) / 4, &lightingData, 0u);
@@ -448,14 +459,15 @@ void SandBox::LoadContent()
 
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
-
+	m_LightPSO->SetName(L"Light PSO");
+	
 	// Create PBR Root signature.
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 2> pbrDescriptorRanges{};
-	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	pbrDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2u, 0u, 1u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	pbrDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, 0u, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 	std::array<CD3DX12_ROOT_PARAMETER1, 4> pbrRootParameters{};
-	pbrRootParameters[0].InitAsDescriptorTable(1u, descriptorRanges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
+	pbrRootParameters[0].InitAsDescriptorTable(1u, pbrDescriptorRanges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
 	pbrRootParameters[1].InitAsConstantBufferView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 	pbrRootParameters[2].InitAsConstantBufferView(1u, 1u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL);
 	pbrRootParameters[3].InitAsConstants(sizeof(LightingData) / 4, 0u, 1u, D3D12_SHADER_VISIBILITY_PIXEL);
@@ -466,6 +478,8 @@ void SandBox::LoadContent()
 	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&pbrRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
 	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_PBRRootSignature)));
 
+	m_PBRRootSignature->SetName(L"PBR Root signature");
+
 	// Create PBR PSO and shaders.
 	wrl::ComPtr<ID3DBlob> pbrVertexShaderBlob;
 	wrl::ComPtr<ID3DBlob> pbrPixelShaderBlob;
@@ -474,7 +488,7 @@ void SandBox::LoadContent()
 	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPixel.cso", &pbrPixelShaderBlob));
 
 
-	// Create general PSO
+	// Create PBR general PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc
 	{
 		.pRootSignature = m_PBRRootSignature.Get(),
@@ -508,21 +522,36 @@ void SandBox::LoadContent()
 	};
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
+	m_PBRPSO->SetName(L"PBR PSO");
 
 	// Load data and textures.
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle = m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandle();
+
 	D3D12_CPU_DESCRIPTOR_HANDLE cbHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
+	
 	D3D12_CPU_DESCRIPTOR_HANDLE uavHandle = m_SRV_CBV_UAV_Descriptor.GetCPUDescriptorHandle();
 
-	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
+	// The first CPU handle is reserved for IMGUI. The GPU descriptor handle is also offset for consistency.
+	m_SRV_CBV_UAV_Descriptor.Offset(srvCPUHandle);
 
+	m_TestTexture.Init(m_Device.Get(), commandList.Get(), srvCPUHandle, srvGPUHandle, L"Assets/Textures/TestTexture.png");
+	m_SRV_CBV_UAV_Descriptor.Offset(srvCPUHandle, srvGPUHandle);
+
+	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), srvCPUHandle, srvGPUHandle, L"Assets/Textures/Marble.jpg");
+	m_SRV_CBV_UAV_Descriptor.Offset(srvCPUHandle, srvGPUHandle);
+
+	m_SphereBaseColor.Init(m_Device.Get(), commandList.Get(), srvCPUHandle, srvGPUHandle, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", true);
+	m_SRV_CBV_UAV_Descriptor.Offset(srvCPUHandle, srvGPUHandle);
+
+	m_SphereMetalRough.Init(m_Device.Get(), commandList.Get(), srvCPUHandle, srvGPUHandle, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", false);
 	m_GenerateMipsPSO.Init(m_Device.Get(), uavHandle);
 
-	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle, Material{.m_BaseColorDescriptorHandle = m_TestTexture.GetGPUDescriptorHandle()});
 	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
 	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
-
-	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle);
+	
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", cbHandle, Material{.m_BaseColorDescriptorHandle = m_TestTexture.GetGPUDescriptorHandle()});
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
 
@@ -532,16 +561,11 @@ void SandBox::LoadContent()
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
 
-	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", cbHandle);
+	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", cbHandle);
 	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, cbHandle);
 	m_SRV_CBV_UAV_Descriptor.Offset(cbHandle);
-
-	m_TestTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/TestTexture.png");
-	m_SRV_CBV_UAV_Descriptor.Offset(srvHandle);
-
-	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), srvHandle, L"Assets/Textures/Marble.jpg");
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());

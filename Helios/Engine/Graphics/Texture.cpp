@@ -8,7 +8,7 @@
 
 namespace helios::gfx
 {
-	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, std::wstring_view texturePath, bool isSRGB)
+	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, D3D12_GPU_DESCRIPTOR_HANDLE srvGPUDescriptor, std::wstring_view texturePath, bool isSRGB)
 	{
 		m_TextureData = stbi_load(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
 		m_ComponentCount = 4;
@@ -72,10 +72,23 @@ namespace helios::gfx
 		};
 
 		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvCPUDescriptor);
+
+		m_CPUDescriptorHandle = srvCPUDescriptor;
+		m_GPUDescriptorHandle = srvGPUDescriptor;
 	}
 
 	ID3D12Resource* Texture::GetTextureResource()
 	{
 		return m_Texture.Get();
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetCPUDescriptorHandle()
+	{
+		return m_CPUDescriptorHandle;
+	}
+
+	D3D12_GPU_DESCRIPTOR_HANDLE Texture::GetGPUDescriptorHandle()
+	{
+		return m_GPUDescriptorHandle;
 	}
 }

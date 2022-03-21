@@ -94,6 +94,9 @@ private:
 	helios::Model m_Sphere{};
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
 
+	helios::gfx::Texture m_SphereBaseColor{};
+	helios::gfx::Texture m_SphereMetalRough{};
+
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
 

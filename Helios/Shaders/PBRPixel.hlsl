@@ -27,9 +27,11 @@ struct MaterialData
 ConstantBuffer<LightingData> lightCBuffer : register(b0, space1);
 ConstantBuffer<MaterialData> materialCBuffer : register(b1, space1);
 
+Texture2D baseTexture : register(t0, space1);
+Texture2D metalRoughnessTexture : register(t1, space1);
+
 static const float GAMMA_CORRECTION = 0.454545455f;
 
-// Note : Currently MIN_FLOAT_VALUE is unused, will be implemented soon to prevent division by 0 while performing calculations.
 static const float MIN_FLOAT_VALUE = 0.0000001f;
 static const float PI = 3.14159265f;
 
@@ -37,7 +39,8 @@ static const float PI = 3.14159265f;
 // F0 : Base reflectivity when view direction is perpendicular to the surface.
 float3 FresnelSchlick(float3 viewDir, float3 halfWayDir, float3 F0)
 {
-    return F0 + (1 - F0) * pow(1.0f - max(dot(viewDir, halfWayDir), 0.0f), 5);
+    float cosTheta = max(dot(viewDir, halfWayDir), 0.0f);
+    return F0 + (float3(1.0f, 1.0f, 1.0f) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5);
 }
 
 // PBR Shading model used : Cook Torrence model.
@@ -51,7 +54,7 @@ float GGXNormalDistribution(float3 normal, float3 halfWayDir, float roughness)
     float alphaSquare = pow(alpha, 2);
 
     float nDotH = max(dot(normal, halfWayDir), 0.0f);
-    return alphaSquare / (PI * pow(pow(nDotH, 2) * (alphaSquare - 1) + 1, 2));
+    return alphaSquare / max((PI * pow(pow(nDotH, 2) * (alphaSquare - 1.0f) + 1.0f, 2)), MIN_FLOAT_VALUE);
 }
 
 // Geometry shadowing function used : Schlick - GGX.
@@ -66,7 +69,7 @@ float SchlickBeckmannGS(float roughness, float3 normal, float3 X)
     float k = roughness / 2;
     
     float nDotX = max(dot(normal, X), 0.0f);
-    return nDotX / (nDotX * (1 - k) + k);
+    return nDotX / max(nDotX * (1 - k) + k, MIN_FLOAT_VALUE);
 }
 
 float SchlickGGXShadowing(float roughness, float3 normal, float3 viewDir, float3 lightDir)
@@ -82,24 +85,35 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 viewDir = normalize(lightCBuffer.cameraPosition - input.worldSpacePosition).xyz;
 
     float3 pixelToLightDir = normalize(lightCBuffer.lightPosition - input.worldSpacePosition).xyz;
-    float3 halfWayDir = (viewDir + pixelToLightDir);
+    float3 halfWayDir = normalize(viewDir + pixelToLightDir);
 
     float distance = length(pixelToLightDir);
-    float attenuation = 1.0 / (pow(distance, 2));
+    float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
+
+    float metallicFactor = metalRoughnessTexture.Sample(wrapSampler, input.texCoord).x;
+    float roughnessFactor = metalRoughnessTexture.Sample(wrapSampler, input.texCoord).y;
+    float3 albedo = baseTexture.Sample(wrapSampler, input.texCoord).xyz;
+
+    #if 0
+    metallicFactor = materialCBuffer.metallicFactor;
+    roughnessFactor = materialCBuffer.roughnessFactor;
+    albedo = materialCBuffer.albedo;
+    #endif 
 
     // Rendering equation (or reflectance equation) for PBR Calculation.
     float3 F0 = float3(0.04f, 0.04f, 0.04f);
-    F0 = lerp(F0, materialCBuffer.albedo, float3(materialCBuffer.metallicFactor, materialCBuffer.metallicFactor, materialCBuffer.metallicFactor));
+    F0 = lerp(F0, albedo, float3(metallicFactor, metallicFactor, metallicFactor));
     
     float3 kS = FresnelSchlick(viewDir, halfWayDir, F0);
     float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
-    kD *= (1.0f - materialCBuffer.metallicFactor);
+    kD *= (1.0f - metallicFactor);
 
-    float3 lambertianDiffuse = materialCBuffer.albedo / PI;
+    float3 lambertianDiffuse = albedo / PI;
 
     // Cook - Torrance BRDF Calculation.
-    float3 NDF = GGXNormalDistribution(normal, halfWayDir, materialCBuffer.roughnessFactor);
-    float G = SchlickGGXShadowing(materialCBuffer.roughnessFactor, normal, viewDir, pixelToLightDir);
+    // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))
+    float3 NDF = GGXNormalDistribution(normal, halfWayDir, roughnessFactor);
+    float G = SchlickGGXShadowing(roughnessFactor, normal, viewDir, pixelToLightDir);
     float3 F = kS;
 
     float3 specular = (NDF * G * F) / max(4.0f * max(dot(normal, viewDir), 0.0f) * max(dot(normal, pixelToLightDir), 0.0f), MIN_FLOAT_VALUE);
@@ -108,5 +122,5 @@ float4 PsMain(VSOutput input) : SV_Target
     float nDotL = max(dot(normal, pixelToLightDir), 0.0f);
     float3 outgoingLight = BRDF * lightColor * nDotL;
 
-    return float4(outgoingLight, 1.0f);
+    return float4(pow(outgoingLight, GAMMA_CORRECTION), 1.0f);
 }

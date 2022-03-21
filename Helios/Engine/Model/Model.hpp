@@ -29,13 +29,20 @@ namespace helios
 		DirectX::XMFLOAT3 translate{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
 	};
 
+	// Note : This is not the final design for materials since it is currently only used for non - PBR materials.
+	struct Material
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE m_BaseColorDescriptorHandle{};
+	};
+
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle, Material material = {});
 
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
 		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
+		Material GetMaterial();
 
 		TransformComponent& GetTransform();
 		void UpdateData(std::wstring_view objectName);
@@ -43,6 +50,7 @@ namespace helios
 		void UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix);
 
 		void Draw(ID3D12GraphicsCommandList* commandList);
+
 
 	private:
 		gfx::VertexBuffer m_VertexBuffer{};
@@ -53,6 +61,9 @@ namespace helios
 		uint32_t m_IndicesCount{};
 
 		TransformComponent m_TransformData{};
+
+		// Note : Currently only used for non - PBR Models.
+		Material m_Material{};
 	};
 }
 
