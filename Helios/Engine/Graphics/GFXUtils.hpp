@@ -55,4 +55,58 @@ namespace helios::gfx::utils
 
 		return { destinationResource, intermediateResource};
 	}
+
+	// Note : Following D3D12 helper functions are temporary.
+	
+	// Note : using std::wstring_view seems to give error's for some reason.
+	inline D3D12_INPUT_ELEMENT_DESC CreateInputLayoutDesc(std::string_view semanticName, DXGI_FORMAT format)
+	{
+		auto semanticNameStr = semanticName.data();
+
+		return
+		{
+				.SemanticName = semanticNameStr,
+				.SemanticIndex = 0,
+				.Format = format,
+				.InputSlot = 0,
+				.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
+				.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				.InstanceDataStepRate = 0
+		};
+	}
+
+	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, std::span<D3D12_INPUT_ELEMENT_DESC> inputElementDesc)
+	{
+		return D3D12_GRAPHICS_PIPELINE_STATE_DESC 
+		{
+			.pRootSignature = rootSignatureBlob,
+			.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob),
+			.PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob),
+			.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
+			.SampleMask = UINT_MAX,
+			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
+			.DepthStencilState
+			{
+				.DepthEnable = TRUE,
+				.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
+				.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+				.StencilEnable = FALSE
+			},
+			.InputLayout =
+			{
+				.pInputElementDescs = inputElementDesc.data(),
+				.NumElements = static_cast<UINT>(inputElementDesc.size()),
+			},
+			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+			.NumRenderTargets = 1u,
+			.RTVFormats = {DXGI_FORMAT_R8G8B8A8_UNORM},
+			.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
+			.SampleDesc
+			{
+				.Count = 1u,
+				.Quality = 0u
+			},
+			.NodeMask = 0u,
+		};
+	}
 }

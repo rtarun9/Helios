@@ -8,7 +8,7 @@
 
 namespace helios::gfx
 {
-	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, D3D12_GPU_DESCRIPTOR_HANDLE srvGPUDescriptor, std::wstring_view texturePath, bool isSRGB)
+	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view texturePath, std::wstring_view textureName, bool isSRGB)
 	{
 		m_TextureData = stbi_load(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
 		m_ComponentCount = 4;
@@ -56,6 +56,8 @@ namespace helios::gfx
 
 		UpdateSubresources(commandList, m_Texture.Get(), m_TextureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
 
+		m_Texture->SetName(textureName.data());
+
 		// Transition resource from copy dest to Pixel SRV.
 		gfx::utils::TransitionResource(commandList, m_Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
@@ -71,10 +73,12 @@ namespace helios::gfx
 			}
 		};
 
-		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvCPUDescriptor);
+		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDescriptor.GetCurrentCPUDescriptorHandle());
+	
+		m_CPUDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
+		m_GPUDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
 
-		m_CPUDescriptorHandle = srvCPUDescriptor;
-		m_GPUDescriptorHandle = srvGPUDescriptor;
+		srvDescriptor.OffsetCurrentDescriptorHandles();
 	}
 
 	ID3D12Resource* Texture::GetTextureResource()

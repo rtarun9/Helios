@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void Descriptor::Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount)
+	void Descriptor::Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc
 		{
@@ -15,8 +15,12 @@ namespace helios::gfx
 		};
 
 		ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_DescriptorHeap)));
+		m_DescriptorHeap->SetName(descriptorName.data());
 
 		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
+
+		m_CurrentCPUDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		m_CurrentGPUDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 	}
 
 	ID3D12DescriptorHeap* Descriptor::GetDescriptorHeap()
@@ -29,29 +33,55 @@ namespace helios::gfx
 		return m_DescriptorSize;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::GetCPUDescriptorHandle()
+	D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::GetCPUDescriptorHandleForStart()
 	{
 		return m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::GetGPUDescriptorHandle()
+	D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::GetGPUDescriptorHandleForStart()
 	{
 		return m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 	}
 
-	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+	D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentCPUDescriptorHandle()
 	{
-		handle.ptr += m_DescriptorSize;
+		return m_CurrentCPUDescriptorHandle;
 	}
 
-	void Descriptor::Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle)
+	D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentGPUDescriptorHandle()
 	{
-		handle.ptr += m_DescriptorSize;
+		return m_CurrentGPUDescriptorHandle;
 	}
 
-	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE& gpuHandle)
+	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset)
 	{
-		cpuHandle.ptr += m_DescriptorSize;
-		gpuHandle.ptr += m_DescriptorSize;
+		handle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+	}
+
+	void Descriptor::Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle, uint32_t offset)
+	{
+		handle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+	}
+
+	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE& gpuHandle, uint32_t offset)
+	{
+		cpuHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		gpuHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+	}
+
+	void Descriptor::OffsetCurrentCPUDescriptor(uint32_t offset)
+	{
+		m_CurrentCPUDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+	}
+
+	void Descriptor::OffsetCurrentGPUDescriptor(uint32_t offset)
+	{
+		m_CurrentGPUDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+	}
+
+	void Descriptor::OffsetCurrentDescriptorHandles(uint32_t offset)
+	{
+		OffsetCurrentCPUDescriptor(offset);
+		OffsetCurrentGPUDescriptor(offset);
 	}
 }

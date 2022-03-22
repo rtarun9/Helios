@@ -17,7 +17,7 @@ namespace helios
 		void FrameStart();
 		void FrameEnd(ID3D12GraphicsCommandList* commandList);
 
-		void Begin();
+		void Begin(std::wstring_view uiComponentName);
 		void End();
 
 		void SetClearColor(std::span<float> clearColor);

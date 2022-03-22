@@ -36,9 +36,6 @@ private:
 	void CheckTearingSupport();
 	void CreateSwapChain();
 
-	[[nodiscard]]
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t descriptorCount);
-
 	void CreateBackBufferRenderTargetViews();
 	void CreateDepthBuffer();
 

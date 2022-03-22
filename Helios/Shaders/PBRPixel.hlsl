@@ -24,8 +24,8 @@ struct MaterialData
     float2 padding;
 };
 
-ConstantBuffer<LightingData> lightCBuffer : register(b0, space1);
-ConstantBuffer<MaterialData> materialCBuffer : register(b1, space1);
+ConstantBuffer<MaterialData> materialCBuffer : register(b0, space1);
+ConstantBuffer<LightingData> lightCBuffer : register(b1, space1);
 
 Texture2D baseTexture : register(t0, space1);
 Texture2D metalRoughnessTexture : register(t1, space1);

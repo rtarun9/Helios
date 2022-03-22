@@ -18,6 +18,15 @@ static inline void ErrorMessage(std::wstring_view message)
 	exit(EXIT_FAILURE);
 }
 
+static inline void GetBlobMessage(ID3DBlob* blob)
+{
+	if (!blob)
+	{
+		auto message = (const char*)blob->GetBufferPointer();
+		OutputDebugStringA(message);
+	}
+}
+
 static inline constexpr std::string WstringToString(std::wstring_view inputWString)
 {
 	std::string result{ begin(inputWString), end(inputWString) };

@@ -6,6 +6,8 @@
 #include "Graphics/IndexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
 
+#include "Graphics/Descriptor.hpp"
+
 namespace helios
 {
 	struct Vertex
@@ -38,7 +40,7 @@ namespace helios
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle, Material material = {});
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Material material = {});
 
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
 		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
@@ -50,7 +52,6 @@ namespace helios
 		void UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix);
 
 		void Draw(ID3D12GraphicsCommandList* commandList);
-
 
 	private:
 		gfx::VertexBuffer m_VertexBuffer{};

@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void CommandQueue::Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType)
+	void CommandQueue::Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType, std::wstring_view commandQueueName)
 	{
 		m_Device = device;
 		m_CommandListType = commandListType;
@@ -19,9 +19,12 @@ namespace helios::gfx
 		};
 
 		ThrowIfFailed(m_Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&m_CommandQueue)));
+		m_CommandQueue->SetName(commandQueueName.data());
 
 		// Create command queue sync objects.
 		ThrowIfFailed(m_Device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
+		std::wstring fenceName = commandQueueName.data() + std::wstring(L" Fence");
+		m_Fence->SetName(fenceName.data());
 
 		m_FenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 		if (!m_FenceEvent)

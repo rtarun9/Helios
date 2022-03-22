@@ -9,16 +9,15 @@ namespace helios
 {
 	void Camera::HandleInput(uint8_t keycode, bool isKeyDown)
 	{
-		if (INPUT_MAP.find(keycode) != end(INPUT_MAP))
+		if (size_t keycodeValue = EnumClassValue(INPUT_MAP[keycode]); INPUT_MAP.find(keycode) != end(INPUT_MAP))
 		{
-			m_KeyStates[EnumClassValue(INPUT_MAP[keycode])] = isKeyDown;
+			m_KeyStates[keycodeValue] = isKeyDown;
 		}
 	}
 
 	void Camera::Update(float deltaTime)
 	{
 		float movementSpeed = deltaTime * m_MovementSpeed / 10.0f;
-
 
 		if (m_KeyStates[EnumClassValue(Keys::W)])
 		{

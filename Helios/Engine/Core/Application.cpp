@@ -75,7 +75,10 @@ namespace helios
 
 		engine->OnInit();
 
-		::ShowWindow(s_WindowHandle, SW_SHOW);
+		if (s_WindowHandle)
+		{
+			::ShowWindow(s_WindowHandle, SW_SHOW);
+		}
 
 		// Main game loop
 		MSG message{};

@@ -10,12 +10,14 @@ namespace helios::gfx
 	{
 	public:
 		template <typename T>
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::span<const T> data)
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::span<const T> data, std::wstring_view vertexBufferName)
 		{
 			auto vertexBuffer = utils::CreateGPUBuffer<T>(device, commandList, data);
 			m_Buffer = vertexBuffer.first;
 			m_IntermediateBuffer = vertexBuffer.second;
 		
+			m_Buffer->SetName(vertexBufferName.data());
+
 			m_BufferView =
 			{
 				.BufferLocation = m_Buffer->GetGPUVirtualAddress(),

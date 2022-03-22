@@ -25,7 +25,9 @@ namespace helios
 
 		ImGui_ImplWin32_Init(Application::GetWindowHandle());
 
-		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCPUDescriptorHandle(), srvDescriptor.GetGPUDescriptorHandle());
+		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCurrentCPUDescriptorHandle(), srvDescriptor.GetCurrentGPUDescriptorHandle());
+
+		srvDescriptor.OffsetCurrentDescriptorHandles();
 	}
 
 	void UIManager::FrameStart()
@@ -48,9 +50,9 @@ namespace helios
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 	}
 
-	void UIManager::Begin()
+	void UIManager::Begin(std::wstring_view uiComponentName)
 	{
-		ImGui::Begin("Scene settings");
+		ImGui::Begin(WstringToString(uiComponentName).c_str());
 	}
 
 	void UIManager::End()

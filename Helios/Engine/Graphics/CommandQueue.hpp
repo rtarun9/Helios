@@ -6,14 +6,16 @@ namespace helios::gfx
 {
 	struct CommandAllocator
 	{
-		uint64_t fenceValue;
+		uint64_t fenceValue{};
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
 
+	// Note : The command allocator and command list are not named since these are for internal use only.
+	// This might change in the future.
 	class CommandQueue
 	{
 	public:
-		void Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
+		void Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT, std::wstring_view commandQueueName = L"Main Command Queue");
 
 		[[nodiscard]]
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList();
@@ -49,8 +51,8 @@ namespace helios::gfx
 		HANDLE m_FenceEvent{};
 		uint64_t m_FenceValue{};
 
-		std::queue<CommandAllocator> m_CommandAllocatorQueue;
-		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> m_CommandListQueue;
+		std::queue<CommandAllocator> m_CommandAllocatorQueue{};
+		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> m_CommandListQueue{};
 
 	};
 }

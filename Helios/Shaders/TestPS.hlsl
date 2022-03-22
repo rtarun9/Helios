@@ -7,7 +7,6 @@ struct VSOutput
 };
 
 Texture2D testTexture : register(t0, space1);
-Texture2D floorTexture : register(t1, space1);
 
 SamplerState clampSampler : register(s0, space1);
 SamplerState wrapSampler : register(s1, space1);

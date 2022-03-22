@@ -15,7 +15,7 @@ using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, D3D12_CPU_DESCRIPTOR_HANDLE cbCPUDescriptorHandle, Material material)
+	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Material material)
 	{
         auto modelPathStr = WstringToString(modelPath);
 
@@ -106,7 +106,7 @@ namespace helios
 					vertex.normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
 					vertex.normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
 
-					vertices.push_back(vertex);
+					vertices.push_back(std::move(vertex));
 				}
 
 				// Get the index buffer data.
@@ -128,10 +128,10 @@ namespace helios
 		m_VerticesCount = static_cast<uint32_t>(vertices.size());
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
-		m_VertexBuffer.Init<Vertex>(device, commandList, vertices);
-		m_IndexBuffer.Init(device, commandList, indices);
+		m_VertexBuffer.Init<Vertex>(device, commandList, vertices, L"Vertex Buffer");
+		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
-			cbCPUDescriptorHandle);
+			cbDescriptor, L"Transform CBuffer");
 
 		m_Material = material;
 	}

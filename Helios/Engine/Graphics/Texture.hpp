@@ -2,13 +2,15 @@
 
 #include "Pch.hpp"
 
+#include "Descriptor.hpp"
+
 namespace helios::gfx
 {
 
 	class Texture
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE srvCPUDescriptor, D3D12_GPU_DESCRIPTOR_HANDLE srvGPUDescriptor, std::wstring_view path, bool isSRGB = true);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view path, std::wstring_view textureName, bool isSRGB = true);
 
 		ID3D12Resource* GetTextureResource();
 
@@ -26,9 +28,6 @@ namespace helios::gfx
 
 		D3D12_CPU_DESCRIPTOR_HANDLE m_CPUDescriptorHandle{};
 		D3D12_GPU_DESCRIPTOR_HANDLE m_GPUDescriptorHandle{};
-
-		// This will be used to be able to view into the descriptor and get its CPU / GPU descriptor handle.
-		uint32_t m_DescriptorOffset{};
 	};
 }
 
