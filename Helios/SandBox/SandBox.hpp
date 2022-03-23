@@ -111,4 +111,14 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;
+
+	// Render target Data.
+	helios::gfx::RenderTarget m_OffscreenRT{};
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OffscreenRTRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_OffscreenRTPipelineState;
+
+	// Temp data : to remove soon.
+	helios::gfx::VertexBuffer m_RenderTargetVertexBuffer{};
+	helios::gfx::IndexBuffer m_RenderTargetIndexBuffer{};
 };

@@ -75,6 +75,9 @@
     <ClInclude Include="Engine\Core\UIManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Graphics\RenderTarget.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Pch.cpp">
@@ -119,6 +122,9 @@
     <ClCompile Include="Engine\Core\UIManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\RenderTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\TestVS.hlsl" />
@@ -128,6 +134,8 @@
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl" />
     <FxCompile Include="Shaders\PBRVertex.hlsl" />
     <FxCompile Include="Shaders\PBRPixel.hlsl" />
+    <FxCompile Include="Shaders\OffscreenRTVertex.hlsl" />
+    <FxCompile Include="Shaders\OffscreenRTPixel.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

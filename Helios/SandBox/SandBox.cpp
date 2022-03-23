@@ -31,6 +31,11 @@ enum class PBRRootParameterIndex : uint32_t
 	DescriptorTable = 3u
 };
 
+enum class OffscreenRTParamterIndex : uint32_t
+{
+	DescriptorTable = 0u
+};
+
 SandBox::SandBox(Config& config)
 	: Engine(config)
 {
@@ -104,18 +109,16 @@ void SandBox::OnRender()
 	commandList->RSSetViewports(1u, &m_Viewport);
 	commandList->RSSetScissorRects(1u, &m_ScissorRect);
 	
-	// Inidicate back buffer will be used as RTV.
-	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	// Inidicate render target will be used as RTV.
+	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Record rendering commands
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
-	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
-
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_OffscreenRT.GetRTVCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetCPUDescriptorHandleForStart();
 	
 	m_UIManager.Begin(L"Scene Settings");
 
-	static std::array<float, 4> clearColor{0.01f, 0.01f, 0.01f, 1.0f};
+	static std::array<float, 4> clearColor{0.00f, 0.00f, 0.0f, 1.0f};
 	m_UIManager.SetClearColor(clearColor);
 
 	gfx::utils::ClearRTV(commandList.Get(), rtvHandle, clearColor);
@@ -178,6 +181,27 @@ void SandBox::OnRender()
 	m_LightSource.Draw(commandList.Get());
 
 	m_UIManager.End();
+
+	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	
+	commandList->SetGraphicsRootSignature(m_OffscreenRTRootSignature.Get());
+	commandList->SetPipelineState(m_OffscreenRTPipelineState.Get());
+	
+	rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
+	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
+
+	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
+	auto rtVertexBufferView = m_RenderTargetVertexBuffer.GetBufferView();
+	auto rtIndexBufferView = m_RenderTargetIndexBuffer.GetBufferView();
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetVertexBuffers(0u, 1u, &rtVertexBufferView);
+	commandList->IASetIndexBuffer(&rtIndexBufferView);
+	
+	commandList->SetGraphicsRootDescriptorTable(0u, m_OffscreenRT.GetSRVGPUDescriptorHandle());
+	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
+
 	m_UIManager.FrameEnd(commandList.Get());
 
 	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -252,7 +276,7 @@ void SandBox::InitRendererCore()
 	CheckTearingSupport();
 	CreateSwapChain();
 
-	m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NUMBER_OF_FRAMES, L"RTV Descriptor");
+	m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NUMBER_OF_FRAMES + 1u, L"RTV Descriptor");
 
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u, L"DSV Descriptor");
 
@@ -400,7 +424,7 @@ void SandBox::LoadContent()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), lightVertexShaderBlob.Get(), lightPixelShaderBlob.Get(), inputElementDesc);
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
 	m_LightPSO->SetName(L"Light PSO");
-	
+
 	// Create PBR Root signature.
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 3> pbrDescriptorRanges{};
 	pbrDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
@@ -429,11 +453,11 @@ void SandBox::LoadContent()
 
 	// Create PBR general PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), pbrVertexShaderBlob.Get(), pbrPixelShaderBlob.Get(), inputElementDesc);
-	
+
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
 	m_PBRPSO->SetName(L"PBR PSO");
 
-	// Load data and textures.
+	// Load data for models and textures.
 	m_TestTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
 
 	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", L"Marble Texture");
@@ -444,10 +468,10 @@ void SandBox::LoadContent()
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 
-	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{.m_BaseColorDescriptorHandle = m_TestTexture.GetGPUDescriptorHandle()});
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{ .m_BaseColorDescriptorHandle = m_TestTexture.GetGPUDescriptorHandle() });
 	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
-	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{.m_BaseColorDescriptorHandle = m_MarbleTexture.GetGPUDescriptorHandle()});
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{ .m_BaseColorDescriptorHandle = m_MarbleTexture.GetGPUDescriptorHandle() });
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
 
@@ -455,6 +479,66 @@ void SandBox::LoadContent()
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
 	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor);
+
+	// Create render targets and thier Root signature and PSO.
+	m_OffscreenRT.Init(m_Device.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
+	
+	// Base case for first loop of OnRender. Render Target is created in D3D12_RESOURCE_STATE_RENDER_TARGET but OnRender assumes its D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE.
+	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> offscreenRTDescriptorRanges{};
+	offscreenRTDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader));
+
+	std::array<CD3DX12_ROOT_PARAMETER1, 1> offscreenRTRootParameters{};
+	offscreenRTRootParameters[0].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+
+	std::array<D3D12_STATIC_SAMPLER_DESC, 1> renderTargetSamplerDescs
+	{
+		D3D12_STATIC_SAMPLER_DESC
+		{
+			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
+			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			.MipLODBias = 0u,
+			.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS,
+			.MinLOD = 0u,
+			.MaxLOD = D3D12_FLOAT32_MAX,
+			.ShaderRegister = 0u,
+			.RegisterSpace = EnumClassValue(ShaderRegisterSpace::PixelShader),
+			.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
+		}
+	};
+	
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC offscreenRTRootSignatureDesc{};
+	offscreenRTRootSignatureDesc.Init_1_1(static_cast<uint32_t>(offscreenRTRootParameters.size()), offscreenRTRootParameters.data(), 
+		static_cast<uint32_t>(renderTargetSamplerDescs.size()), renderTargetSamplerDescs.data(), 
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+
+	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&offscreenRTRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
+	ThrowIfFailed(m_Device->CreateRootSignature(0u, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_OffscreenRTRootSignature)));
+
+	// Create PSO for the offscreen rt root signature with its shaders.
+	wrl::ComPtr<ID3DBlob> offscreenVertexShader;
+	wrl::ComPtr<ID3DBlob> offscreenPixelShader;
+
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTVertex.cso", &offscreenVertexShader));
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTPixel.cso", &offscreenPixelShader));
+
+	std::array<D3D12_INPUT_ELEMENT_DESC, 2> renderTargetInputElementDescs
+	{
+		gfx::utils::CreateInputLayoutDesc("POSITION", DXGI_FORMAT_R32G32_FLOAT),
+		gfx::utils::CreateInputLayoutDesc("TEXTURE_COORD", DXGI_FORMAT_R32G32_FLOAT)
+	};
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc= gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), offscreenVertexShader.Get(), offscreenPixelShader.Get(), renderTargetInputElementDescs, DXGI_FORMAT_R8G8B8A8_UNORM);
+	ThrowIfFailed(m_Device-> CreateGraphicsPipelineState(&offscreenRTPSODesc, IID_PPV_ARGS(&m_OffscreenRTPipelineState)));
+	m_OffscreenRTPipelineState->SetName(L"Offscreen RT Pipeline State");
+
+	// Temp data : To remove soon.
+	m_RenderTargetVertexBuffer.Init<helios::gfx::RTVertex>(m_Device.Get(), commandList.Get(), gfx::RT_VERTICES, L"Render Target Vertex Buffer");
+	m_RenderTargetIndexBuffer.Init(m_Device.Get(), commandList.Get(), gfx::RT_INDICES, L"Render Target Index Buffer");
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
