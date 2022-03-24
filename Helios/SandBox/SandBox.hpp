@@ -25,6 +25,8 @@ public:
 	void OnResize() override;
 
 private:
+	void PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12Resource* currentBackBuffer);
+
 	void InitRendererCore();
 
 	void LoadContent();
@@ -117,8 +119,4 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OffscreenRTRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_OffscreenRTPipelineState;
-
-	// Temp data : to remove soon.
-	helios::gfx::VertexBuffer m_RenderTargetVertexBuffer{};
-	helios::gfx::IndexBuffer m_RenderTargetIndexBuffer{};
 };

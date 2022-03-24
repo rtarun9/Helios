@@ -10,6 +10,8 @@ namespace helios::gfx
 {
 	void Texture::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view texturePath, std::wstring_view textureName, bool isSRGB)
 	{
+		stbi_set_flip_vertically_on_load(true);
+
 		m_TextureData = stbi_load(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
 		m_ComponentCount = 4;
 		

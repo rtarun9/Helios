@@ -4,7 +4,11 @@
 
 #include "Descriptor.hpp"
 
+#include "VertexBuffer.hpp"
+#include "IndexBuffer.hpp"
+
 // Main reference used : https://raw.githubusercontent.com/wiki/Microsoft/DirectXTK12/RenderTexture.h.
+// TODO : Resizing.
 namespace helios::gfx
 {
 	struct RTVertex
@@ -31,8 +35,9 @@ namespace helios::gfx
 	class RenderTarget
 	{
 	public:
-		void Init(ID3D12Device* device, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
 		
+
 		ID3D12Resource* GetResource();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE GetRTVCPUDescriptorHandle();
@@ -40,6 +45,9 @@ namespace helios::gfx
 
 		D3D12_GPU_DESCRIPTOR_HANDLE GetRTVGPUDescriptorHandle();
 		D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptorHandle();
+
+		static void InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+		static void Bind(ID3D12GraphicsCommandList* commandList);
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
@@ -52,5 +60,8 @@ namespace helios::gfx
 
 		uint32_t m_Width{};
 		uint32_t m_Height{};
+
+		static inline VertexBuffer s_VertexBuffer{};
+		static inline IndexBuffer s_IndexBuffer{};
 	};
 }

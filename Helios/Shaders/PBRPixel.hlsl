@@ -90,11 +90,11 @@ float4 PsMain(VSOutput input) : SV_Target
     float distance = length(pixelToLightDir);
     float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
 
-    float metallicFactor = metalRoughnessTexture.Sample(wrapSampler, input.texCoord).x;
-    float roughnessFactor = metalRoughnessTexture.Sample(wrapSampler, input.texCoord).y;
-    float3 albedo = baseTexture.Sample(wrapSampler, input.texCoord).xyz;
+    float metallicFactor = metalRoughnessTexture.Sample(clampSampler, input.texCoord).x;
+    float roughnessFactor = metalRoughnessTexture.Sample(clampSampler, input.texCoord).y;
+    float3 albedo = baseTexture.Sample(clampSampler, input.texCoord).xyz;
 
-    #if 0
+    #if 1
     metallicFactor = materialCBuffer.metallicFactor;
     roughnessFactor = materialCBuffer.roughnessFactor;
     albedo = materialCBuffer.albedo;

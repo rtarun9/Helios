@@ -31,7 +31,7 @@ enum class PBRRootParameterIndex : uint32_t
 	DescriptorTable = 3u
 };
 
-enum class OffscreenRTParamterIndex : uint32_t
+enum class RenderTargetRootParamterIndex : uint32_t
 {
 	DescriptorTable = 0u
 };
@@ -56,9 +56,9 @@ void SandBox::OnUpdate()
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 
-	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 1.0f) * 2.0f);
-	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 1.0f) * 2.0f);
-	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime()));
+	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
+	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
+	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f));
 
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
@@ -70,141 +70,7 @@ void SandBox::OnRender()
 	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
 	
-	m_UIManager.FrameStart();
-	
-	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
-
-	// TODO : Move to OnUpdate soon.
-	for (auto& [objectName, gameObject] : m_GameObjects)
-	{
-		gameObject.UpdateData(objectName);
-		gameObject.UpdateTransformData(commandList.Get(), projectionView);
-	}
-
-	ImGui::Begin("Sphere");
-	m_Sphere.UpdateData(L"Sphere");
-	m_Sphere.UpdateTransformData(commandList.Get(), projectionView);
-	ImGui::End();
-
-	ImGui::Begin("Material Data");
-	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
-	ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
-	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
-	ImGui::End();
-
-	m_LightSource.UpdateTransformData(commandList.Get(), projectionView);
-
-	// Set the necessary states
-	commandList->SetPipelineState(m_PSO.Get());
-	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
-	
-	std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
-	{
-		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
-	};
-	
-	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
-	commandList->SetGraphicsRootDescriptorTable(2u, m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandleForStart());
-
-	commandList->RSSetViewports(1u, &m_Viewport);
-	commandList->RSSetScissorRects(1u, &m_ScissorRect);
-	
-	// Inidicate render target will be used as RTV.
-	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	// Record rendering commands
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_OffscreenRT.GetRTVCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetCPUDescriptorHandleForStart();
-	
-	m_UIManager.Begin(L"Scene Settings");
-
-	static std::array<float, 4> clearColor{0.00f, 0.00f, 0.0f, 1.0f};
-	m_UIManager.SetClearColor(clearColor);
-
-	gfx::utils::ClearRTV(commandList.Get(), rtvHandle, clearColor);
-	
-	gfx::utils::ClearDepthBuffer(commandList.Get(), dsvHandle);
-
-	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	LightingData lightingData
-	{
-		.lightPosition = {m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f},
-		.cameraPosition = m_Camera.m_CameraPosition
-	};
-
-	for (auto& [objectName, gameObject] : m_GameObjects)
-	{
-		auto textureGPUHandle = gameObject.GetMaterial().m_BaseColorDescriptorHandle;
-		if (!textureGPUHandle.ptr)
-		{
-			// In future add a default texture (black or white) here.
-		}
-
-		commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RootParameterIndex::DescriptorTable), textureGPUHandle);
-		commandList->SetGraphicsRootConstantBufferView(EnumClassValue(RootParameterIndex::ConstantBuffer), gameObject.GetTransformCBufferVirtualAddress());
-		commandList->SetGraphicsRoot32BitConstants(EnumClassValue(RootParameterIndex::RootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
-
-		gameObject.Draw(commandList.Get());
-	}
-
-	// Draw sphere (for PBR Test).
-	commandList->SetPipelineState(m_PBRPSO.Get());
-	commandList->SetGraphicsRootSignature(m_PBRRootSignature.Get());
-	
-	std::array pbrMaterialDescriptorHandles
-	{
-		m_SphereBaseColor.GetGPUDescriptorHandle(),
-		m_SphereMetalRough.GetGPUDescriptorHandle()
-	};
-
-	auto textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
-
-
-	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
-	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(PBRRootParameterIndex::DescriptorTable), m_SphereBaseColor.GetGPUDescriptorHandle());
-	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer), m_Sphere.GetTransformCBufferVirtualAddress());
-	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer), pbrMaterialGPUVirutalAddress);
-	commandList->SetGraphicsRoot32BitConstants(EnumClassValue(PBRRootParameterIndex::PixelRootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
-
-	m_Sphere.Draw(commandList.Get());
-
-	// Draw the light source
-	commandList->SetPipelineState(m_LightPSO.Get());
-	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
-
-	m_LightSource.UpdateTransformData(commandList.Get(), projectionView);
-	commandList->SetGraphicsRootConstantBufferView(0u, m_LightSource.GetTransformCBufferVirtualAddress());
-
-	m_LightSource.Draw(commandList.Get());
-
-	m_UIManager.End();
-
-	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	
-	commandList->SetGraphicsRootSignature(m_OffscreenRTRootSignature.Get());
-	commandList->SetPipelineState(m_OffscreenRTPipelineState.Get());
-	
-	rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
-	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
-
-	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
-	auto rtVertexBufferView = m_RenderTargetVertexBuffer.GetBufferView();
-	auto rtIndexBufferView = m_RenderTargetIndexBuffer.GetBufferView();
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->IASetVertexBuffers(0u, 1u, &rtVertexBufferView);
-	commandList->IASetIndexBuffer(&rtIndexBufferView);
-	
-	commandList->SetGraphicsRootDescriptorTable(0u, m_OffscreenRT.GetSRVGPUDescriptorHandle());
-	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
-
-	m_UIManager.FrameEnd(commandList.Get());
-
-	gfx::utils::TransitionResource(commandList.Get(), currentBackBuffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	PopulateCommandList(commandList.Get(), currentBackBuffer.Get());
 
 	m_FrameFenceValues[m_CurrentBackBufferIndex] = m_CommandQueue.ExecuteCommandList(commandList.Get());
 
@@ -263,6 +129,142 @@ void SandBox::OnResize()
 
 		CreateBackBufferRenderTargetViews();
 	}
+}
+
+
+void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12Resource* currentBackBuffer)
+{
+	m_UIManager.FrameStart();
+
+	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
+
+	// TODO : Move to OnUpdate soon.
+	//for (auto& [objectName, gameObject] : m_GameObjects)
+	//{
+	//	gameObject.UpdateData(objectName);
+	//	gameObject.UpdateTransformData(commandList, projectionView);
+	//}
+
+	ImGui::Begin("Sphere");
+	m_Sphere.UpdateData(L"Sphere");
+	m_Sphere.UpdateTransformData(commandList, projectionView);
+	ImGui::End();
+
+	ImGui::Begin("Material Data");
+	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
+	ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
+	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
+	ImGui::End();
+
+	m_LightSource.UpdateTransformData(commandList, projectionView);
+
+	// Set the necessary states
+	commandList->SetPipelineState(m_PSO.Get());
+	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
+
+	std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
+	{
+		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
+	};
+
+	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
+	commandList->SetGraphicsRootDescriptorTable(2u, m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandleForStart());
+
+	commandList->RSSetViewports(1u, &m_Viewport);
+	commandList->RSSetScissorRects(1u, &m_ScissorRect);
+
+	// Inidicate render target will be used as RTV.
+	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	// Record rendering commands
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_OffscreenRT.GetRTVCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetCPUDescriptorHandleForStart();
+
+	m_UIManager.Begin(L"Scene Settings");
+
+	static std::array<float, 4> clearColor{ 0.10f, 0.10f, 0.1f, 1.0f };
+
+	gfx::utils::ClearRTV(commandList, rtvHandle, clearColor);
+
+	gfx::utils::ClearDepthBuffer(commandList, dsvHandle);
+
+	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	LightingData lightingData
+	{
+		.lightPosition = {m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f},
+		.cameraPosition = m_Camera.m_CameraPosition
+	};
+
+	for (auto& [objectName, gameObject] : m_GameObjects)
+	{
+		continue;
+		auto textureGPUHandle = gameObject.GetMaterial().m_BaseColorDescriptorHandle;
+		if (!textureGPUHandle.ptr)
+		{
+			// In future add a default texture (black or white) here.
+		}
+
+		commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RootParameterIndex::DescriptorTable), textureGPUHandle);
+		commandList->SetGraphicsRootConstantBufferView(EnumClassValue(RootParameterIndex::ConstantBuffer), gameObject.GetTransformCBufferVirtualAddress());
+		commandList->SetGraphicsRoot32BitConstants(EnumClassValue(RootParameterIndex::RootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
+
+		gameObject.Draw(commandList);
+	}
+	
+	// Draw sphere (for PBR Test).
+	commandList->SetPipelineState(m_PBRPSO.Get());
+	commandList->SetGraphicsRootSignature(m_PBRRootSignature.Get());
+
+	std::array pbrMaterialDescriptorHandles
+	{
+		m_SphereBaseColor.GetGPUDescriptorHandle(),
+		m_SphereMetalRough.GetGPUDescriptorHandle()
+	};
+
+	auto textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
+
+
+	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
+	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(PBRRootParameterIndex::DescriptorTable), m_SphereBaseColor.GetGPUDescriptorHandle());
+	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer), m_Sphere.GetTransformCBufferVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer), pbrMaterialGPUVirutalAddress);
+	commandList->SetGraphicsRoot32BitConstants(EnumClassValue(PBRRootParameterIndex::PixelRootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
+
+	m_Sphere.Draw(commandList);
+
+	// Draw the light source
+	commandList->SetPipelineState(m_LightPSO.Get());
+	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
+
+	m_LightSource.UpdateTransformData(commandList, projectionView);
+	commandList->SetGraphicsRootConstantBufferView(0u, m_LightSource.GetTransformCBufferVirtualAddress());
+
+	m_LightSource.Draw(commandList);
+
+	m_UIManager.End();
+
+	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	commandList->SetGraphicsRootSignature(m_OffscreenRTRootSignature.Get());
+	commandList->SetPipelineState(m_OffscreenRTPipelineState.Get());
+
+	rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
+	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
+
+	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
+	gfx::RenderTarget::Bind(commandList);
+
+	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable), m_OffscreenRT.GetSRVGPUDescriptorHandle());
+	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
+
+	m_UIManager.FrameEnd(commandList);
+
+	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
 }
 
 void SandBox::InitRendererCore()
@@ -478,14 +480,14 @@ void SandBox::LoadContent()
 	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
 
 	// Create render targets and thier Root signature and PSO.
-	m_OffscreenRT.Init(m_Device.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
-	
-	// Base case for first loop of OnRender. Render Target is created in D3D12_RESOURCE_STATE_RENDER_TARGET but OnRender assumes its D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE.
-	gfx::utils::TransitionResource(commandList.Get(), m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get());
 
+	m_OffscreenRT.Init(m_Device.Get(), commandList.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
+	
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> offscreenRTDescriptorRanges{};
 	offscreenRTDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader));
 
@@ -535,10 +537,6 @@ void SandBox::LoadContent()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc= gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), offscreenVertexShader.Get(), offscreenPixelShader.Get(), renderTargetInputElementDescs, DXGI_FORMAT_R8G8B8A8_UNORM);
 	ThrowIfFailed(m_Device-> CreateGraphicsPipelineState(&offscreenRTPSODesc, IID_PPV_ARGS(&m_OffscreenRTPipelineState)));
 	m_OffscreenRTPipelineState->SetName(L"Offscreen RT Pipeline State");
-
-	// Temp data : To remove soon.
-	m_RenderTargetVertexBuffer.Init<helios::gfx::RTVertex>(m_Device.Get(), commandList.Get(), gfx::RT_VERTICES, L"Render Target Vertex Buffer");
-	m_RenderTargetIndexBuffer.Init(m_Device.Get(), commandList.Get(), gfx::RT_INDICES, L"Render Target Index Buffer");
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
