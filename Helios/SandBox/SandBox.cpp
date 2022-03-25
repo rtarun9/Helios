@@ -259,6 +259,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::RenderTarget::Bind(commandList);
 
 	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable), m_OffscreenRT.GetSRVGPUDescriptorHandle());
+
+	commandList->SetGraphicsRootShaderResourceView(1u, gfx::RenderTarget::GetPositionBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(2u, gfx::RenderTarget::GetTextureCoordsBuffer()->GetGPUVirtualAddress());
+	
 	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
 
 	m_UIManager.FrameEnd(commandList);
@@ -491,8 +495,10 @@ void SandBox::LoadContent()
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> offscreenRTDescriptorRanges{};
 	offscreenRTDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader));
 
-	std::array<CD3DX12_ROOT_PARAMETER1, 1> offscreenRTRootParameters{};
+	std::array<CD3DX12_ROOT_PARAMETER1, 3> offscreenRTRootParameters{};
 	offscreenRTRootParameters[0].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+	offscreenRTRootParameters[1].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	offscreenRTRootParameters[2].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 
 	std::array<D3D12_STATIC_SAMPLER_DESC, 1> renderTargetSamplerDescs
 	{
@@ -550,12 +556,15 @@ void SandBox::EnableDebugLayer()
 	m_DebugInterface->EnableDebugLayer();
 	m_DebugInterface->SetEnableGPUBasedValidation(TRUE);
 	m_DebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
+
+	// Currently set to default behaviour.
+	m_DebugInterface->SetGPUBasedValidationFlags(D3D12_GPU_BASED_VALIDATION_FLAGS_NONE);
 #endif
 }
 
 void SandBox::SelectAdapter()
 {
-	wrl::ComPtr<IDXGIFactory4> dxgiFactory;
+	wrl::ComPtr<IDXGIFactory6> dxgiFactory;
 	UINT createFactoryFlags = 0;
 
 #ifdef _DEBUG
@@ -564,26 +573,15 @@ void SandBox::SelectAdapter()
 
 	ThrowIfFailed(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
 
-	wrl::ComPtr<IDXGIAdapter4> adapter4;
-	wrl::ComPtr<IDXGIAdapter1> adapter1;
-
-	// Prefer adapter with highest available dedicated video memory.
-	SIZE_T maximumDedicatedVideoMemory{};
-	for (UINT i = 0; dxgiFactory->EnumAdapters1(i, &adapter1) != DXGI_ERROR_NOT_FOUND; ++i)
-	{
-		DXGI_ADAPTER_DESC1 adapterDesc{};
-		adapter1->GetDesc1(&adapterDesc);
-
-		if ((!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)) &&
-			(SUCCEEDED(::D3D12CreateDevice(adapter1.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr))) &&
-			(adapterDesc.DedicatedVideoMemory > maximumDedicatedVideoMemory))
-		{
-			maximumDedicatedVideoMemory = adapterDesc.DedicatedVideoMemory;
-			ThrowIfFailed(adapter1.As(&adapter4));
-		}
-	}
-
-	m_Adapter = adapter4;
+	// Index 0 will be the GPU with highest preference.
+	ThrowIfFailed(dxgiFactory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&m_Adapter)));
+	
+#ifdef _DEBUG
+	DXGI_ADAPTER_DESC adapterDesc{};
+	ThrowIfFailed(m_Adapter->GetDesc(&adapterDesc));
+	std::wstring adapterInfo = L"Adapter Description : " + std::wstring(adapterDesc.Description) + L".\n";
+	OutputDebugString(adapterInfo.c_str());
+#endif
 }
 
 void SandBox::CreateDevice()
@@ -606,12 +604,20 @@ void SandBox::CreateDevice()
 		D3D12_MESSAGE_SEVERITY_INFO
 	};
 
+	// Configure queue filter to ignore individual messages using thier ID.
+	std::array<D3D12_MESSAGE_ID, 1> ignoreMessageIDs
+	{
+		D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
+	};
+
 	D3D12_INFO_QUEUE_FILTER infoQueueFilter
 	{
 		.DenyList
 		{
 			.NumSeverities = static_cast<UINT>(ignoreMessageSeverities.size()),
-			.pSeverityList = ignoreMessageSeverities.data()
+			.pSeverityList = ignoreMessageSeverities.data(),
+			.NumIDs = static_cast<UINT>(ignoreMessageIDs.size()),
+			.pIDList = ignoreMessageIDs.data()
 		},
 	};
 
@@ -636,7 +642,7 @@ void SandBox::CheckTearingSupport()
 
 void SandBox::CreateSwapChain()
 {
-	wrl::ComPtr<IDXGIFactory4> dxgiFactory;
+	wrl::ComPtr<IDXGIFactory7> dxgiFactory;
 	UINT createFactoryFlags = 0;
 
 #ifdef _DEBUG
@@ -666,7 +672,7 @@ void SandBox::CreateSwapChain()
 
 	wrl::ComPtr<IDXGISwapChain1> swapChain1;
 	ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
-
+	
 	// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
 	ThrowIfFailed(dxgiFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
 	
@@ -685,6 +691,7 @@ void SandBox::CreateBackBufferRenderTargetViews()
 		m_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, m_RTVDescriptor.GetCurrentCPUDescriptorHandle());
 
 		m_BackBuffers[i] = backBuffer;
+		m_BackBuffers[i]->SetName(L"SwapChain BackBuffer");
 
 		m_RTVDescriptor.OffsetCurrentCPUDescriptor();
 	}

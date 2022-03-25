@@ -2,28 +2,29 @@
 
 #include "Pch.hpp"
 
-#include "Descriptor.hpp"
-
-#include "VertexBuffer.hpp"
+#include "StructuredBuffer.hpp"
 #include "IndexBuffer.hpp"
+
+#include "Descriptor.hpp"
 
 // Main reference used : https://raw.githubusercontent.com/wiki/Microsoft/DirectXTK12/RenderTexture.h.
 // TODO : Resizing.
 namespace helios::gfx
 {
-	struct RTVertex
+	static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_POSITIONS
 	{
-		DirectX::XMFLOAT2 position{};
-		DirectX::XMFLOAT2 textureCoord{};
+		DirectX::XMFLOAT2(-1.0f, -1.0f),
+		DirectX::XMFLOAT2(-1.0f,   1.0f),
+		DirectX::XMFLOAT2(1.0f, 1.0f),
+		DirectX::XMFLOAT2(1.0f, -1.0f),
 	};
 
-	// Will be moved soon.
-	static constexpr std::array<RTVertex, 4> RT_VERTICES
+	static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_TEXTURE_COORDS
 	{
-		RTVertex{.position = DirectX::XMFLOAT2(-1.0f, -1.0f),		.textureCoord = DirectX::XMFLOAT2(0.0f, 1.0f) },
-		RTVertex{.position = DirectX::XMFLOAT2(-1.0f,   1.0f),		.textureCoord = DirectX::XMFLOAT2(0.0f, 0.0f) },
-		RTVertex{.position = DirectX::XMFLOAT2(1.0f, 1.0f),			.textureCoord = DirectX::XMFLOAT2(1.0f, 0.0f) },
-		RTVertex{.position = DirectX::XMFLOAT2(1.0f, -1.0f),		.textureCoord = DirectX::XMFLOAT2(1.0f, 1.0f) },
+		DirectX::XMFLOAT2(0.0f, 1.0f),
+		DirectX::XMFLOAT2(0.0f, 0.0f),
+		DirectX::XMFLOAT2(1.0f, 0.0f),
+		DirectX::XMFLOAT2(1.0f, 1.0f),
 	};
 
 	static constexpr std::array<uint32_t, 6> RT_INDICES
@@ -46,6 +47,9 @@ namespace helios::gfx
 		D3D12_GPU_DESCRIPTOR_HANDLE GetRTVGPUDescriptorHandle();
 		D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptorHandle();
 
+		static ID3D12Resource* GetPositionBuffer();
+		static ID3D12Resource* GetTextureCoordsBuffer();
+
 		static void InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 		static void Bind(ID3D12GraphicsCommandList* commandList);
 
@@ -61,7 +65,9 @@ namespace helios::gfx
 		uint32_t m_Width{};
 		uint32_t m_Height{};
 
-		static inline VertexBuffer s_VertexBuffer{};
 		static inline IndexBuffer s_IndexBuffer{};
+
+		static inline StructuredBuffer s_PositionBuffer{};
+		static inline StructuredBuffer s_TextureCoordsBuffer{};
 	};
 }

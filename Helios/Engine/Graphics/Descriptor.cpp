@@ -20,7 +20,11 @@ namespace helios::gfx
 		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
 
 		m_CurrentCPUDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		m_CurrentGPUDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+		if (heapFlags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
+		{
+			m_CurrentGPUDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();	
+		}
 	}
 
 	ID3D12DescriptorHeap* Descriptor::GetDescriptorHeap()

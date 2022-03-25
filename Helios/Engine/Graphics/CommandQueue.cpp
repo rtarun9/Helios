@@ -27,6 +27,7 @@ namespace helios::gfx
 		m_Fence->SetName(fenceName.data());
 
 		m_FenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+		
 		if (!m_FenceEvent)
 		{
 			ErrorMessage(L"Failed to create fence event");

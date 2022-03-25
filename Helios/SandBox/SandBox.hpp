@@ -46,7 +46,7 @@ private:
 	static constexpr uint8_t NUMBER_OF_FRAMES = 3;
 
 	// Core DirectX12 objects and data.
-	Microsoft::WRL::ComPtr<ID3D12Device5> m_Device;
+	Microsoft::WRL::ComPtr<ID3D12Device8> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
@@ -54,7 +54,7 @@ private:
 
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NUMBER_OF_FRAMES> m_BackBuffers{};
 
-	Microsoft::WRL::ComPtr<ID3D12Debug1> m_DebugInterface;
+	Microsoft::WRL::ComPtr<ID3D12Debug3> m_DebugInterface;
 
 	D3D12_VIEWPORT m_Viewport{};
 	D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };

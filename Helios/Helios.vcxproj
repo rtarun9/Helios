@@ -196,6 +196,7 @@
     <ClInclude Include="Engine\Graphics\VertexBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\Texture.hpp" />
     <ClInclude Include="Engine\Core\UIManager.hpp" />
+    <ClInclude Include="Engine\Graphics\StructuredBuffer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Camera.cpp" />
@@ -218,6 +219,7 @@
     <ClCompile Include="SandBox\SandBox.cpp" />
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
     <ClCompile Include="Engine\Core\UIManager.cpp" />
+    <ClCompile Include="Engine\Graphics\StructuredBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl">

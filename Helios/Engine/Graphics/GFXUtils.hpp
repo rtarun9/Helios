@@ -26,6 +26,11 @@ namespace helios::gfx::utils
 	template <typename T>
 	inline std::pair<ID3D12Resource*, ID3D12Resource*> CreateGPUBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::span<const T> bufferData, D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE)
 	{
+		if (bufferData.empty())
+		{
+			throw std::exception("Cannot create GPU Buffer for data of 0 bytes.");
+		}
+
 		ID3D12Resource* destinationResource{ nullptr };
 		ID3D12Resource* intermediateResource{ nullptr };
 

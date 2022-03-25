@@ -39,8 +39,6 @@
 #include <span>
 #include <queue>
 #include <map>
-#include <locale>
-#include <codecvt>
 
 #include "Core/Helpers.hpp"
 

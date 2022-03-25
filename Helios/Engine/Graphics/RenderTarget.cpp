@@ -43,11 +43,9 @@ namespace helios::gfx
 
 	void RenderTarget::Bind(ID3D12GraphicsCommandList* commandList)
 	{
-		auto rtVertexBufferView = RenderTarget::s_VertexBuffer.GetBufferView();
 		auto rtIndexBufferView = RenderTarget::s_IndexBuffer.GetBufferView();
 
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->IASetVertexBuffers(0u, 1u, &rtVertexBufferView);
 		commandList->IASetIndexBuffer(&rtIndexBufferView);
 	}
 
@@ -76,9 +74,21 @@ namespace helios::gfx
 		return m_SRVGPUDescriptorHandle;
 	}
 
+	ID3D12Resource* RenderTarget::GetPositionBuffer()
+	{
+		return s_PositionBuffer.GetResource();
+	}
+
+	ID3D12Resource* RenderTarget::GetTextureCoordsBuffer()
+	{
+		return s_TextureCoordsBuffer.GetResource();
+	}
+
 	void RenderTarget::InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 	{
-		s_VertexBuffer.Init<RTVertex>(device, commandList, RT_VERTICES, L"Render Target Vertex Buffer");
 		s_IndexBuffer.Init(device, commandList, RT_INDICES, L"Render Target Index Buffer");
+
+		s_PositionBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_POSITIONS);
+		s_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_TEXTURE_COORDS);
 	}
 }

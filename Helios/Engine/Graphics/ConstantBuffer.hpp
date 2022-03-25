@@ -37,6 +37,11 @@ namespace helios::gfx
 			m_BufferData = data;
 		}
 
+		ID3D12Resource* GetResource()
+		{
+			return m_Buffer.Get();
+		}
+
 		D3D12_CONSTANT_BUFFER_VIEW_DESC GetBufferView()
 		{
 			return m_BufferView;
