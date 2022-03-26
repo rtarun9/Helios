@@ -1,10 +1,3 @@
-struct VSInput
-{
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-    float2 texCoord : TEXCOORD;
-};
-
 struct VSOutput
 {
     float4 position : SV_Position;
@@ -18,15 +11,19 @@ struct TransformData
     matrix projectionViewMatrix;
 };
 
+StructuredBuffer<float3> positionBuffer : register(t0, space0);
+StructuredBuffer<float2> textureCoordsBuffer : register(t1, space0);
+StructuredBuffer<float3> normalBuffer : register(t2, space0);
+
 ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
 
-VSOutput VsMain(VSInput input)
+VSOutput VsMain(uint vertexID : SV_VertexID)
 {
     matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
 
     VSOutput output;
-    output.position = mul(mvpMatrix, float4(input.position, 1.0f));
-    output.texCoord = input.texCoord;
+    output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
+    output.texCoord = textureCoordsBuffer[vertexID];
 
     return output;
 }

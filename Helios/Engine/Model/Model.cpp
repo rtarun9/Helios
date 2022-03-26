@@ -41,7 +41,10 @@ namespace helios
 
         // Build meshes.
 
-        std::vector<Vertex> vertices{};
+		std::vector<dx::XMFLOAT3> modelPositions{};
+		std::vector<dx::XMFLOAT2> modelTextureCoords{};
+		std::vector<dx::XMFLOAT3> modelNormals{};
+
 		std::vector<uint32_t> indices{};
 
 		tinygltf::Scene& scene = model.scenes[model.defaultScene];
@@ -92,21 +95,24 @@ namespace helios
 				// Fill in the vertices array.
 				for (size_t i = 0; i < positionAccesor.count; ++i)
 				{
-					Vertex vertex{};
+					dx::XMFLOAT3 position{};
+					position.x = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0];
+					position.y = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1];
+					position.z = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2];
 
-					vertex.position.x = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0];
-					vertex.position.y = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1];
-					vertex.position.z = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2];
+					dx::XMFLOAT2 textureCoord{};
+					textureCoord.x = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0];
+					textureCoord.y = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1];
+					textureCoord.y = 1.0f - textureCoord.y;
 
-					vertex.textureCoord.x = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0];
-					vertex.textureCoord.y = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1];
-					vertex.textureCoord.y = 1.0f - vertex.textureCoord.y;
+					dx::XMFLOAT3 normal{};
+					normal.x = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0];
+					normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
+					normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
 
-					vertex.normal.x = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0];
-					vertex.normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
-					vertex.normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
-
-					vertices.push_back(std::move(vertex));
+					modelPositions.emplace_back(position);
+					modelTextureCoords.emplace_back(textureCoord);
+					modelNormals.emplace_back(normal);
 				}
 
 				// Get the index buffer data.
@@ -125,10 +131,12 @@ namespace helios
 			}
 		}
 
-		m_VerticesCount = static_cast<uint32_t>(vertices.size());
+		m_PositionBuffer.Init<dx::XMFLOAT3>(device, commandList, modelPositions, D3D12_RESOURCE_FLAG_NONE, L"Position Buffer");
+		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
+		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
+
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
-		m_VertexBuffer.Init<Vertex>(device, commandList, vertices, L"Vertex Buffer");
 		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
 			cbDescriptor, L"Transform CBuffer");
@@ -136,10 +144,20 @@ namespace helios
 		m_Material = material;
 	}
 
-    D3D12_VERTEX_BUFFER_VIEW Model::GetVertexBufferView()
-    {
-        return m_VertexBuffer.GetBufferView();
-    }
+	ID3D12Resource* Model::GetPositionBuffer()
+	{
+		return m_PositionBuffer.GetResource();
+	}
+
+	ID3D12Resource* Model::GetTextureCoordsBuffer()
+	{
+		return m_TextureCoordsBuffer.GetResource();
+	}
+
+	ID3D12Resource* Model::GetNormalBuffer()
+	{
+		return m_NormalBuffer.GetResource();
+	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS Model::GetTransformCBufferVirtualAddress()
 	{
@@ -182,10 +200,8 @@ namespace helios
 
     void Model::Draw(ID3D12GraphicsCommandList* commandList)
     {
-		auto vertexBufferView = m_VertexBuffer.GetBufferView();
 		auto indexBufferView = m_IndexBuffer.GetBufferView();
 
-		commandList->IASetVertexBuffers(0u, 1u, &vertexBufferView);
 		commandList->IASetIndexBuffer(&indexBufferView);
 
 		commandList->DrawIndexedInstanced(m_IndicesCount, 1u, 0u, 0u, 0u);

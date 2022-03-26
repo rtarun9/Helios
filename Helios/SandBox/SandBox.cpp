@@ -18,22 +18,33 @@ enum class ShaderRegisterSpace : uint32_t
 
 enum class RootParameterIndex : uint32_t
 {
-	ConstantBuffer = 0u,
-	RootConstant = 1u,
-	DescriptorTable = 2u
+	PositionBuffer = 0u,
+	TextureCoordBuffer = 1u,
+	NormalBuffer = 2u,
+	ConstantBuffer = 3u,
+	RootConstant = 4u,
+	DescriptorTable = 5u,
+	ParamterCount = 6u
 };
 
 enum class PBRRootParameterIndex : uint32_t
 {
-	VertexConstantBuffer = 0u,
-	PixelConstantBuffer = 1u,
-	PixelRootConstant = 2u,
-	DescriptorTable = 3u
+	PositionBuffer = 0u,
+	TextureCoordBuffer = 1u,
+	NormalBuffer = 2u,
+	VertexConstantBuffer = 3u,
+	PixelConstantBuffer = 4u,
+	PixelRootConstant = 5u,
+	DescriptorTable = 6u,
+	ParamterCount = 7u
 };
 
 enum class RenderTargetRootParamterIndex : uint32_t
 {
-	DescriptorTable = 0u
+	PositionBuffer = 0u,
+	TextureCoordBuffer = 1u,
+	DescriptorTable = 2u,
+	ParamterCount = 3u
 };
 
 SandBox::SandBox(Config& config)
@@ -139,11 +150,11 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
 
 	// TODO : Move to OnUpdate soon.
-	//for (auto& [objectName, gameObject] : m_GameObjects)
-	//{
-	//	gameObject.UpdateData(objectName);
-	//	gameObject.UpdateTransformData(commandList, projectionView);
-	//}
+	for (auto& [objectName, gameObject] : m_GameObjects)
+	{
+		gameObject.UpdateData(objectName);
+		gameObject.UpdateTransformData(commandList, projectionView);
+	}
 
 	ImGui::Begin("Sphere");
 	m_Sphere.UpdateData(L"Sphere");
@@ -168,7 +179,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	};
 
 	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
-	commandList->SetGraphicsRootDescriptorTable(2u, m_SRV_CBV_UAV_Descriptor.GetGPUDescriptorHandleForStart());
 
 	commandList->RSSetViewports(1u, &m_Viewport);
 	commandList->RSSetScissorRects(1u, &m_ScissorRect);
@@ -200,13 +210,15 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
-		continue;
 		auto textureGPUHandle = gameObject.GetMaterial().m_BaseColorDescriptorHandle;
 		if (!textureGPUHandle.ptr)
 		{
-			// In future add a default texture (black or white) here.
+			textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
 		}
 
+		commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RootParameterIndex::PositionBuffer), gameObject.GetPositionBuffer()->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RootParameterIndex::TextureCoordBuffer), gameObject.GetTextureCoordsBuffer()->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RootParameterIndex::NormalBuffer), gameObject.GetNormalBuffer()->GetGPUVirtualAddress());
 		commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RootParameterIndex::DescriptorTable), textureGPUHandle);
 		commandList->SetGraphicsRootConstantBufferView(EnumClassValue(RootParameterIndex::ConstantBuffer), gameObject.GetTransformCBufferVirtualAddress());
 		commandList->SetGraphicsRoot32BitConstants(EnumClassValue(RootParameterIndex::RootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
@@ -228,6 +240,9 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 
 	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::PositionBuffer), m_Sphere.GetPositionBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::TextureCoordBuffer), m_Sphere.GetTextureCoordsBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::NormalBuffer), m_Sphere.GetNormalBuffer()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(PBRRootParameterIndex::DescriptorTable), m_SphereBaseColor.GetGPUDescriptorHandle());
 	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer), m_Sphere.GetTransformCBufferVirtualAddress());
 	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer), pbrMaterialGPUVirutalAddress);
@@ -240,7 +255,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
 
 	m_LightSource.UpdateTransformData(commandList, projectionView);
-	commandList->SetGraphicsRootConstantBufferView(0u, m_LightSource.GetTransformCBufferVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(0u, m_LightSource.GetPositionBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(1u, m_LightSource.GetTextureCoordsBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(2u, m_LightSource.GetNormalBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(3u, m_LightSource.GetTransformCBufferVirtualAddress());
 
 	m_LightSource.Draw(commandList);
 
@@ -260,8 +278,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable), m_OffscreenRT.GetSRVGPUDescriptorHandle());
 
-	commandList->SetGraphicsRootShaderResourceView(1u, gfx::RenderTarget::GetPositionBuffer()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootShaderResourceView(2u, gfx::RenderTarget::GetTextureCoordsBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RenderTargetRootParamterIndex::PositionBuffer), gfx::RenderTarget::GetPositionBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer), gfx::RenderTarget::GetTextureCoordsBuffer()->GetGPUVirtualAddress());
 	
 	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
 
@@ -372,10 +390,13 @@ void SandBox::LoadContent()
 	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-	std::array<CD3DX12_ROOT_PARAMETER1, 3> rootParameters{};
-	rootParameters[0].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootParameters[1].InitAsConstants(sizeof(LightingData) / 4, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
-	rootParameters[2].InitAsDescriptorTable(1u, &descriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL);
+	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(RootParameterIndex::ParamterCount)> rootParameters{};
+	rootParameters[EnumClassValue(RootParameterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[EnumClassValue(RootParameterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[EnumClassValue(RootParameterIndex::NormalBuffer)].InitAsShaderResourceView(2u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[EnumClassValue(RootParameterIndex::ConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[EnumClassValue(RootParameterIndex::RootConstant)].InitAsConstants(sizeof(LightingData) / 4, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[EnumClassValue(RootParameterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &descriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc{};
 	rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -394,21 +415,17 @@ void SandBox::LoadContent()
 	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &testVertexShaderBlob));
 	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &testPixelShaderBlob));
 
-	std::array<D3D12_INPUT_ELEMENT_DESC, 3> inputElementDesc
-	{
-		gfx::utils::CreateInputLayoutDesc("POSITION", DXGI_FORMAT_R32G32B32_FLOAT),
-		gfx::utils::CreateInputLayoutDesc("NORMAL", DXGI_FORMAT_R32G32B32_FLOAT),
-		gfx::utils::CreateInputLayoutDesc("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT),
-	};
-
 	// Create general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = gfx::utils::CreateGraphicsPSODesc(m_RootSignature.Get(), testVertexShaderBlob.Get(), testPixelShaderBlob.Get(), inputElementDesc);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = gfx::utils::CreateGraphicsPSODesc(m_RootSignature.Get(), testVertexShaderBlob.Get(), testPixelShaderBlob.Get());
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 	m_PSO->SetName(L"Graphics PSO");
 
 	// Light Root signature
-	std::array<CD3DX12_ROOT_PARAMETER1, 1> lightRootParameters{};
-	lightRootParameters[0].InitAsConstantBufferView(EnumClassValue(RootParameterIndex::ConstantBuffer), EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	std::array<CD3DX12_ROOT_PARAMETER1, 4> lightRootParameters{};
+	lightRootParameters[0].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	lightRootParameters[1].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	lightRootParameters[2].InitAsShaderResourceView(2u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	lightRootParameters[3].InitAsConstantBufferView(0u,  EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC lightRootSignatureDesc{};
 	lightRootSignatureDesc.Init_1_1(static_cast<UINT>(lightRootParameters.size()), lightRootParameters.data(), 0u, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -427,21 +444,24 @@ void SandBox::LoadContent()
 	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &lightPixelShaderBlob));
 
 	// Create Light PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), lightVertexShaderBlob.Get(), lightPixelShaderBlob.Get(), inputElementDesc);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), lightVertexShaderBlob.Get(), lightPixelShaderBlob.Get());
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
 	m_LightPSO->SetName(L"Light PSO");
 
 	// Create PBR Root signature.
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, 3> pbrDescriptorRanges{};
+	std::array<CD3DX12_DESCRIPTOR_RANGE1, EnumClassValue(PBRRootParameterIndex::ParamterCount)> pbrDescriptorRanges{};
 	pbrDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 	pbrDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 	pbrDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-	std::array<CD3DX12_ROOT_PARAMETER1, 4> pbrRootParameters{};
-	pbrRootParameters[0].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	pbrRootParameters[1].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL);
-	pbrRootParameters[2].InitAsConstants(sizeof(LightingData) / 4, 1u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
-	pbrRootParameters[3].InitAsDescriptorTable(1u, &pbrDescriptorRanges[2], D3D12_SHADER_VISIBILITY_PIXEL);
+	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(PBRRootParameterIndex::ParamterCount)> pbrRootParameters{};
+	pbrRootParameters[EnumClassValue(RootParameterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	pbrRootParameters[EnumClassValue(RootParameterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	pbrRootParameters[EnumClassValue(RootParameterIndex::NormalBuffer)].InitAsShaderResourceView(2u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL);
+	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::PixelRootConstant)].InitAsConstants(sizeof(LightingData) / 4, 1u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
+	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &pbrDescriptorRanges[2], D3D12_SHADER_VISIBILITY_PIXEL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC pbrRootSignatureDesc{};
 	pbrRootSignatureDesc.Init_1_1(static_cast<uint32_t>(pbrRootParameters.size()), pbrRootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -458,7 +478,7 @@ void SandBox::LoadContent()
 	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPixel.cso", &pbrPixelShaderBlob));
 
 	// Create PBR general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), pbrVertexShaderBlob.Get(), pbrPixelShaderBlob.Get(), inputElementDesc);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), pbrVertexShaderBlob.Get(), pbrPixelShaderBlob.Get());
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
 	m_PBRPSO->SetName(L"PBR PSO");
@@ -495,10 +515,10 @@ void SandBox::LoadContent()
 	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> offscreenRTDescriptorRanges{};
 	offscreenRTDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader));
 
-	std::array<CD3DX12_ROOT_PARAMETER1, 3> offscreenRTRootParameters{};
-	offscreenRTRootParameters[0].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	offscreenRTRootParameters[1].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	offscreenRTRootParameters[2].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(RenderTargetRootParamterIndex::ParamterCount)> offscreenRTRootParameters{};
+	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::PositionBuffer)].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
 	std::array<D3D12_STATIC_SAMPLER_DESC, 1> renderTargetSamplerDescs
 	{
@@ -534,13 +554,7 @@ void SandBox::LoadContent()
 	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTVertex.cso", &offscreenVertexShader));
 	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTPixel.cso", &offscreenPixelShader));
 
-	std::array<D3D12_INPUT_ELEMENT_DESC, 2> renderTargetInputElementDescs
-	{
-		gfx::utils::CreateInputLayoutDesc("POSITION", DXGI_FORMAT_R32G32_FLOAT),
-		gfx::utils::CreateInputLayoutDesc("TEXTURE_COORD", DXGI_FORMAT_R32G32_FLOAT)
-	};
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc= gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), offscreenVertexShader.Get(), offscreenPixelShader.Get(), renderTargetInputElementDescs, DXGI_FORMAT_R8G8B8A8_UNORM);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc = gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), offscreenVertexShader.Get(), offscreenPixelShader.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
 	ThrowIfFailed(m_Device-> CreateGraphicsPipelineState(&offscreenRTPSODesc, IID_PPV_ARGS(&m_OffscreenRTPipelineState)));
 	m_OffscreenRTPipelineState->SetName(L"Offscreen RT Pipeline State");
 

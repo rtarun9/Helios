@@ -13,6 +13,7 @@
 #include "Graphics/IndexBuffer.hpp"
 #include "Graphics/VertexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
+#include "Graphics/StructuredBuffer.hpp"
 #include "Graphics/CommandQueue.hpp"
 #include "Graphics/Texture.hpp"
 #include "Graphics/GenerateMipsPSO.hpp"

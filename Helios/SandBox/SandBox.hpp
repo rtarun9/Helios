@@ -105,9 +105,6 @@ private:
 	helios::gfx::Texture m_TestTexture{};
 	helios::gfx::Texture m_MarbleTexture{};
 
-	// For mip map generation using compute shader.
-	helios::gfx::GenerateMipsPSO m_GenerateMipsPSO{};
-
 	// Light source data.
 	helios::Model m_LightSource{};
 

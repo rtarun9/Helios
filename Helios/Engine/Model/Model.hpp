@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Graphics/VertexBuffer.hpp"
+#include "Graphics/StructuredBuffer.hpp"
 #include "Graphics/IndexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
 
@@ -10,13 +10,6 @@
 
 namespace helios
 {
-	struct Vertex
-	{
-		DirectX::XMFLOAT3 position{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
-		DirectX::XMFLOAT3 normal{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
-		DirectX::XMFLOAT2 textureCoord{ DirectX::XMFLOAT2(0.0f, 0.0f) };
-	};
-
 	struct alignas(256) Transform
 	{
 		DirectX::XMMATRIX modelMatrix{DirectX::XMMatrixIdentity()};
@@ -42,7 +35,10 @@ namespace helios
 	public:
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Material material = {});
 
-		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
+		ID3D12Resource* GetPositionBuffer();
+		ID3D12Resource* GetTextureCoordsBuffer();
+		ID3D12Resource* GetNormalBuffer();
+
 		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
 		Material GetMaterial();
 
@@ -54,11 +50,14 @@ namespace helios
 		void Draw(ID3D12GraphicsCommandList* commandList);
 
 	private:
-		gfx::VertexBuffer m_VertexBuffer{};
+		
+		gfx::StructuredBuffer m_PositionBuffer{};
+		gfx::StructuredBuffer m_TextureCoordsBuffer{};
+		gfx::StructuredBuffer m_NormalBuffer{};
+
 		gfx::IndexBuffer m_IndexBuffer{};
 		gfx::ConstantBuffer<Transform> m_TransformConstantBuffer{};
 
-		uint32_t m_VerticesCount{};
 		uint32_t m_IndicesCount{};
 
 		TransformComponent m_TransformData{};

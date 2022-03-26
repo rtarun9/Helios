@@ -88,7 +88,7 @@ namespace helios::gfx
 	{
 		s_IndexBuffer.Init(device, commandList, RT_INDICES, L"Render Target Index Buffer");
 
-		s_PositionBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_POSITIONS);
-		s_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_TEXTURE_COORDS);
+		s_PositionBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_POSITIONS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Position Buffer");
+		s_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_TEXTURE_COORDS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Texture Coord Buffer");
 	}
 }

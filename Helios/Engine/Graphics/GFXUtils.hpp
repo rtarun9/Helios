@@ -80,7 +80,7 @@ namespace helios::gfx::utils
 		};
 	}
 
-	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, std::span<D3D12_INPUT_ELEMENT_DESC> inputElementDesc, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT)
+	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT)
 	{
 		return D3D12_GRAPHICS_PIPELINE_STATE_DESC 
 		{
@@ -96,11 +96,6 @@ namespace helios::gfx::utils
 				.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
 				.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 				.StencilEnable = FALSE
-			},
-			.InputLayout =
-			{
-				.pInputElementDescs = inputElementDesc.data(),
-				.NumElements = static_cast<UINT>(inputElementDesc.size()),
 			},
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1u,
