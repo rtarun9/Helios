@@ -39,6 +39,7 @@
 #include <span>
 #include <queue>
 #include <map>
+#include <type_traits>
 
 #include "Core/Helpers.hpp"
 

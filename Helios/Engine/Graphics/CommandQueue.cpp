@@ -86,7 +86,7 @@ namespace helios::gfx
 		commandList->Close();
 
 		ID3D12CommandAllocator* commandAllocator{ nullptr };
-		UINT dataSize = sizeof(commandAllocator);
+		UINT dataSize = sizeof(ID3D12CommandAllocator);
 
 		ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
 
@@ -125,7 +125,7 @@ namespace helios::gfx
 		if (!IsFenceComplete(fenceValue))
 		{
 			ThrowIfFailed(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
-			::WaitForSingleObject(m_FenceEvent, static_cast<DWORD>(INFINITE));
+			::WaitForSingleObject(m_FenceEvent, static_cast<DWORD>(std::chrono::milliseconds::max().count()));
 		}
 	}
 

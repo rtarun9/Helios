@@ -39,6 +39,14 @@ enum class PBRRootParameterIndex : uint32_t
 	ParamterCount = 7u
 };
 
+enum class SkyBoxParamterIndex : uint32_t
+{
+	PositionBuffer = 0u,
+	VertexConstantBuffer = 1u,
+	DescriptorTable = 2u,
+	ParamterCount = 3u
+};
+
 enum class RenderTargetRootParamterIndex : uint32_t
 {
 	PositionBuffer = 0u,
@@ -66,10 +74,11 @@ void SandBox::OnUpdate()
 	m_ViewMatrix = m_Camera.GetViewMatrix();
 
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
-
-	m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
-	m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
-	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f));
+	
+	m_LightSource.GetTransform().translate.x = 2.0f;
+	//m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
+	//m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
+	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 2.0f));
 
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
@@ -167,6 +176,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
 	ImGui::End();
 
+	m_LightSource.UpdateData(L"Light Source");
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 
 	// Set the necessary states
@@ -191,8 +201,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetCPUDescriptorHandleForStart();
 
 	m_UIManager.Begin(L"Scene Settings");
-
 	static std::array<float, 4> clearColor{ 0.10f, 0.10f, 0.1f, 1.0f };
+	m_UIManager.SetClearColor(clearColor);
 
 	gfx::utils::ClearRTV(commandList, rtvHandle, clearColor);
 
@@ -238,7 +248,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	auto textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
 
-
 	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
 	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::PositionBuffer), m_Sphere.GetPositionBuffer()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::TextureCoordBuffer), m_Sphere.GetTextureCoordsBuffer()->GetGPUVirtualAddress());
@@ -263,6 +272,18 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_LightSource.Draw(commandList);
 
 	m_UIManager.End();
+
+	// Draw sky box
+	commandList->SetGraphicsRootSignature(m_SkyBoxRootSignature.Get());
+	commandList->SetPipelineState(m_SkyBoxPipelineState.Get());
+
+	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
+
+	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(SkyBoxParamterIndex::PositionBuffer), m_SkyBoxModel.GetPositionBuffer()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(SkyBoxParamterIndex::VertexConstantBuffer), m_SkyBoxModel.GetTransformCBufferVirtualAddress());
+	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(SkyBoxParamterIndex::DescriptorTable), m_SkyBoxTexture.GetGPUDescriptorHandle());
+	
+	m_SkyBoxTexture.DrawToCube(m_Device.Get(), commandList, m_SkyBoxModel);
 
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -300,7 +321,7 @@ void SandBox::InitRendererCore()
 	CheckTearingSupport();
 	CreateSwapChain();
 
-	m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NUMBER_OF_FRAMES + 1u, L"RTV Descriptor");
+	m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
 
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u, L"DSV Descriptor");
 
@@ -381,7 +402,6 @@ void SandBox::LoadContent()
 	{
 		clampStaticSamplerDesc,
 		wrapStaticSamplerDesc
-
 	};
 
 	// Create General Root signature.
@@ -483,6 +503,52 @@ void SandBox::LoadContent()
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
 	m_PBRPSO->SetName(L"PBR PSO");
 
+	// Create Sky Box root signature.
+	std::array<CD3DX12_DESCRIPTOR_RANGE1, 3> skyboxDescriptorRange{};
+	skyboxDescriptorRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+	skyboxDescriptorRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	skyboxDescriptorRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+
+	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(SkyBoxParamterIndex::ParamterCount)> skyboxRootParameters{};
+	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
+	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::VertexConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
+	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &skyboxDescriptorRange[1], D3D12_SHADER_VISIBILITY_PIXEL);
+
+	D3D12_STATIC_SAMPLER_DESC clampLinearStaticSamplerDesc
+	{
+		.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		.MipLODBias = 0.0f,
+		.MaxAnisotropy = 0u,
+		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		.MinLOD = 0.0f,
+		.MaxLOD = D3D12_FLOAT32_MAX,
+		.ShaderRegister = 0u,
+		.RegisterSpace = 1u,
+		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
+	};
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC skyboxRootSignatureDesc{};
+	skyboxRootSignatureDesc.Init_1_1(static_cast<UINT>(skyboxRootParameters.size()), skyboxRootParameters.data(), 1u, &clampLinearStaticSamplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&skyboxRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
+	ThrowIfFailed(m_Device->CreateRootSignature(0u, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_SkyBoxRootSignature)));
+	m_SkyBoxRootSignature->SetName(L"Sky Box Root Signature");
+
+	wrl::ComPtr<ID3DBlob> skyBoxVertexShaderBlob;
+	wrl::ComPtr<ID3DBlob> skyBoxPixelShaderBlob;
+
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/SkyBoxVS.cso", &skyBoxVertexShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/SkyBoxPS.cso", &skyBoxPixelShaderBlob));
+
+	// Create Sky Box PSO.
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = gfx::utils::CreateGraphicsPSODesc(m_SkyBoxRootSignature.Get(), skyBoxVertexShaderBlob.Get(), skyBoxPixelShaderBlob.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, false);
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&m_SkyBoxPipelineState)));
+	m_SkyBoxPipelineState->SetName(L"Sky Box Pipeline State");
+
 	// Load data for models and textures.
 	m_TestTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
 
@@ -491,6 +557,8 @@ void SandBox::LoadContent()
 	m_SphereBaseColor.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", L"Sphere Base Color Texture", true);
 
 	m_SphereMetalRough.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", L"Sphere Roughness Metallic Texture", false);
+
+	m_SkyBoxTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, m_RTVDescriptor, L"Assets/Textures/Environment.HDR", L"Environment HDR Texture");
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 
@@ -507,6 +575,8 @@ void SandBox::LoadContent()
 	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
 
+	m_SkyBoxModel.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
+
 	// Create render targets and thier Root signature and PSO.
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get());
 
@@ -517,7 +587,7 @@ void SandBox::LoadContent()
 
 	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(RenderTargetRootParamterIndex::ParamterCount)> offscreenRTRootParameters{};
 	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::PositionBuffer)].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_VERTEX);
 	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
 	std::array<D3D12_STATIC_SAMPLER_DESC, 1> renderTargetSamplerDescs

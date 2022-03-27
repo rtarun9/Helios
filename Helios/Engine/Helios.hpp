@@ -16,6 +16,7 @@
 #include "Graphics/StructuredBuffer.hpp"
 #include "Graphics/CommandQueue.hpp"
 #include "Graphics/Texture.hpp"
+#include "Graphics/CubeMap.hpp"
 #include "Graphics/GenerateMipsPSO.hpp"
 #include "Graphics/RenderTarget.hpp"
 

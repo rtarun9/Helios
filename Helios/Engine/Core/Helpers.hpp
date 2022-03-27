@@ -20,7 +20,7 @@ static inline void ErrorMessage(std::wstring_view message)
 
 static inline void GetBlobMessage(ID3DBlob* blob)
 {
-	if (!blob)
+	if (blob)
 	{
 		auto message = (const char*)blob->GetBufferPointer();
 		OutputDebugStringA(message);
@@ -60,7 +60,7 @@ static std::map<uint8_t, Keys> INPUT_MAP
 };
 
 template <typename T>
-static constexpr uint32_t EnumClassValue(const T& value)
+static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
 {
-	return static_cast<uint32_t>(value);
+	return static_cast<std::underlying_type<T>::type>(value);
 }

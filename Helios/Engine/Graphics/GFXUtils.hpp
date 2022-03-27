@@ -80,7 +80,7 @@ namespace helios::gfx::utils
 		};
 	}
 
-	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT)
+	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true)
 	{
 		return D3D12_GRAPHICS_PIPELINE_STATE_DESC 
 		{
@@ -92,7 +92,7 @@ namespace helios::gfx::utils
 			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState
 			{
-				.DepthEnable = TRUE,
+				.DepthEnable = depthEnable,
 				.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
 				.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 				.StencilEnable = FALSE

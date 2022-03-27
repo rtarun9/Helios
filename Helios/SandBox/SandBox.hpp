@@ -111,6 +111,12 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;
 
+	// Sky Box data.
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_SkyBoxRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SkyBoxPipelineState;
+	helios::Model m_SkyBoxModel{};
+	helios::gfx::CubeMap m_SkyBoxTexture{};
+
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
 

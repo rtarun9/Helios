@@ -81,6 +81,9 @@
     <ClInclude Include="Engine\Graphics\StructuredBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Graphics\CubeMap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Pch.cpp">
@@ -131,6 +134,9 @@
     <ClCompile Include="Engine\Graphics\StructuredBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\CubeMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\TestVS.hlsl" />
@@ -142,6 +148,8 @@
     <FxCompile Include="Shaders\PBRPixel.hlsl" />
     <FxCompile Include="Shaders\OffscreenRTVertex.hlsl" />
     <FxCompile Include="Shaders\OffscreenRTPixel.hlsl" />
+    <FxCompile Include="Shaders\SkyBoxVS.hlsl" />
+    <FxCompile Include="Shaders\SkyBoxPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
