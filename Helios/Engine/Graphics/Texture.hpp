@@ -26,8 +26,7 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_TextureUploadHeap;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE m_CPUDescriptorHandle{};
-		D3D12_GPU_DESCRIPTOR_HANDLE m_GPUDescriptorHandle{};
+		DescriptorHandle m_DescriptorHandles{};
 	};
 }
 

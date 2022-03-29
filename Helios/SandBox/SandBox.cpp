@@ -42,9 +42,10 @@ enum class PBRRootParameterIndex : uint32_t
 enum class SkyBoxParamterIndex : uint32_t
 {
 	PositionBuffer = 0u,
-	VertexConstantBuffer = 1u,
-	DescriptorTable = 2u,
-	ParamterCount = 3u
+	TextureCoordBuffer = 1u,
+	VertexConstantBuffer = 2u,
+	DescriptorTable = 3u,
+	ParamterCount = 4u
 };
 
 enum class RenderTargetRootParamterIndex : uint32_t
@@ -273,18 +274,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	m_UIManager.End();
 
-	// Draw sky box
-	commandList->SetGraphicsRootSignature(m_SkyBoxRootSignature.Get());
-	commandList->SetPipelineState(m_SkyBoxPipelineState.Get());
-
-	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
-
-	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(SkyBoxParamterIndex::PositionBuffer), m_SkyBoxModel.GetPositionBuffer()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(SkyBoxParamterIndex::VertexConstantBuffer), m_SkyBoxModel.GetTransformCBufferVirtualAddress());
-	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(SkyBoxParamterIndex::DescriptorTable), m_SkyBoxTexture.GetGPUDescriptorHandle());
-	
-	m_SkyBoxTexture.DrawToCube(m_Device.Get(), commandList, m_SkyBoxModel);
-
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -326,7 +315,7 @@ void SandBox::InitRendererCore()
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u, L"DSV Descriptor");
 
 	// Creating 15 descriptor heap slots as of now, just an arbitruary number.
-	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 15u, L"SRV_CBV_UAV Descriptor");
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 20u, L"SRV_CBV_UAV Descriptor");
 
 	CreateBackBufferRenderTargetViews();
 	CreateDepthBuffer();
@@ -404,150 +393,45 @@ void SandBox::LoadContent()
 		wrapStaticSamplerDesc
 	};
 
-	// Create General Root signature.
-	// Note : There is no need for descriptor ranges to be in a array, it is for keeping track of all descriptor ranges used for each root signature.
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, 2> descriptorRanges{};
-	descriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	descriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	// Create general PSO and shaders.
+	wrl::ComPtr<ID3DBlob> vertexShaderBlob;
+	wrl::ComPtr<ID3DBlob> pixelShaderBlob;
 
-	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(RootParameterIndex::ParamterCount)> rootParameters{};
-	rootParameters[EnumClassValue(RootParameterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootParameters[EnumClassValue(RootParameterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootParameters[EnumClassValue(RootParameterIndex::NormalBuffer)].InitAsShaderResourceView(2u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootParameters[EnumClassValue(RootParameterIndex::ConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootParameters[EnumClassValue(RootParameterIndex::RootConstant)].InitAsConstants(sizeof(LightingData) / 4, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
-	rootParameters[EnumClassValue(RootParameterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &descriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL);
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &vertexShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &pixelShaderBlob));
 
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc{};
-	rootSignatureDesc.Init_1_1(static_cast<uint32_t>(rootParameters.size()), rootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	wrl::ComPtr<ID3DBlob> rootSignatureBlob;
-	wrl::ComPtr<ID3DBlob> errorBlob;
-
-	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
-	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
+	ThrowIfFailed(m_Device->CreateRootSignature(0, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 	m_RootSignature->SetName(L"Root Signature");
 
-	// Create general PSO and shaders.
-	wrl::ComPtr<ID3DBlob> testVertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> testPixelShaderBlob;
-
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &testVertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &testPixelShaderBlob));
-
 	// Create general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = gfx::utils::CreateGraphicsPSODesc(m_RootSignature.Get(), testVertexShaderBlob.Get(), testPixelShaderBlob.Get());
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = gfx::utils::CreateGraphicsPSODesc(m_RootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 	m_PSO->SetName(L"Graphics PSO");
 
 	// Light Root signature
-	std::array<CD3DX12_ROOT_PARAMETER1, 4> lightRootParameters{};
-	lightRootParameters[0].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	lightRootParameters[1].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	lightRootParameters[2].InitAsShaderResourceView(2u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	lightRootParameters[3].InitAsConstantBufferView(0u,  EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightVS.cso", &vertexShaderBlob));
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &pixelShaderBlob));
 
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC lightRootSignatureDesc{};
-	lightRootSignatureDesc.Init_1_1(static_cast<UINT>(lightRootParameters.size()), lightRootParameters.data(), 0u, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	wrl::ComPtr<ID3DBlob> lightRootSignatureErrorBlob;
-	wrl::ComPtr<ID3DBlob> lightRootSignature;
-
-	ThrowIfFailed(::D3D12SerializeVersionedRootSignature(&lightRootSignatureDesc, &lightRootSignature, &lightRootSignatureErrorBlob));
-	ThrowIfFailed(m_Device->CreateRootSignature(0u, lightRootSignature->GetBufferPointer(), lightRootSignature->GetBufferSize(), IID_PPV_ARGS(&m_LightRootSignature)));
+	ThrowIfFailed(m_Device->CreateRootSignature(0u, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_LightRootSignature)));
 	m_LightRootSignature->SetName(L"Light Root Signature");
 
-	wrl::ComPtr<ID3DBlob> lightVertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> lightPixelShaderBlob;
-
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightVS.cso", &lightVertexShaderBlob));
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &lightPixelShaderBlob));
-
 	// Create Light PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), lightVertexShaderBlob.Get(), lightPixelShaderBlob.Get());
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
 	m_LightPSO->SetName(L"Light PSO");
 
 	// Create PBR Root signature.
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, EnumClassValue(PBRRootParameterIndex::ParamterCount)> pbrDescriptorRanges{};
-	pbrDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	pbrDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	pbrDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRVS.cso", &vertexShaderBlob));
+	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPS.cso", &pixelShaderBlob));
 
-	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(PBRRootParameterIndex::ParamterCount)> pbrRootParameters{};
-	pbrRootParameters[EnumClassValue(RootParameterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	pbrRootParameters[EnumClassValue(RootParameterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	pbrRootParameters[EnumClassValue(RootParameterIndex::NormalBuffer)].InitAsShaderResourceView(2u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL);
-	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::PixelRootConstant)].InitAsConstants(sizeof(LightingData) / 4, 1u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_SHADER_VISIBILITY_PIXEL);
-	pbrRootParameters[EnumClassValue(PBRRootParameterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &pbrDescriptorRanges[2], D3D12_SHADER_VISIBILITY_PIXEL);
-
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC pbrRootSignatureDesc{};
-	pbrRootSignatureDesc.Init_1_1(static_cast<uint32_t>(pbrRootParameters.size()), pbrRootParameters.data(), static_cast<uint32_t>(samplers.size()), samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&pbrRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
-	ThrowIfFailed(m_Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_PBRRootSignature)));
+	ThrowIfFailed(m_Device->CreateRootSignature(0, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_PBRRootSignature)));
 	m_PBRRootSignature->SetName(L"PBR Root signature");
 
-	// Create PBR PSO and shaders.
-	wrl::ComPtr<ID3DBlob> pbrVertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> pbrPixelShaderBlob;
-
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRVertex.cso", &pbrVertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPixel.cso", &pbrPixelShaderBlob));
-
 	// Create PBR general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), pbrVertexShaderBlob.Get(), pbrPixelShaderBlob.Get());
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
 	m_PBRPSO->SetName(L"PBR PSO");
-
-	// Create Sky Box root signature.
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, 3> skyboxDescriptorRange{};
-	skyboxDescriptorRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
-	skyboxDescriptorRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader), D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	skyboxDescriptorRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
-
-	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(SkyBoxParamterIndex::ParamterCount)> skyboxRootParameters{};
-	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::PositionBuffer)].InitAsShaderResourceView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
-	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::VertexConstantBuffer)].InitAsConstantBufferView(0u, EnumClassValue(ShaderRegisterSpace::VertexShader), D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
-	skyboxRootParameters[EnumClassValue(SkyBoxParamterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &skyboxDescriptorRange[1], D3D12_SHADER_VISIBILITY_PIXEL);
-
-	D3D12_STATIC_SAMPLER_DESC clampLinearStaticSamplerDesc
-	{
-		.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.MipLODBias = 0.0f,
-		.MaxAnisotropy = 0u,
-		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		.MinLOD = 0.0f,
-		.MaxLOD = D3D12_FLOAT32_MAX,
-		.ShaderRegister = 0u,
-		.RegisterSpace = 1u,
-		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
-	};
-
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC skyboxRootSignatureDesc{};
-	skyboxRootSignatureDesc.Init_1_1(static_cast<UINT>(skyboxRootParameters.size()), skyboxRootParameters.data(), 1u, &clampLinearStaticSamplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&skyboxRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
-	ThrowIfFailed(m_Device->CreateRootSignature(0u, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_SkyBoxRootSignature)));
-	m_SkyBoxRootSignature->SetName(L"Sky Box Root Signature");
-
-	wrl::ComPtr<ID3DBlob> skyBoxVertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> skyBoxPixelShaderBlob;
-
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/SkyBoxVS.cso", &skyBoxVertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/SkyBoxPS.cso", &skyBoxPixelShaderBlob));
-
-	// Create Sky Box PSO.
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = gfx::utils::CreateGraphicsPSODesc(m_SkyBoxRootSignature.Get(), skyBoxVertexShaderBlob.Get(), skyBoxPixelShaderBlob.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, false);
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&m_SkyBoxPipelineState)));
-	m_SkyBoxPipelineState->SetName(L"Sky Box Pipeline State");
 
 	// Load data for models and textures.
 	m_TestTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
@@ -557,8 +441,6 @@ void SandBox::LoadContent()
 	m_SphereBaseColor.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", L"Sphere Base Color Texture", true);
 
 	m_SphereMetalRough.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", L"Sphere Roughness Metallic Texture", false);
-
-	m_SkyBoxTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, m_RTVDescriptor, L"Assets/Textures/Environment.HDR", L"Environment HDR Texture");
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 
@@ -575,56 +457,18 @@ void SandBox::LoadContent()
 	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
 
-	m_SkyBoxModel.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
-
 	// Create render targets and thier Root signature and PSO.
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get());
 
 	m_OffscreenRT.Init(m_Device.Get(), commandList.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
-	
-	std::array<CD3DX12_DESCRIPTOR_RANGE1, 1> offscreenRTDescriptorRanges{};
-	offscreenRTDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1u, 0u, EnumClassValue(ShaderRegisterSpace::PixelShader));
-
-	std::array<CD3DX12_ROOT_PARAMETER1, EnumClassValue(RenderTargetRootParamterIndex::ParamterCount)> offscreenRTRootParameters{};
-	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::PositionBuffer)].InitAsShaderResourceView(0u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
-	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer)].InitAsShaderResourceView(1u, 0u, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_VERTEX);
-	offscreenRTRootParameters[EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable)].InitAsDescriptorTable(1u, &offscreenRTDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-
-	std::array<D3D12_STATIC_SAMPLER_DESC, 1> renderTargetSamplerDescs
-	{
-		D3D12_STATIC_SAMPLER_DESC
-		{
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.MipLODBias = 0u,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS,
-			.MinLOD = 0u,
-			.MaxLOD = D3D12_FLOAT32_MAX,
-			.ShaderRegister = 0u,
-			.RegisterSpace = EnumClassValue(ShaderRegisterSpace::PixelShader),
-			.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-		}
-	};
-	
-	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC offscreenRTRootSignatureDesc{};
-	offscreenRTRootSignatureDesc.Init_1_1(static_cast<uint32_t>(offscreenRTRootParameters.size()), offscreenRTRootParameters.data(), 
-		static_cast<uint32_t>(renderTargetSamplerDescs.size()), renderTargetSamplerDescs.data(), 
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-
-	ThrowIfFailed(::D3DX12SerializeVersionedRootSignature(&offscreenRTRootSignatureDesc, featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
-	ThrowIfFailed(m_Device->CreateRootSignature(0u, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_OffscreenRTRootSignature)));
 
 	// Create PSO for the offscreen rt root signature with its shaders.
-	wrl::ComPtr<ID3DBlob> offscreenVertexShader;
-	wrl::ComPtr<ID3DBlob> offscreenPixelShader;
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTVS.cso", &vertexShaderBlob));
+	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTPS.cso", &pixelShaderBlob));
 
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTVertex.cso", &offscreenVertexShader));
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTPixel.cso", &offscreenPixelShader));
+	ThrowIfFailed(m_Device->CreateRootSignature(0u, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_OffscreenRTRootSignature)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc = gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), offscreenVertexShader.Get(), offscreenPixelShader.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc = gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
 	ThrowIfFailed(m_Device-> CreateGraphicsPipelineState(&offscreenRTPSODesc, IID_PPV_ARGS(&m_OffscreenRTPipelineState)));
 	m_OffscreenRTPipelineState->SetName(L"Offscreen RT Pipeline State");
 

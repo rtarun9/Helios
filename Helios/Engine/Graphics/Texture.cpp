@@ -77,8 +77,8 @@ namespace helios::gfx
 
 		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDescriptor.GetCurrentCPUDescriptorHandle());
 	
-		m_CPUDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
-		m_GPUDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
+		m_DescriptorHandles.cpuDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
+		m_DescriptorHandles.gpuDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
 
 		srvDescriptor.OffsetCurrentDescriptorHandles();
 	}
@@ -90,11 +90,11 @@ namespace helios::gfx
 
 	D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetCPUDescriptorHandle()
 	{
-		return m_CPUDescriptorHandle;
+		return m_DescriptorHandles.cpuDescriptorHandle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE Texture::GetGPUDescriptorHandle()
 	{
-		return m_GPUDescriptorHandle;
+		return m_DescriptorHandles.gpuDescriptorHandle;
 	}
 }

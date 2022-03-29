@@ -1,3 +1,5 @@
+#include "OffscreenRTRS.hlsli"
+
 struct VSOutput
 {
     float4 position : SV_Position;
@@ -7,6 +9,7 @@ struct VSOutput
 StructuredBuffer<float2> positionBuffer : register(t0, space0);
 StructuredBuffer<float2> textureCoordsBuffer : register(t1, space0);
 
+[RootSignature(OffscreenRTRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
     VSOutput output;

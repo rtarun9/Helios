@@ -84,6 +84,9 @@
     <ClInclude Include="Engine\Graphics\CubeMap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Graphics\RootSignature.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Pch.cpp">
@@ -137,6 +140,9 @@
     <ClCompile Include="Engine\Graphics\CubeMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\RootSignature.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\TestVS.hlsl" />
@@ -144,14 +150,18 @@
     <FxCompile Include="Shaders\LightPS.hlsl" />
     <FxCompile Include="Shaders\LightVS.hlsl" />
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl" />
-    <FxCompile Include="Shaders\PBRVertex.hlsl" />
-    <FxCompile Include="Shaders\PBRPixel.hlsl" />
-    <FxCompile Include="Shaders\OffscreenRTVertex.hlsl" />
-    <FxCompile Include="Shaders\OffscreenRTPixel.hlsl" />
+    <FxCompile Include="Shaders\PBRVS.hlsl" />
+    <FxCompile Include="Shaders\PBRPS.hlsl" />
+    <FxCompile Include="Shaders\OffscreenRTVS.hlsl" />
+    <FxCompile Include="Shaders\OffscreenRTPS.hlsl" />
     <FxCompile Include="Shaders\SkyBoxVS.hlsl" />
     <FxCompile Include="Shaders\SkyBoxPS.hlsl" />
+    <FxCompile Include="Shaders\LightRS.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="Shaders\TestRS.hlsli" />
+    <None Include="Shaders\PBRRS.hlsli" />
+    <None Include="Shaders\OffscreenRTRS.hlsli" />
   </ItemGroup>
 </Project>

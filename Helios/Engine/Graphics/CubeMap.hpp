@@ -10,9 +10,7 @@ namespace helios::gfx
 	class CubeMap
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, Descriptor& rtvDescriptor, std::wstring_view path, std::wstring_view textureName);
-
-		void DrawToCube(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,  Model& cubeModel);
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view path, std::wstring_view textureName);
 
 		ID3D12Resource* GetTextureResource();
 
@@ -30,13 +28,7 @@ namespace helios::gfx
 
 		D3D12_CPU_DESCRIPTOR_HANDLE m_CPUDescriptorHandle{};
 		D3D12_GPU_DESCRIPTOR_HANDLE m_GPUDescriptorHandle{};
-		
-		std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> m_CubeFaceCPUDescriptorHandle{};
-		std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 6> m_CubeFaceGPUDescriptorHandle{};
 
-		std::array<DirectX::XMMATRIX, 6> m_LookAtMatrices{};
-		D3D12_VIEWPORT m_Viewport{};
-		DirectX::XMMATRIX m_ProjectionMatrix{};
 	};
 }
 

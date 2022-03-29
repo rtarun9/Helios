@@ -1,3 +1,5 @@
+#include "PBRRS.hlsli"
+
 struct VSOutput
 {
     float4 position : SV_Position;
@@ -19,6 +21,7 @@ StructuredBuffer<float3> normalBuffer : register(t2, space0);
 
 ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
 
+[RootSignature(PBRRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
     matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);

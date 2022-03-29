@@ -1,3 +1,5 @@
+#include "PBRRS.hlsli"
+
 struct VSOutput
 {
     float4 position : SV_Position;
@@ -77,6 +79,7 @@ float SchlickGGXShadowing(float roughness, float3 normal, float3 viewDir, float3
     return SchlickBeckmannGS(roughness, normal, viewDir) * SchlickBeckmannGS(roughness, normal, lightDir);
 }
 
+[RootSignature(PBRRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
     float3 lightColor = float3(1.0f, 1.0f, 1.0f); 

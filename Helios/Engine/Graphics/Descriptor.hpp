@@ -4,6 +4,12 @@
 
 namespace helios::gfx
 {
+	struct DescriptorHandle
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle{};
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorHandle{};
+	};
+
 	// Note : This function is heavily WIP.
 	class Descriptor
 	{
@@ -35,7 +41,6 @@ namespace helios::gfx
 
 		// Note : The purpose for this is so that I can pass the descriptor directly into textures and other classes that use either the CPU or GPU descriptor handle.
 		// This is only used for initialization of gfx object's as of now.
-		D3D12_CPU_DESCRIPTOR_HANDLE m_CurrentCPUDescriptorHandle{};
-		D3D12_GPU_DESCRIPTOR_HANDLE m_CurrentGPUDescriptorHandle{};
+		DescriptorHandle m_CurrentDescriptorHandle{};
 	};
 }

@@ -19,11 +19,11 @@ namespace helios::gfx
 
 		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
 
-		m_CurrentCPUDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		m_CurrentDescriptorHandle.cpuDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 		if (heapFlags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
 		{
-			m_CurrentGPUDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();	
+			m_CurrentDescriptorHandle.gpuDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 		}
 	}
 
@@ -49,12 +49,12 @@ namespace helios::gfx
 
 	D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentCPUDescriptorHandle()
 	{
-		return m_CurrentCPUDescriptorHandle;
+		return 	m_CurrentDescriptorHandle.cpuDescriptorHandle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentGPUDescriptorHandle()
 	{
-		return m_CurrentGPUDescriptorHandle;
+		return 	m_CurrentDescriptorHandle.gpuDescriptorHandle;
 	}
 
 	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset)
@@ -75,12 +75,12 @@ namespace helios::gfx
 
 	void Descriptor::OffsetCurrentCPUDescriptor(uint32_t offset)
 	{
-		m_CurrentCPUDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		m_CurrentDescriptorHandle.cpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
 	void Descriptor::OffsetCurrentGPUDescriptor(uint32_t offset)
 	{
-		m_CurrentGPUDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		m_CurrentDescriptorHandle.gpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
 	void Descriptor::OffsetCurrentDescriptorHandles(uint32_t offset)
