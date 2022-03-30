@@ -6,11 +6,10 @@ class SandBox : public helios::Engine
 {
 	struct alignas(256) MaterialData
 	{
-		DirectX::XMFLOAT3 albedo;
-		float metallicFactor;
-		float roughnessFactor;
-		float ao;
-		DirectX::XMFLOAT2 padding;
+		DirectX::XMFLOAT3 albedo{};
+		float metallicFactor{};
+		float roughnessFactor{};
+		float ao{};
 	};
 
 public:
@@ -30,6 +29,10 @@ private:
 	void InitRendererCore();
 
 	void LoadContent();
+	
+	void LoadMaterials();
+	void LoadTextures(ID3D12GraphicsCommandList* commandList);
+	void LoadModels(ID3D12GraphicsCommandList* commandList);
 
 	void EnableDebugLayer();
 	void SelectAdapter();
@@ -76,6 +79,15 @@ private:
 	bool m_IsFullScreen{ false };
 
 	// Application Data.
+	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
+	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
+	std::map<std::wstring_view, helios::Model> m_GameObjects{};
+
+	helios::Model m_Sphere{};
+	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
+
+	helios::Model m_LightSource{};
+
 	helios::Camera m_Camera{};
 
 	helios::UIManager m_UIManager{};
@@ -83,37 +95,9 @@ private:
 	// Transform data.
 	float m_FOV{ 45.0f };
 
-	// Gameobject data.
 	DirectX::XMMATRIX m_ViewMatrix{};
 	DirectX::XMMATRIX m_ProjectionMatrix{};
 
-	std::map<std::wstring_view, helios::Model> m_GameObjects{};
-
-	// Data for PBR object.
-	helios::Model m_Sphere{};
-	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
-
-	helios::gfx::Texture m_SphereBaseColor{};
-	helios::gfx::Texture m_SphereMetalRough{};
-
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PSO;
-
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_PBRRootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PBRPSO;
-
-	helios::gfx::Texture m_TestTexture{};
-	helios::gfx::Texture m_MarbleTexture{};
-
-	// Light source data.
-	helios::Model m_LightSource{};
-
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_LightRootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_LightPSO;
-
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
-
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OffscreenRTRootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_OffscreenRTPipelineState;
 };

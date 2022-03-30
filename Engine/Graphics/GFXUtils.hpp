@@ -2,6 +2,8 @@
 
 #include "Pch.hpp"
 
+#include "Material.hpp"
+
 namespace helios::gfx::utils
 {
 	inline void TransitionResource(ID3D12GraphicsCommandList* commandList, ID3D12Resource* resource,
@@ -108,5 +110,33 @@ namespace helios::gfx::utils
 			},
 			.NodeMask = 0u,
 		};
+	}
+
+	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT)
+	{
+		wrl::ComPtr<ID3DBlob> vertexBlob;
+		::D3DReadFileToBlob(vsShaderPath.data(), &vertexBlob);
+
+		wrl::ComPtr<ID3DBlob> pixelBlob;
+		::D3DReadFileToBlob(psShaderPath.data(), &pixelBlob);
+
+		if (!vertexBlob.Get() || !pixelBlob.Get())
+		{
+			ErrorMessage(psShaderPath.data() + std::wstring(L" Not found"));
+		}
+
+		wrl::ComPtr<ID3D12RootSignature> rootSignature;
+		ThrowIfFailed(device->CreateRootSignature(0u, vertexBlob->GetBufferPointer(), vertexBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+		auto rootSignatureName = materialName.data() + std::wstring(L" Root Signature");
+		rootSignature->SetName(rootSignatureName.c_str());
+
+		wrl::ComPtr<ID3D12PipelineState> pso;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = utils::CreateGraphicsPSODesc(rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format);
+		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		auto psoName = materialName.data() + std::wstring(L" PSO");
+		pso->SetName(psoName.c_str());
+
+		return { rootSignature, pso };
 	}
 }

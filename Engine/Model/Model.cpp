@@ -15,7 +15,7 @@ using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Material material)
+	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Texture texture)
 	{
         auto modelPathStr = WstringToString(modelPath);
 
@@ -141,7 +141,7 @@ namespace helios
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
 			cbDescriptor, L"Transform CBuffer");
 
-		m_Material = material;
+		m_Texture = texture;
 	}
 
 	ID3D12Resource* Model::GetPositionBuffer()
@@ -165,9 +165,9 @@ namespace helios
 		return bufferView.BufferLocation;
 	}
 
-	Material Model::GetMaterial()
+	Texture Model::GetTexture()
 	{
-		return m_Material;
+		return m_Texture;
 	}
 
 	TransformComponent& Model::GetTransform()

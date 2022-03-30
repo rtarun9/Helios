@@ -77,8 +77,6 @@ void SandBox::OnUpdate()
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 	
 	m_LightSource.GetTransform().translate.x = 2.0f;
-	//m_LightSource.GetTransform().translate.z = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
-	//m_LightSource.GetTransform().translate.x = static_cast<float>(cos(Application::GetTimer().GetTotalTime() / 10.0f) * 2.0f);
 	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 2.0f));
 
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
@@ -166,10 +164,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		gameObject.UpdateTransformData(commandList, projectionView);
 	}
 
-	ImGui::Begin("Sphere");
 	m_Sphere.UpdateData(L"Sphere");
 	m_Sphere.UpdateTransformData(commandList, projectionView);
-	ImGui::End();
 
 	ImGui::Begin("Material Data");
 	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
@@ -181,8 +177,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 
 	// Set the necessary states
-	commandList->SetPipelineState(m_PSO.Get());
-	commandList->SetGraphicsRootSignature(m_RootSignature.Get());
+	m_Materials[L"DefaultMaterial"].Bind(commandList);
 
 	std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
 	{
@@ -221,10 +216,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
-		auto textureGPUHandle = gameObject.GetMaterial().m_BaseColorDescriptorHandle;
+		auto textureGPUHandle = gameObject.GetTexture().m_BaseColorDescriptorHandle;
 		if (!textureGPUHandle.ptr)
 		{
-			textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
+			textureGPUHandle = m_Textures[L"TestTexture"].GetGPUDescriptorHandle();
 		}
 
 		commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RootParameterIndex::PositionBuffer), gameObject.GetPositionBuffer()->GetGPUVirtualAddress());
@@ -238,22 +233,21 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	}
 	
 	// Draw sphere (for PBR Test).
-	commandList->SetPipelineState(m_PBRPSO.Get());
-	commandList->SetGraphicsRootSignature(m_PBRRootSignature.Get());
+	m_Materials[L"PBRMaterial"].Bind(commandList);
 
-	std::array pbrMaterialDescriptorHandles
+	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 2> pbrMaterialDescriptorHandles
 	{
-		m_SphereBaseColor.GetGPUDescriptorHandle(),
-		m_SphereMetalRough.GetGPUDescriptorHandle()
+		m_Textures[L"SphereAlbedoTexture"].GetGPUDescriptorHandle(),
+		m_Textures[L"SphereMetalRoughTexture"].GetGPUDescriptorHandle()
 	};
 
-	auto textureGPUHandle = m_TestTexture.GetGPUDescriptorHandle();
+	auto textureGPUHandle = m_Textures[L"TestTexture"].GetGPUDescriptorHandle();
 
 	auto pbrMaterialGPUVirutalAddress = m_PBRMaterial.GetBufferView().BufferLocation;
 	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::PositionBuffer), m_Sphere.GetPositionBuffer()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::TextureCoordBuffer), m_Sphere.GetTextureCoordsBuffer()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(PBRRootParameterIndex::NormalBuffer), m_Sphere.GetNormalBuffer()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(PBRRootParameterIndex::DescriptorTable), m_SphereBaseColor.GetGPUDescriptorHandle());
+	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(PBRRootParameterIndex::DescriptorTable), m_Textures[L"SphereAlbedoTexture"].GetGPUDescriptorHandle());
 	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::VertexConstantBuffer), m_Sphere.GetTransformCBufferVirtualAddress());
 	commandList->SetGraphicsRootConstantBufferView(EnumClassValue(PBRRootParameterIndex::PixelConstantBuffer), pbrMaterialGPUVirutalAddress);
 	commandList->SetGraphicsRoot32BitConstants(EnumClassValue(PBRRootParameterIndex::PixelRootConstant), sizeof(LightingData) / 4, &lightingData, 0u);
@@ -261,8 +255,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_Sphere.Draw(commandList);
 
 	// Draw the light source
-	commandList->SetPipelineState(m_LightPSO.Get());
-	commandList->SetGraphicsRootSignature(m_LightRootSignature.Get());
+	m_Materials[L"LightMaterial"].Bind(commandList);
 
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 	commandList->SetGraphicsRootShaderResourceView(0u, m_LightSource.GetPositionBuffer()->GetGPUVirtualAddress());
@@ -277,8 +270,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	commandList->SetGraphicsRootSignature(m_OffscreenRTRootSignature.Get());
-	commandList->SetPipelineState(m_OffscreenRTPipelineState.Get());
+	m_Materials[L"OffscreenRTMaterial"].Bind(commandList);
 
 	rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
 	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
@@ -338,143 +330,53 @@ void SandBox::LoadContent()
 	// Reset command list and allocator for initial setup.
 	auto commandList = m_CommandQueue.GetCommandList();
 
-	// Check for highest available version for root signature. Version_1_1 provides driver optimizations.
-	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData =
-	{
-		.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1
-	};
-
-	if (FAILED(m_Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-	{
-		featureData =
-		{
-			.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0
-		};
-	}
-
-	// Create static samplers descs.
-	D3D12_STATIC_SAMPLER_DESC clampStaticSamplerDesc
-	{
-		.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		.MipLODBias = 0.0f,
-		.MaxAnisotropy = 0u,
-		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		.MinLOD = 0.0f,
-		.MaxLOD = D3D12_FLOAT32_MAX,
-		.ShaderRegister = 0u,
-		.RegisterSpace = 1u,
-		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
-	};
-
-	D3D12_STATIC_SAMPLER_DESC wrapStaticSamplerDesc
-	{
-		.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
-		.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		.MipLODBias = 0.0f,
-		.MaxAnisotropy = 0u,
-		.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		.MinLOD = 0.0f,
-		.MaxLOD = D3D12_FLOAT32_MAX,
-		.ShaderRegister = 1u,
-		.RegisterSpace = 1u,
-		.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
-	};
-
-	std::array<D3D12_STATIC_SAMPLER_DESC, 2> samplers
-	{
-		clampStaticSamplerDesc,
-		wrapStaticSamplerDesc
-	};
-
-	// Create general PSO and shaders.
-	wrl::ComPtr<ID3DBlob> vertexShaderBlob;
-	wrl::ComPtr<ID3DBlob> pixelShaderBlob;
-
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestVS.cso", &vertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/TestPS.cso", &pixelShaderBlob));
-
-	ThrowIfFailed(m_Device->CreateRootSignature(0, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
-	m_RootSignature->SetName(L"Root Signature");
-
-	// Create general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = gfx::utils::CreateGraphicsPSODesc(m_RootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
-	m_PSO->SetName(L"Graphics PSO");
-
-	// Light Root signature
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightVS.cso", &vertexShaderBlob));
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/LightPS.cso", &pixelShaderBlob));
-
-	ThrowIfFailed(m_Device->CreateRootSignature(0u, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_LightRootSignature)));
-	m_LightRootSignature->SetName(L"Light Root Signature");
-
-	// Create Light PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC lightPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_LightRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&lightPsoDesc, IID_PPV_ARGS(&m_LightPSO)));
-	m_LightPSO->SetName(L"Light PSO");
-
-	// Create PBR Root signature.
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRVS.cso", &vertexShaderBlob));
-	ThrowIfFailed(D3DReadFileToBlob(L"Shaders/PBRPS.cso", &pixelShaderBlob));
-
-	ThrowIfFailed(m_Device->CreateRootSignature(0, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_PBRRootSignature)));
-	m_PBRRootSignature->SetName(L"PBR Root signature");
-
-	// Create PBR general PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pbrPsoDesc = gfx::utils::CreateGraphicsPSODesc(m_PBRRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get());
-
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pbrPsoDesc, IID_PPV_ARGS(&m_PBRPSO)));
-	m_PBRPSO->SetName(L"PBR PSO");
+	LoadMaterials();
+	LoadTextures(commandList.Get());
+	LoadModels(commandList.Get());
 
 	// Load data for models and textures.
-	m_TestTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
-
-	m_MarbleTexture.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", L"Marble Texture");
-
-	m_SphereBaseColor.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", L"Sphere Base Color Texture", true);
-
-	m_SphereMetalRough.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", L"Sphere Roughness Metallic Texture", false);
-
 	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
-
-	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{ .m_BaseColorDescriptorHandle = m_TestTexture.GetGPUDescriptorHandle() });
-	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
-
-	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Material{ .m_BaseColorDescriptorHandle = m_MarbleTexture.GetGPUDescriptorHandle() });
-	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
-	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
-
-	m_LightSource.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
-	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
-
-	m_Sphere.Init(m_Device.Get(), commandList.Get(), L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
-	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
 
 	// Create render targets and thier Root signature and PSO.
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get());
 
 	m_OffscreenRT.Init(m_Device.Get(), commandList.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
 
-	// Create PSO for the offscreen rt root signature with its shaders.
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTVS.cso", &vertexShaderBlob));
-	ThrowIfFailed(::D3DReadFileToBlob(L"Shaders/OffscreenRTPS.cso", &pixelShaderBlob));
-
-	ThrowIfFailed(m_Device->CreateRootSignature(0u, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), IID_PPV_ARGS(&m_OffscreenRTRootSignature)));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC offscreenRTPSODesc = gfx::utils::CreateGraphicsPSODesc(m_OffscreenRTRootSignature.Get(), vertexShaderBlob.Get(), pixelShaderBlob.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
-	ThrowIfFailed(m_Device-> CreateGraphicsPipelineState(&offscreenRTPSODesc, IID_PPV_ARGS(&m_OffscreenRTPipelineState)));
-	m_OffscreenRTPipelineState->SetName(L"Offscreen RT Pipeline State");
-
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
 	m_CommandQueue.FlushQueue();
+}
+
+void SandBox::LoadMaterials()
+{
+	m_Materials[L"DefaultMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/TestVS.cso", L"Shaders/TestPS.cso", L"Default Material");
+	m_Materials[L"LightMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/LightVS.cso", L"Shaders/LightPS.cso", L"Light Material");
+	m_Materials[L"PBRMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
+	m_Materials[L"OffscreenRTMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
+}
+
+void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
+{
+	m_Textures[L"TestTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
+	m_Textures[L"MarbleTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", L"Marble Texture");
+	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", L"Sphere Base Color Texture", true);
+	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", L"Sphere Roughness Metallic Texture", false);
+}
+
+void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
+{
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Texture{ .m_BaseColorDescriptorHandle = m_Textures[L"TestTexture"].GetGPUDescriptorHandle() });
+	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
+
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, Texture{ .m_BaseColorDescriptorHandle = m_Textures[L"MarbleTexture"].GetGPUDescriptorHandle() });
+	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
+	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
+
+	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+
+	m_Sphere.Init(m_Device.Get(), commandList, L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
 }
 
 void SandBox::EnableDebugLayer()

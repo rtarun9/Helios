@@ -25,7 +25,7 @@ namespace helios
 	};
 
 	// Note : This is not the final design for materials since it is currently only used for non - PBR materials.
-	struct Material
+	struct Texture
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE m_BaseColorDescriptorHandle{};
 	};
@@ -33,14 +33,14 @@ namespace helios
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Material material = {});
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Texture material = {});
 
 		ID3D12Resource* GetPositionBuffer();
 		ID3D12Resource* GetTextureCoordsBuffer();
 		ID3D12Resource* GetNormalBuffer();
 
 		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
-		Material GetMaterial();
+		Texture GetTexture();
 
 		TransformComponent& GetTransform();
 		void UpdateData(std::wstring_view objectName);
@@ -63,7 +63,7 @@ namespace helios
 		TransformComponent m_TransformData{};
 
 		// Note : Currently only used for non - PBR Models.
-		Material m_Material{};
+		Texture m_Texture{};
 	};
 }
 
