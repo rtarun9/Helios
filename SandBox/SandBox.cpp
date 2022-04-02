@@ -270,6 +270,18 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+
+	// --------------------- WIP -------------------
+	// Bindless rendering for offscreen RT.
+	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
+
+	gfx::RenderResource bindlessRenderResource
+	{
+		.positionBufferIndex = static_cast<uint32_t>(m_OffscreenRT.GetPositionBuffer()->GetGPUVirtualAddress()),
+		.textureBufferIndex = static_cast<uint32_t>(m_OffscreenRT.GetTextureCoordsBuffer()->GetGPUVirtualAddress()),
+		.textureIndex = static_cast<uint32_t>(m_Textures[L"TestTexture"].GetGPUDescriptorHandle().ptr),
+	};
+ 
 	m_Materials[L"OffscreenRTMaterial"].Bind(commandList);
 
 	rtvHandle = m_RTVDescriptor.GetCPUDescriptorHandleForStart();
@@ -278,11 +290,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	commandList->OMSetRenderTargets(1u, &rtvHandle, FALSE, &dsvHandle);
 	gfx::RenderTarget::Bind(commandList);
 
-	commandList->SetGraphicsRootDescriptorTable(EnumClassValue(RenderTargetRootParamterIndex::DescriptorTable), m_OffscreenRT.GetSRVGPUDescriptorHandle());
+	commandList->SetGraphicsRoot32BitConstants(0u, 1u, &bindlessRenderResource, 0u);
 
-	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RenderTargetRootParamterIndex::PositionBuffer), gfx::RenderTarget::GetPositionBuffer()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootShaderResourceView(EnumClassValue(RenderTargetRootParamterIndex::TextureCoordBuffer), gfx::RenderTarget::GetTextureCoordsBuffer()->GetGPUVirtualAddress());
-	
 	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
 
 	m_UIManager.FrameEnd(commandList);
@@ -321,8 +330,6 @@ void SandBox::InitRendererCore()
 		.MinDepth = 0.0f,
 		.MaxDepth = 1.0f
 	};
-
-	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 }
 
 void SandBox::LoadContent()
@@ -341,6 +348,8 @@ void SandBox::LoadContent()
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get());
 
 	m_OffscreenRT.Init(m_Device.Get(), commandList.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
+
+	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
@@ -513,17 +522,20 @@ void SandBox::CreateSwapChain()
 
 void SandBox::CreateBackBufferRenderTargetViews()
 {
+
 	for (int i = 0; i < NUMBER_OF_FRAMES; ++i)
 	{
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RTVDescriptor.GetCurrentCPUDescriptorHandle();
+		
 		wrl::ComPtr<ID3D12Resource> backBuffer;
 		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-		m_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, m_RTVDescriptor.GetCurrentCPUDescriptorHandle());
+		m_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
 
 		m_BackBuffers[i] = backBuffer;
 		m_BackBuffers[i]->SetName(L"SwapChain BackBuffer");
 
-		m_RTVDescriptor.OffsetCurrentCPUDescriptor();
+		m_RTVDescriptor.OffsetCurrentHandle();
 	}
 }
 
@@ -556,7 +568,9 @@ void SandBox::CreateDepthBuffer()
 		}
 	};
 
-	m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, m_DSVDescriptor.GetCurrentCPUDescriptorHandle());
-	m_DSVDescriptor.OffsetCurrentCPUDescriptor();
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetCurrentCPUDescriptorHandle();
+
+	m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, dsvHandle);
+	m_DSVDescriptor.OffsetCurrentHandle();
 }
 

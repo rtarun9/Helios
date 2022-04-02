@@ -1,4 +1,5 @@
 #include "PBRRS.hlsli"
+#include "BindlessRS.hlsli"
 
 struct VSOutput
 {

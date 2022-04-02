@@ -27,7 +27,7 @@ namespace helios
 
 		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCurrentCPUDescriptorHandle(), srvDescriptor.GetCurrentGPUDescriptorHandle());
 
-		srvDescriptor.OffsetCurrentDescriptorHandles();
+		srvDescriptor.OffsetCurrentHandle();
 	}
 
 	void UIManager::FrameStart()

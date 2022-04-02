@@ -26,14 +26,23 @@ namespace helios::gfx
 		device->CreateRenderTargetView(m_Resource.Get(), nullptr, rtvDescriptor.GetCurrentCPUDescriptorHandle());
 		device->CreateShaderResourceView(m_Resource.Get(), nullptr, srvDescriptor.GetCurrentCPUDescriptorHandle());
 
-		m_RTVCPUDescriptorHandle = rtvDescriptor.GetCurrentCPUDescriptorHandle();
-		m_RTVGPUDescriptorHandle = rtvDescriptor.GetCurrentGPUDescriptorHandle();
+		m_RTV_DescriptorHandle =
+		{
+			.cpuDescriptorHandle = rtvDescriptor.GetCurrentCPUDescriptorHandle(),
+			.gpuDescriptorHandle = rtvDescriptor.GetCurrentGPUDescriptorHandle(),
+			.descriptorSize = rtvDescriptor.GetDescriptorSize()
+		};
 
-		m_SRVCPUDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
-		m_SRVGPUDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
+		m_SRV_DescriptorHandle =
+		{
+			.cpuDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle(),
+			.gpuDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle(),
+			.descriptorSize = srvDescriptor.GetDescriptorSize()
+		};
 
-		rtvDescriptor.OffsetCurrentDescriptorHandles();
-		srvDescriptor.OffsetCurrentDescriptorHandles();
+
+		rtvDescriptor.OffsetCurrentHandle();
+		srvDescriptor.OffsetCurrentHandle();
 
 		m_Width = width;
 		m_Height = height;
@@ -56,22 +65,22 @@ namespace helios::gfx
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderTarget::GetRTVCPUDescriptorHandle()
 	{
-		return m_RTVCPUDescriptorHandle;
+		return m_RTV_DescriptorHandle.cpuDescriptorHandle;
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderTarget::GetSRVCPUDescriptorHandle()
 	{
-		return m_SRVCPUDescriptorHandle;
+		return m_SRV_DescriptorHandle.cpuDescriptorHandle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE RenderTarget::GetRTVGPUDescriptorHandle()
 	{
-		return m_RTVGPUDescriptorHandle;
+		return m_RTV_DescriptorHandle.gpuDescriptorHandle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE RenderTarget::GetSRVGPUDescriptorHandle()
 	{
-		return m_SRVGPUDescriptorHandle;
+		return m_SRV_DescriptorHandle.gpuDescriptorHandle;
 	}
 
 	ID3D12Resource* RenderTarget::GetPositionBuffer()

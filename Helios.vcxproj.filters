@@ -157,5 +157,7 @@
     <None Include="Shaders\TestRS.hlsli" />
     <None Include="Shaders\PBRRS.hlsli" />
     <None Include="Shaders\OffscreenRTRS.hlsli" />
+    <None Include="packages.config" />
+    <None Include="Shaders\BindlessRS.hlsli" />
   </ItemGroup>
 </Project>

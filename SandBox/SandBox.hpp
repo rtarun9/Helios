@@ -29,7 +29,7 @@ private:
 	void InitRendererCore();
 
 	void LoadContent();
-	
+
 	void LoadMaterials();
 	void LoadTextures(ID3D12GraphicsCommandList* commandList);
 	void LoadModels(ID3D12GraphicsCommandList* commandList);

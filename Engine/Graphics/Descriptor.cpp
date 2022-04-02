@@ -19,12 +19,16 @@ namespace helios::gfx
 
 		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
 
-		m_CurrentDescriptorHandle.cpuDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		m_DescriptorHandleFromStart.cpuDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 		if (heapFlags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
 		{
-			m_CurrentDescriptorHandle.gpuDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+			m_DescriptorHandleFromStart.gpuDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 		}
+
+		m_DescriptorHandleFromStart.descriptorSize = m_DescriptorSize;
+
+		m_CurrentDescriptorHandle = m_DescriptorHandleFromStart;
 	}
 
 	ID3D12DescriptorHeap* Descriptor::GetDescriptorHeap()
@@ -49,12 +53,12 @@ namespace helios::gfx
 
 	D3D12_CPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentCPUDescriptorHandle()
 	{
-		return 	m_CurrentDescriptorHandle.cpuDescriptorHandle;
+		return m_CurrentDescriptorHandle.cpuDescriptorHandle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE Descriptor::GetCurrentGPUDescriptorHandle()
 	{
-		return 	m_CurrentDescriptorHandle.gpuDescriptorHandle;
+		return m_CurrentDescriptorHandle.gpuDescriptorHandle;
 	}
 
 	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset)
@@ -73,19 +77,8 @@ namespace helios::gfx
 		gpuHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
-	void Descriptor::OffsetCurrentCPUDescriptor(uint32_t offset)
+	void Descriptor::OffsetCurrentHandle()
 	{
-		m_CurrentDescriptorHandle.cpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
-	}
-
-	void Descriptor::OffsetCurrentGPUDescriptor(uint32_t offset)
-	{
-		m_CurrentDescriptorHandle.gpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
-	}
-
-	void Descriptor::OffsetCurrentDescriptorHandles(uint32_t offset)
-	{
-		OffsetCurrentCPUDescriptor(offset);
-		OffsetCurrentGPUDescriptor(offset);
+		m_CurrentDescriptorHandle.Offset();
 	}
 }

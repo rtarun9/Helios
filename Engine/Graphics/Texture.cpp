@@ -80,7 +80,7 @@ namespace helios::gfx
 		m_DescriptorHandles.cpuDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
 		m_DescriptorHandles.gpuDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
 
-		srvDescriptor.OffsetCurrentDescriptorHandles();
+		srvDescriptor.OffsetCurrentHandle();
 	}
 
 	ID3D12Resource* Texture::GetTextureResource()

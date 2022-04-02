@@ -27,7 +27,7 @@ namespace helios::gfx
 			};
 
 			device->CreateConstantBufferView(&m_BufferView, cbDescriptor.GetCurrentCPUDescriptorHandle());
-			cbDescriptor.OffsetCurrentDescriptorHandles();
+			cbDescriptor.OffsetCurrentHandle();
 		
 			CD3DX12_RANGE readRange(0, 0);       
 			ThrowIfFailed(m_Buffer->Map(0, &readRange, reinterpret_cast<void**>(&m_Data)));

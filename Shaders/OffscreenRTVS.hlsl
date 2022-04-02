@@ -1,4 +1,4 @@
-#include "OffscreenRTRS.hlsli"
+#include "BindlessRS.hlsli"
 
 struct VSOutput
 {
@@ -6,12 +6,21 @@ struct VSOutput
     float2 textureCoord : TEXTURE_COORD;
 };
 
-StructuredBuffer<float2> positionBuffer : register(t0, space0);
-StructuredBuffer<float2> textureCoordsBuffer : register(t1, space0);
+struct RenderResource
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint textureIndex;
+};
 
-[RootSignature(OffscreenRTRootSignature)]
+ConstantBuffer<RenderResource> renderResource : register(b0);
+
+[RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
+    StructuredBuffer<float2> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
+
     VSOutput output;
 
     output.position = float4(positionBuffer[vertexID].xy, 0.0f, 1.0f);

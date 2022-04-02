@@ -1,4 +1,4 @@
-#include "OffscreenRTRS.hlsli"
+#include "BindlessRS.hlsli"
 
 struct VSOutput
 {
@@ -6,11 +6,21 @@ struct VSOutput
     float2 textureCoord : TEXTURE_COORD;
 };
 
-Texture2D rtvTexture : register(t0, space1);
+struct RenderResource
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint textureIndex;
+};
+
+ConstantBuffer<RenderResource> renderResource : register(b0);
+
 SamplerState pointSampler : register(s0, space1);
 
-[RootSignature(OffscreenRTRootSignature)]
+[RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
+    Texture2D<float4> rtvTexture = ResourceDescriptorHeap[renderResource.textureIndex];
+    
     return rtvTexture.Sample(pointSampler, input.textureCoord);
 }

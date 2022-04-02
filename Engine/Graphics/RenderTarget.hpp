@@ -56,11 +56,8 @@ namespace helios::gfx
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE m_RTVCPUDescriptorHandle{};
-		D3D12_GPU_DESCRIPTOR_HANDLE m_RTVGPUDescriptorHandle{};
-
-		D3D12_CPU_DESCRIPTOR_HANDLE m_SRVCPUDescriptorHandle{};
-		D3D12_GPU_DESCRIPTOR_HANDLE m_SRVGPUDescriptorHandle{};
+		DescriptorHandle m_SRV_DescriptorHandle{};
+		DescriptorHandle m_RTV_DescriptorHandle{};
 
 		uint32_t m_Width{};
 		uint32_t m_Height{};
