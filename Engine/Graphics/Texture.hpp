@@ -12,10 +12,9 @@ namespace helios::gfx
 	public:
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view path, std::wstring_view textureName, bool isSRGB = true);
 
-		ID3D12Resource* GetTextureResource();
+		ID3D12Resource* GetTextureResource() const;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle();
-		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle();
+		uint32_t GetTextureIndex() const;
 
 	private:
 		void* m_TextureData{};
@@ -26,7 +25,7 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_TextureUploadHeap;
 
-		DescriptorHandle m_DescriptorHandles{};
+		uint32_t m_TextureIndexInDescriptorHeap{};
 	};
 }
 

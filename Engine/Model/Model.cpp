@@ -15,7 +15,7 @@ using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Texture texture)
+	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& srvCbDescriptor, uint32_t textureIndex)
 	{
         auto modelPathStr = WstringToString(modelPath);
 
@@ -131,43 +131,63 @@ namespace helios
 			}
 		}
 
-		m_PositionBuffer.Init<dx::XMFLOAT3>(device, commandList, modelPositions, D3D12_RESOURCE_FLAG_NONE, L"Position Buffer");
-		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
-		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
+		m_PositionBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, L"Position Buffer");
+		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
+		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
 
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
 		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
-			cbDescriptor, L"Transform CBuffer");
+			srvCbDescriptor, L"Transform CBuffer");
 
-		m_Texture = texture;
+		m_TextureIndex = textureIndex;
 	}
 
-	ID3D12Resource* Model::GetPositionBuffer()
+	ID3D12Resource* Model::GetPositionBuffer() const
 	{
 		return m_PositionBuffer.GetResource();
 	}
 
-	ID3D12Resource* Model::GetTextureCoordsBuffer()
+	ID3D12Resource* Model::GetTextureCoordsBuffer() const
 	{
 		return m_TextureCoordsBuffer.GetResource();
 	}
 
-	ID3D12Resource* Model::GetNormalBuffer()
+	ID3D12Resource* Model::GetNormalBuffer() const
 	{
 		return m_NormalBuffer.GetResource();
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS Model::GetTransformCBufferVirtualAddress()
+	D3D12_GPU_VIRTUAL_ADDRESS Model::GetTransformCBufferVirtualAddress() const
 	{
 		auto bufferView = m_TransformConstantBuffer.GetBufferView();
 		return bufferView.BufferLocation;
 	}
 
-	Texture Model::GetTexture()
+	uint32_t Model::GetPositionBufferIndex() const
 	{
-		return m_Texture;
+		return m_PositionBuffer.GetSRVIndex();
+	}
+
+	uint32_t Model::GetTextureCoordsBufferIndex() const
+	{
+		return m_TextureCoordsBuffer.GetSRVIndex();
+	}
+
+	uint32_t Model::GetNormalBufferIndex() const
+	{
+		return m_NormalBuffer.GetSRVIndex();
+	}
+
+	gfx::DescriptorHandle Model::GetTransformCBufferHandle() const
+	{
+		return m_TransformConstantBuffer.GetDescriptorHandle();
+	}
+
+	uint32_t Model::GetTextureIndex() const
+	{
+		return m_TextureIndex;
 	}
 
 	TransformComponent& Model::GetTransform()

@@ -75,26 +75,20 @@ namespace helios::gfx
 			}
 		};
 
-		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDescriptor.GetCurrentCPUDescriptorHandle());
+		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
 	
-		m_DescriptorHandles.cpuDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle();
-		m_DescriptorHandles.gpuDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle();
+		m_TextureIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
 
 		srvDescriptor.OffsetCurrentHandle();
 	}
 
-	ID3D12Resource* Texture::GetTextureResource()
+	ID3D12Resource* Texture::GetTextureResource() const
 	{
 		return m_Texture.Get();
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetCPUDescriptorHandle()
+	uint32_t Texture::GetTextureIndex() const
 	{
-		return m_DescriptorHandles.cpuDescriptorHandle;
-	}
-
-	D3D12_GPU_DESCRIPTOR_HANDLE Texture::GetGPUDescriptorHandle()
-	{
-		return m_DescriptorHandles.gpuDescriptorHandle;
+		return m_TextureIndexInDescriptorHeap;
 	}
 }

@@ -1,9 +1,8 @@
-#include "LightRS.hlsli"
+#include "BindlessRS.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
-    float2 texCoord : TEXCOORD;
 };
 
 struct TransformData
@@ -13,20 +12,25 @@ struct TransformData
     matrix projectionViewMatrix;
 };
 
-StructuredBuffer<float3> positionBuffer : register(t0, space0);
-StructuredBuffer<float2> textureCoordsBuffer : register(t1, space0);
-StructuredBuffer<float3> normalBuffer : register(t2, space0);
+struct LightRenderResources
+{
+    uint positionBufferIndex;
+    uint mvpCBufferIndex;
+};
 
-ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
+ConstantBuffer<LightRenderResources> renderResource : register(b0);
 
-[RootSignature(LightRootSignature)]
+[RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
+    StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    
+    ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
+    
     matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
 
     VSOutput output;
     output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
-    output.texCoord = textureCoordsBuffer[vertexID];
 
     return output;
 }

@@ -37,27 +37,24 @@ namespace helios::gfx
 	{
 	public:
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
-		
 
-		ID3D12Resource* GetResource();
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetRTVCPUDescriptorHandle();
-		D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUDescriptorHandle();
+		ID3D12Resource* GetResource() const;
 
-		D3D12_GPU_DESCRIPTOR_HANDLE GetRTVGPUDescriptorHandle();
-		D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptorHandle();
+		uint32_t GetSRVIndex() const;
+		uint32_t GetRTVIndex() const;
 
-		static ID3D12Resource* GetPositionBuffer();
-		static ID3D12Resource* GetTextureCoordsBuffer();
+		static uint32_t GetPositionBufferIndex();
+		static uint32_t GetTextureCoordsBufferIndex();
 
-		static void InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+		static void InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor);
 		static void Bind(ID3D12GraphicsCommandList* commandList);
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
 
-		DescriptorHandle m_SRV_DescriptorHandle{};
-		DescriptorHandle m_RTV_DescriptorHandle{};
+		uint32_t m_SRVIndexInDescriptorHeap{};
+		uint32_t m_RTVIndexInDescriptorHeap{};
 
 		uint32_t m_Width{};
 		uint32_t m_Height{};

@@ -25,7 +25,7 @@ namespace helios
 
 		ImGui_ImplWin32_Init(Application::GetWindowHandle());
 
-		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCurrentCPUDescriptorHandle(), srvDescriptor.GetCurrentGPUDescriptorHandle());
+		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle, srvDescriptor.GetCurrentDescriptorHandle().gpuDescriptorHandle);
 
 		srvDescriptor.OffsetCurrentHandle();
 	}

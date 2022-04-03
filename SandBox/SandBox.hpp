@@ -12,6 +12,55 @@ class SandBox : public helios::Engine
 		float ao{};
 	};
 
+	struct alignas(256) LightingData
+	{
+		dx::XMFLOAT4 lightPosition;
+		dx::XMVECTOR cameraPosition;
+	};
+
+	// Render resources.
+	struct alignas(256) RenderResources
+	{
+		uint32_t positionBufferIndex{};
+		uint32_t textureBufferIndex{};
+		uint32_t textureIndex{};
+	};
+
+	struct alignas(256) PBRRenderResources
+	{
+		uint32_t positionBufferIndex{};
+		uint32_t textureBufferIndex{};
+		uint32_t normalBufferIndex{};
+
+		uint32_t mvpCBufferIndex{};
+
+		uint32_t materialCBufferIndex{};
+		uint32_t lightCBufferIndex{};
+
+		uint32_t baseTextureIndex{};
+		uint32_t metalRoughnessTextureIndex{};	
+	};
+
+	struct alignas(256) LightRenderResources
+	{
+		uint32_t positionBufferIndex{};
+		
+		uint32_t mvpCBufferIndex{};
+	};
+
+	// Test -> For Test shaders.
+	struct TestRenderResources
+	{
+		uint32_t positionBufferIndex{};
+		uint32_t textureBufferIndex{};
+		uint32_t normalBufferIndex{};
+
+		uint32_t mvpCBufferIndex{};
+
+		uint32_t lightCBufferIndex{};
+		uint32_t textureIndex{};
+	};
+
 public:
 	SandBox(helios::Config& config);
 
@@ -87,6 +136,7 @@ private:
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
 
 	helios::Model m_LightSource{};
+	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
 
 	helios::Camera m_Camera{};
 

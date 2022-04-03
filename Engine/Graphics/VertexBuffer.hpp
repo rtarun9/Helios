@@ -6,6 +6,7 @@
 
 namespace helios::gfx
 {
+	// NOTE : Now that structured buffers has entirely replaced VertexBuffer's, this class will not be updated here on.
 	class VertexBuffer
 	{
 	public:

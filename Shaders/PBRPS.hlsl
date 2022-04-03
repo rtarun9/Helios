@@ -1,4 +1,3 @@
-#include "PBRRS.hlsli"
 #include "BindlessRS.hlsli"
 
 struct VSOutput
@@ -27,11 +26,22 @@ struct MaterialData
     float2 padding;
 };
 
-ConstantBuffer<MaterialData> materialCBuffer : register(b0, space1);
-ConstantBuffer<LightingData> lightCBuffer : register(b1, space1);
+struct RenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint normalBufferIndex;
+    
+    uint mvpCBufferIndex;
+    
+    uint materialCBufferIndex;
+    uint lightCBufferIndex;
+    
+    uint baseTextureIndex;
+    uint metalRoughnessTextureIndex;
+};
 
-Texture2D baseTexture : register(t0, space1);
-Texture2D metalRoughnessTexture : register(t1, space1);
+ConstantBuffer<RenderResources> renderResource : register(b0);
 
 static const float GAMMA_CORRECTION = 0.454545455f;
 
@@ -80,9 +90,15 @@ float SchlickGGXShadowing(float roughness, float3 normal, float3 viewDir, float3
     return SchlickBeckmannGS(roughness, normal, viewDir) * SchlickBeckmannGS(roughness, normal, lightDir);
 }
 
-[RootSignature(PBRRootSignature)]
+[RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
+    ConstantBuffer<MaterialData> materialCBuffer = ResourceDescriptorHeap[renderResource.materialCBufferIndex];
+    ConstantBuffer<LightingData> lightCBuffer = ResourceDescriptorHeap[renderResource.lightCBufferIndex];
+
+    Texture2D<float4> baseTexture = ResourceDescriptorHeap[renderResource.baseTextureIndex];
+    Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[renderResource.metalRoughnessTextureIndex];
+    
     float3 lightColor = float3(1.0f, 1.0f, 1.0f); 
 
     float3 normal = normalize(input.normal);
@@ -98,11 +114,9 @@ float4 PsMain(VSOutput input) : SV_Target
     float roughnessFactor = metalRoughnessTexture.Sample(clampSampler, input.texCoord).y;
     float3 albedo = baseTexture.Sample(clampSampler, input.texCoord).xyz;
 
-    #if 1
     metallicFactor = materialCBuffer.metallicFactor;
     roughnessFactor = materialCBuffer.roughnessFactor;
     albedo = materialCBuffer.albedo;
-    #endif 
 
     // Rendering equation (or reflectance equation) for PBR Calculation.
     float3 F0 = float3(0.04f, 0.04f, 0.04f);

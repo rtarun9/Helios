@@ -23,23 +23,11 @@ namespace helios::gfx
 		m_Resource->SetName(rtvName.data());
 	
 		// Create RTV and SRV.
-		device->CreateRenderTargetView(m_Resource.Get(), nullptr, rtvDescriptor.GetCurrentCPUDescriptorHandle());
-		device->CreateShaderResourceView(m_Resource.Get(), nullptr, srvDescriptor.GetCurrentCPUDescriptorHandle());
+		device->CreateRenderTargetView(m_Resource.Get(), nullptr, rtvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		device->CreateShaderResourceView(m_Resource.Get(), nullptr, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
 
-		m_RTV_DescriptorHandle =
-		{
-			.cpuDescriptorHandle = rtvDescriptor.GetCurrentCPUDescriptorHandle(),
-			.gpuDescriptorHandle = rtvDescriptor.GetCurrentGPUDescriptorHandle(),
-			.descriptorSize = rtvDescriptor.GetDescriptorSize()
-		};
-
-		m_SRV_DescriptorHandle =
-		{
-			.cpuDescriptorHandle = srvDescriptor.GetCurrentCPUDescriptorHandle(),
-			.gpuDescriptorHandle = srvDescriptor.GetCurrentGPUDescriptorHandle(),
-			.descriptorSize = srvDescriptor.GetDescriptorSize()
-		};
-
+		m_RTVIndexInDescriptorHeap = rtvDescriptor.GetCurrentDescriptorIndex();
+		m_SRVIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
 
 		rtvDescriptor.OffsetCurrentHandle();
 		srvDescriptor.OffsetCurrentHandle();
@@ -58,46 +46,36 @@ namespace helios::gfx
 		commandList->IASetIndexBuffer(&rtIndexBufferView);
 	}
 
-	ID3D12Resource* RenderTarget::GetResource()
+	ID3D12Resource* RenderTarget::GetResource() const
 	{
 		return m_Resource.Get();
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderTarget::GetRTVCPUDescriptorHandle()
+	uint32_t RenderTarget::GetRTVIndex() const
 	{
-		return m_RTV_DescriptorHandle.cpuDescriptorHandle;
+		return m_RTVIndexInDescriptorHeap;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderTarget::GetSRVCPUDescriptorHandle()
+	uint32_t RenderTarget::GetSRVIndex() const
 	{
-		return m_SRV_DescriptorHandle.cpuDescriptorHandle;
+		return m_SRVIndexInDescriptorHeap;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE RenderTarget::GetRTVGPUDescriptorHandle()
+	uint32_t RenderTarget::GetPositionBufferIndex() 
 	{
-		return m_RTV_DescriptorHandle.gpuDescriptorHandle;
+		return s_PositionBuffer.GetSRVIndex();
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE RenderTarget::GetSRVGPUDescriptorHandle()
+	uint32_t RenderTarget::GetTextureCoordsBufferIndex()
 	{
-		return m_SRV_DescriptorHandle.gpuDescriptorHandle;
+		return s_TextureCoordsBuffer.GetSRVIndex();
 	}
 
-	ID3D12Resource* RenderTarget::GetPositionBuffer()
-	{
-		return s_PositionBuffer.GetResource();
-	}
-
-	ID3D12Resource* RenderTarget::GetTextureCoordsBuffer()
-	{
-		return s_TextureCoordsBuffer.GetResource();
-	}
-
-	void RenderTarget::InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
+	void RenderTarget::InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor)
 	{
 		s_IndexBuffer.Init(device, commandList, RT_INDICES, L"Render Target Index Buffer");
 
-		s_PositionBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_POSITIONS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Position Buffer");
-		s_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, RT_VERTEX_TEXTURE_COORDS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Texture Coord Buffer");
+		s_PositionBuffer.Init<dx::XMFLOAT2>(device, commandList, srvDescriptor, RT_VERTEX_POSITIONS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Position Buffer");
+		s_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, srvDescriptor, RT_VERTEX_TEXTURE_COORDS, D3D12_RESOURCE_FLAG_NONE, L"Render Target Texture Coord Buffer");
 	}
 }

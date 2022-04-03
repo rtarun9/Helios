@@ -8,6 +8,8 @@
 
 #include "Graphics/Descriptor.hpp"
 
+#include "Graphics/Texture.hpp"
+
 namespace helios
 {
 	struct alignas(256) Transform
@@ -24,23 +26,23 @@ namespace helios
 		DirectX::XMFLOAT3 translate{ DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f) };
 	};
 
-	// Note : This is not the final design for materials since it is currently only used for non - PBR materials.
-	struct Texture
-	{
-		D3D12_GPU_DESCRIPTOR_HANDLE m_BaseColorDescriptorHandle{};
-	};
-
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, Texture material = {});
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, uint32_t textureIndex = -1);
 
-		ID3D12Resource* GetPositionBuffer();
-		ID3D12Resource* GetTextureCoordsBuffer();
-		ID3D12Resource* GetNormalBuffer();
+		// Will not be used currently, only for future use (if any).
+		ID3D12Resource* GetPositionBuffer() const;
+		ID3D12Resource* GetTextureCoordsBuffer() const;
+		ID3D12Resource* GetNormalBuffer() const;
+		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress() const;
 
-		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress();
-		Texture GetTexture();
+		uint32_t GetPositionBufferIndex() const;
+		uint32_t GetTextureCoordsBufferIndex() const;
+		uint32_t GetNormalBufferIndex() const;
+		gfx::DescriptorHandle GetTransformCBufferHandle() const;
+
+		uint32_t GetTextureIndex() const;
 
 		TransformComponent& GetTransform();
 		void UpdateData(std::wstring_view objectName);
@@ -63,7 +65,7 @@ namespace helios
 		TransformComponent m_TransformData{};
 
 		// Note : Currently only used for non - PBR Models.
-		Texture m_Texture{};
+		uint32_t m_TextureIndex{};
 	};
 }
 

@@ -26,7 +26,9 @@ namespace helios::gfx
 				.SizeInBytes = sizeof(T)
 			};
 
-			device->CreateConstantBufferView(&m_BufferView, cbDescriptor.GetCurrentCPUDescriptorHandle());
+			device->CreateConstantBufferView(&m_BufferView, cbDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
+			m_DescriptorHandle = cbDescriptor.GetCurrentDescriptorHandle();
+
 			cbDescriptor.OffsetCurrentHandle();
 		
 			CD3DX12_RANGE readRange(0, 0);       
@@ -37,14 +39,19 @@ namespace helios::gfx
 			m_BufferData = data;
 		}
 
-		ID3D12Resource* GetResource()
+		ID3D12Resource* GetResource() const
 		{
 			return m_Buffer.Get();
 		}
 
-		D3D12_CONSTANT_BUFFER_VIEW_DESC GetBufferView()
+		D3D12_CONSTANT_BUFFER_VIEW_DESC GetBufferView() const
 		{
 			return m_BufferView;
+		}
+
+		DescriptorHandle GetDescriptorHandle() const
+		{
+			return m_DescriptorHandle;
 		}
 
 		void Update()
@@ -63,6 +70,8 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Buffer;
 		D3D12_CONSTANT_BUFFER_VIEW_DESC m_BufferView{};
  
+		DescriptorHandle m_DescriptorHandle{};
+
 		T m_BufferData{};
 
 		void* m_Data{ nullptr };

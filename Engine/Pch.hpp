@@ -40,6 +40,7 @@
 #include <queue>
 #include <map>
 #include <type_traits>
+#include <optional>
 
 #include "Core/Helpers.hpp"
 

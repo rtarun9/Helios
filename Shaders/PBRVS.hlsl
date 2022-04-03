@@ -1,4 +1,4 @@
-#include "PBRRS.hlsli"
+#include "BindlessRS.hlsli"
 
 struct VSOutput
 {
@@ -15,15 +15,32 @@ struct TransformData
     matrix projectionViewMatrix;
 };
 
-StructuredBuffer<float3> positionBuffer : register(t0, space0);
-StructuredBuffer<float2> textureCoordsBuffer : register(t1, space0);
-StructuredBuffer<float3> normalBuffer : register(t2, space0);
+struct RenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint normalBufferIndex;
+    
+    uint mvpCBufferIndex;
+    
+    uint materialCBufferIndex;
+    uint lightCBufferIndex;
+    
+    uint baseTextureIndex;
+    uint metalRoughnessTextureIndex;	  
+};
 
-ConstantBuffer<TransformData> mvpCBuffer : register(b0, space0);
+ConstantBuffer<RenderResources> renderResource : register(b0);
 
-[RootSignature(PBRRootSignature)]
+[RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
+    StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
+    StructuredBuffer<float3> normalBuffer = ResourceDescriptorHeap[renderResource.normalBufferIndex];
+
+    ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
+
     matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
 
     VSOutput output;

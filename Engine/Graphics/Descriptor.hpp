@@ -23,19 +23,20 @@ namespace helios::gfx
 	public:
 		void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName);
 		
-		ID3D12DescriptorHeap* GetDescriptorHeap();
-		uint32_t GetDescriptorSize();
+		ID3D12DescriptorHeap* GetDescriptorHeap() const;
+		uint32_t GetDescriptorSize() const;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForStart();
-		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForStart();
+		DescriptorHandle GetDescriptorHandleForStart() const;
+		DescriptorHandle GetCurrentDescriptorHandle() const;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle();
-		D3D12_GPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle();
+		// Returns a index that can be used to directly index into a descriptor heap.
+		uint32_t GetDescriptorIndex(const DescriptorHandle& descriptorHandle) const;
+		uint32_t GetCurrentDescriptorIndex() const;
 
 		// Used to offset a X_Handle passed into function.
-		void Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u);
-		void Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u);
-		void Offset(D3D12_CPU_DESCRIPTOR_HANDLE& cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE& gpuHandle, uint32_t offset = 1u);
+		void Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u) const;
+		void Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u) const;
+		void Offset(DescriptorHandle& handle, uint32_t offset = 1u) const;
 
 		void OffsetCurrentHandle();
 

@@ -150,12 +150,9 @@
     <FxCompile Include="Shaders\OffscreenRTPS.hlsl" />
     <FxCompile Include="Shaders\SkyBoxVS.hlsl" />
     <FxCompile Include="Shaders\SkyBoxPS.hlsl" />
-    <FxCompile Include="Shaders\LightRS.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
-    <None Include="Shaders\TestRS.hlsli" />
-    <None Include="Shaders\PBRRS.hlsli" />
     <None Include="Shaders\OffscreenRTRS.hlsli" />
     <None Include="packages.config" />
     <None Include="Shaders\BindlessRS.hlsli" />
