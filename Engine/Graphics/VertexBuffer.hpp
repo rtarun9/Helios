@@ -27,7 +27,7 @@ namespace helios::gfx
 			};
 		}
 
-		D3D12_VERTEX_BUFFER_VIEW GetBufferView()
+		D3D12_VERTEX_BUFFER_VIEW GetBufferView() const
 		{
 			return m_BufferView;
 		}

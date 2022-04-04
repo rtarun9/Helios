@@ -22,7 +22,7 @@ namespace helios::gfx
 		};
 	}
 
-	D3D12_INDEX_BUFFER_VIEW IndexBuffer::GetBufferView()
+	D3D12_INDEX_BUFFER_VIEW IndexBuffer::GetBufferView() const
 	{
 		return m_BufferView;
 	}

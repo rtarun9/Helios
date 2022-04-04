@@ -15,22 +15,7 @@ struct TransformData
     matrix projectionViewMatrix;
 };
 
-struct RenderResources
-{
-    uint positionBufferIndex;
-    uint textureBufferIndex;
-    uint normalBufferIndex;
-    
-    uint mvpCBufferIndex;
-    
-    uint materialCBufferIndex;
-    uint lightCBufferIndex;
-    
-    uint baseTextureIndex;
-    uint metalRoughnessTextureIndex;	  
-};
-
-ConstantBuffer<RenderResources> renderResource : register(b0);
+ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)

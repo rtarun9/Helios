@@ -26,34 +26,19 @@ struct MaterialData
     float2 padding;
 };
 
-struct RenderResources
-{
-    uint positionBufferIndex;
-    uint textureBufferIndex;
-    uint normalBufferIndex;
-    
-    uint mvpCBufferIndex;
-    
-    uint materialCBufferIndex;
-    uint lightCBufferIndex;
-    
-    uint baseTextureIndex;
-    uint metalRoughnessTextureIndex;
-};
-
-ConstantBuffer<RenderResources> renderResource : register(b0);
+ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
 static const float GAMMA_CORRECTION = 0.454545455f;
 
 static const float MIN_FLOAT_VALUE = 0.0000001f;
-static const float PI = 3.14159265f;
+static const float PI = 3.14159265359;
 
 // Fresnel effect : Amount of specular reflection based on the viewing angle to surface.
 // F0 : Base reflectivity when view direction is perpendicular to the surface.
 float3 FresnelSchlick(float3 viewDir, float3 halfWayDir, float3 F0)
 {
     float cosTheta = max(dot(viewDir, halfWayDir), 0.0f);
-    return F0 + (float3(1.0f, 1.0f, 1.0f) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5);
+    return F0 + (float3(1.0f, 1.0f, 1.0f) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
 }
 
 // PBR Shading model used : Cook Torrence model.
@@ -82,7 +67,7 @@ float SchlickBeckmannGS(float roughness, float3 normal, float3 X)
     float k = roughness / 2;
     
     float nDotX = max(dot(normal, X), 0.0f);
-    return nDotX / max(nDotX * (1 - k) + k, MIN_FLOAT_VALUE);
+    return nDotX / max(nDotX * (1.0f - k) + k, MIN_FLOAT_VALUE);
 }
 
 float SchlickGGXShadowing(float roughness, float3 normal, float3 viewDir, float3 lightDir)
@@ -126,7 +111,7 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
     kD *= (1.0f - metallicFactor);
 
-    float3 lambertianDiffuse = albedo / PI;
+    float3 lambertianDiffuse = albedo;
 
     // Cook - Torrance BRDF Calculation.
     // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))

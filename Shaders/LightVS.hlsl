@@ -12,12 +12,6 @@ struct TransformData
     matrix projectionViewMatrix;
 };
 
-struct LightRenderResources
-{
-    uint positionBufferIndex;
-    uint mvpCBufferIndex;
-};
-
 ConstantBuffer<LightRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]

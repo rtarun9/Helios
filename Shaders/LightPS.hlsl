@@ -5,12 +5,6 @@ struct VSOutput
     float4 position : SV_Position;
 };
 
-struct LightRenderResources
-{
-    uint positionBufferIndex;
-    uint mvpCBufferIndex;
-};
-
 static const float GAMMA_CORRECTION = 0.454545455f;
 
 [RootSignature(BindlessRootSignature)]

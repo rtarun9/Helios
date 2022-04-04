@@ -4,23 +4,6 @@
 
 using namespace helios;
 
-enum class ShaderRegisterSpace : uint32_t
-{
-	VertexShader = 0u,
-	PixelShader = 1u
-};
-
-enum class RootParameterIndex : uint32_t
-{
-	PositionBuffer = 0u,
-	TextureCoordBuffer = 1u,
-	NormalBuffer = 2u,
-	ConstantBuffer = 3u,
-	RootConstant = 4u,
-	DescriptorTable = 5u,
-	ParamterCount = 6u
-};
-
 SandBox::SandBox(Config& config)
 	: Engine(config)
 {
@@ -38,17 +21,14 @@ void SandBox::OnUpdate()
 	m_Camera.Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
 
 	m_ViewMatrix = m_Camera.GetViewMatrix();
-
 	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
 	
 	m_LightSource.GetTransform().translate.x = 2.0f;
 	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 2.0f));
-
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
 	m_LightData.GetBufferData().cameraPosition = m_Camera.m_CameraPosition;
 	m_LightData.GetBufferData().lightPosition = { m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f };
-
 	m_LightData.Update();
 
 	m_PBRMaterial.Update();
@@ -147,14 +127,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 
 	// Set the necessary states
-	m_Materials[L"DefaultMaterial"].Bind(commandList);
-
-	std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
-	{
-		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
-	};
-
-	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	commandList->RSSetViewports(1u, &m_Viewport);
 	commandList->RSSetScissorRects(1u, &m_ScissorRect);
@@ -166,19 +138,27 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	auto rtvHandle = m_RTVDescriptor.GetDescriptorHandleForStart();
 	m_RTVDescriptor.Offset(rtvHandle, m_OffscreenRT.GetRTVIndex());
 
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetDescriptorHandleForStart().cpuDescriptorHandle;
-
+	auto dsvHandle = m_DSVDescriptor.GetDescriptorHandleForStart();
+	
 	m_UIManager.Begin(L"Scene Settings");
 	static std::array<float, 4> clearColor{ 0.10f, 0.10f, 0.1f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
 
-	gfx::utils::ClearRTV(commandList, rtvHandle.cpuDescriptorHandle, clearColor);
-
+	gfx::utils::ClearRTV(commandList, rtvHandle, clearColor);
 	gfx::utils::ClearDepthBuffer(commandList, dsvHandle);
 
-	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle);
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	std::array<ID3D12DescriptorHeap*, 1> descriptorHeaps
+	{
+		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
+	};
+
+	m_Materials[L"DefaultMaterial"].Bind(commandList);
+
+	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	TestRenderResources testRenderResource{};
 
@@ -195,8 +175,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 			.positionBufferIndex = gameObject.GetPositionBufferIndex(),
 			.textureBufferIndex = gameObject.GetTextureCoordsBufferIndex(),
 			.normalBufferIndex = gameObject.GetNormalBufferIndex(),
-			.mvpCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(gameObject.GetTransformCBufferHandle()),
-			.lightCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(m_LightData.GetDescriptorHandle()),
+			.mvpCBufferIndex = gameObject.GetTransformCBufferIndex(),
+			.lightCBufferIndex = m_LightData.GetBufferIndex(),
 			.textureIndex = textureIndex,
 		};
 	
@@ -206,15 +186,16 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	
 	// Draw sphere (for PBR Test).
 	m_Materials[L"PBRMaterial"].Bind(commandList);
+	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	PBRRenderResources pbrRenderResources
 	{
 		.positionBufferIndex = m_Sphere.GetPositionBufferIndex(),
 		.textureBufferIndex = m_Sphere.GetTextureIndex(),
 		.normalBufferIndex = m_Sphere.GetNormalBufferIndex(),
-		.mvpCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(m_Sphere.GetTransformCBufferHandle()),
-		.materialCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(m_PBRMaterial.GetDescriptorHandle()),
-		.lightCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(m_LightData.GetDescriptorHandle()),
+		.mvpCBufferIndex = m_Sphere.GetTransformCBufferIndex(),
+		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
+		.lightCBufferIndex = m_LightData.GetBufferIndex(),
 		.baseTextureIndex = m_Textures[L"SphereAlbedoTexture"].GetTextureIndex(),
 		.metalRoughnessTextureIndex = m_Textures[L"SphereMetalRoughTexture"].GetTextureIndex(),
 	};
@@ -225,11 +206,12 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	// Draw the light source
 	m_Materials[L"LightMaterial"].Bind(commandList);
+	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	LightRenderResources lightRenderResources
 	{
 		.positionBufferIndex = m_LightSource.GetPositionBufferIndex(),
-		.mvpCBufferIndex = m_SRV_CBV_UAV_Descriptor.GetDescriptorIndex(m_LightSource.GetTransformCBufferHandle())
+		.mvpCBufferIndex = m_LightSource.GetTransformCBufferIndex()
 	};
 
 	commandList->SetGraphicsRoot32BitConstants(0u, sizeof(LightRenderResources) / 4u, &lightRenderResources, 0u);
@@ -241,8 +223,13 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfx::utils::TransitionResource(commandList, currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	// --------------------- WIP -------------------
-	// Bindless rendering for offscreen RT.
+	rtvHandle = m_RTVDescriptor.GetDescriptorHandleForStart();
+	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
+
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
+	gfx::RenderTarget::Bind(commandList);
+
+	m_Materials[L"OffscreenRTMaterial"].Bind(commandList);
 	commandList->SetDescriptorHeaps(static_cast<uint32_t>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	RenderResources bindlessRenderResource
@@ -252,14 +239,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		.textureIndex = m_OffscreenRT.GetSRVIndex()
 	};
  
-	m_Materials[L"OffscreenRTMaterial"].Bind(commandList);
-
-	rtvHandle = m_RTVDescriptor.GetDescriptorHandleForStart();
-	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
-
-	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle);
-	gfx::RenderTarget::Bind(commandList);
-
 	commandList->SetGraphicsRoot32BitConstants(0u, 12u, &bindlessRenderResource, 0u);
 
 	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
@@ -310,17 +289,13 @@ void SandBox::LoadContent()
 	LoadMaterials();
 	LoadTextures(commandList.Get());
 	LoadModels(commandList.Get());
+	LoadRenderTargets(commandList.Get());
 
-	// Load data for models and textures.
-	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 1.0f, 1.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
+	// NOTE : These will eventually be needed to move onto one of the LoadX methods.
+	m_PBRMaterial.Init(m_Device.Get(), commandList.Get(), MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 
 	m_LightData.Init(m_Device.Get(), commandList.Get(), LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");
 	
-	// Create render targets and thier Root signature and PSO.
-	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor);
-
-	m_OffscreenRT.Init(m_Device.Get(), commandList.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
-
 	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
@@ -330,6 +305,8 @@ void SandBox::LoadContent()
 
 void SandBox::LoadMaterials()
 {
+	gfx::Material::CreateBindlessRootSignature(m_Device.Get(), L"Shaders/BindlessRS.cso");
+
 	m_Materials[L"DefaultMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/TestVS.cso", L"Shaders/TestPS.cso", L"Default Material");
 	m_Materials[L"LightMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/LightVS.cso", L"Shaders/LightPS.cso", L"Light Material");
 	m_Materials[L"PBRMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
@@ -358,6 +335,14 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 
 	m_Sphere.Init(m_Device.Get(), commandList, L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
+}
+
+void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
+{
+	// Create render targets and thier Root signature and PSO.
+	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
+
+	m_OffscreenRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
 }
 
 void SandBox::EnableDebugLayer()

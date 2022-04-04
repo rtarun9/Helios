@@ -5,9 +5,7 @@
 #include "Graphics/StructuredBuffer.hpp"
 #include "Graphics/IndexBuffer.hpp"
 #include "Graphics/ConstantBuffer.hpp"
-
 #include "Graphics/Descriptor.hpp"
-
 #include "Graphics/Texture.hpp"
 
 namespace helios
@@ -35,15 +33,15 @@ namespace helios
 		ID3D12Resource* GetPositionBuffer() const;
 		ID3D12Resource* GetTextureCoordsBuffer() const;
 		ID3D12Resource* GetNormalBuffer() const;
-		D3D12_GPU_VIRTUAL_ADDRESS GetTransformCBufferVirtualAddress() const;
 
 		uint32_t GetPositionBufferIndex() const;
 		uint32_t GetTextureCoordsBufferIndex() const;
 		uint32_t GetNormalBufferIndex() const;
-		gfx::DescriptorHandle GetTransformCBufferHandle() const;
+
+		uint32_t GetTransformCBufferIndex() const;
 
 		uint32_t GetTextureIndex() const;
-
+	
 		TransformComponent& GetTransform();
 		void UpdateData(std::wstring_view objectName);
 
@@ -52,7 +50,6 @@ namespace helios
 		void Draw(ID3D12GraphicsCommandList* commandList);
 
 	private:
-		
 		gfx::StructuredBuffer m_PositionBuffer{};
 		gfx::StructuredBuffer m_TextureCoordsBuffer{};
 		gfx::StructuredBuffer m_NormalBuffer{};
@@ -66,6 +63,8 @@ namespace helios
 
 		// Note : Currently only used for non - PBR Models.
 		uint32_t m_TextureIndex{};
+
+		uint32_t m_TransformCBufferIndexInDescriptorHeap{};
 	};
 }
 

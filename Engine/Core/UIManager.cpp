@@ -9,7 +9,7 @@
 
 namespace helios
 {
-	void UIManager::Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor)
+	void UIManager::Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor) const
 	{
 		// Setup ImGui context.
 		IMGUI_CHECKVERSION();
@@ -30,37 +30,37 @@ namespace helios
 		srvDescriptor.OffsetCurrentHandle();
 	}
 
-	void UIManager::FrameStart()
+	void UIManager::FrameStart() const
 	{
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 	}
 
-	void UIManager::ShutDown()
+	void UIManager::ShutDown() const
 	{
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
 	}
 
-	void UIManager::FrameEnd(ID3D12GraphicsCommandList* commandList)
+	void UIManager::FrameEnd(ID3D12GraphicsCommandList* commandList) const
 	{
 		ImGui::Render();
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 	}
 
-	void UIManager::Begin(std::wstring_view uiComponentName)
+	void UIManager::Begin(std::wstring_view uiComponentName) const
 	{
 		ImGui::Begin(WstringToString(uiComponentName).c_str());
 	}
 
-	void UIManager::End()
+	void UIManager::End() const
 	{
 		ImGui::End();
 	}
 
-	void UIManager::SetClearColor(std::span<float> clearColor)
+	void UIManager::SetClearColor(std::span<float> clearColor) const
 	{
 		ImGui::ColorEdit3("Clear Color", clearColor.data());
 	}

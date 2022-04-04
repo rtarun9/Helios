@@ -142,6 +142,8 @@ namespace helios
 			srvCbDescriptor, L"Transform CBuffer");
 
 		m_TextureIndex = textureIndex;
+
+		m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
 	}
 
 	ID3D12Resource* Model::GetPositionBuffer() const
@@ -159,12 +161,6 @@ namespace helios
 		return m_NormalBuffer.GetResource();
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS Model::GetTransformCBufferVirtualAddress() const
-	{
-		auto bufferView = m_TransformConstantBuffer.GetBufferView();
-		return bufferView.BufferLocation;
-	}
-
 	uint32_t Model::GetPositionBufferIndex() const
 	{
 		return m_PositionBuffer.GetSRVIndex();
@@ -180,9 +176,9 @@ namespace helios
 		return m_NormalBuffer.GetSRVIndex();
 	}
 
-	gfx::DescriptorHandle Model::GetTransformCBufferHandle() const
+	uint32_t Model:: GetTransformCBufferIndex() const
 	{
-		return m_TransformConstantBuffer.GetDescriptorHandle();
+		return m_TransformCBufferIndexInDescriptorHeap;
 	}
 
 	uint32_t Model::GetTextureIndex() const

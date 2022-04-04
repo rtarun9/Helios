@@ -6,14 +6,7 @@ struct VSOutput
     float2 textureCoord : TEXTURE_COORD;
 };
 
-struct RenderResources
-{
-    uint positionBufferIndex;
-    uint textureBufferIndex;
-    uint textureIndex;
-};
-
-ConstantBuffer<RenderResources> renderResource : register(b0);
+ConstantBuffer<RenderTargetRenderResources> renderResource : register(b0);
 
 SamplerState pointSampler : register(s0, space1);
 

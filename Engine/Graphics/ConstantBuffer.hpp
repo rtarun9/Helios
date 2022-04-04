@@ -27,7 +27,7 @@ namespace helios::gfx
 			};
 
 			device->CreateConstantBufferView(&m_BufferView, cbDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
-			m_DescriptorHandle = cbDescriptor.GetCurrentDescriptorHandle();
+			m_BufferIndexInDescriptorHeap = cbDescriptor.GetCurrentDescriptorIndex();
 
 			cbDescriptor.OffsetCurrentHandle();
 		
@@ -49,12 +49,12 @@ namespace helios::gfx
 			return m_BufferView;
 		}
 
-		DescriptorHandle GetDescriptorHandle() const
+		uint32_t GetBufferIndex() const
 		{
-			return m_DescriptorHandle;
+			return m_BufferIndexInDescriptorHeap;
 		}
 
-		void Update()
+		void Update() const
 		{
 			memcpy(m_Data, &m_BufferData, sizeof(T));
 		}
@@ -70,7 +70,7 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Buffer;
 		D3D12_CONSTANT_BUFFER_VIEW_DESC m_BufferView{};
  
-		DescriptorHandle m_DescriptorHandle{};
+		uint32_t m_BufferIndexInDescriptorHeap{};
 
 		T m_BufferData{};
 

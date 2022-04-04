@@ -3,6 +3,7 @@
 #include "Pch.hpp"
 
 #include "Material.hpp"
+#include "Descriptor.hpp"
 
 namespace helios::gfx::utils
 {
@@ -13,14 +14,14 @@ namespace helios::gfx::utils
 		commandList->ResourceBarrier(1u, &transitionBarrier);
 	}
 
-	inline void ClearRTV(ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE rtv, std::span<const float> clearColor)
+	inline void ClearRTV(ID3D12GraphicsCommandList* commandList, DescriptorHandle& rtvHandle, std::span<const float> clearColor)
 	{
-		commandList->ClearRenderTargetView(rtv, clearColor.data(), 0u, nullptr);
+		commandList->ClearRenderTargetView(rtvHandle.cpuDescriptorHandle, clearColor.data(), 0u, nullptr);
 	}
 
-	inline void ClearDepthBuffer(ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE dsv, float depthClearValue = 1.0f)
+	inline void ClearDepthBuffer(ID3D12GraphicsCommandList* commandList, DescriptorHandle& dsvHandle, float depthClearValue = 1.0f)
 	{
-		commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 1u, 0u, nullptr);
+		commandList->ClearDepthStencilView(dsvHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 1u, 0u, nullptr);
 	}
 
 	// Create a GPU buffer that returns two buffers : The final Destination buffer and an intermediate buffer (that is used to transfer data from the CPU to the GPU).
@@ -63,25 +64,6 @@ namespace helios::gfx::utils
 		return { destinationResource, intermediateResource};
 	}
 
-	// Note : Following D3D12 helper functions are temporary.
-	
-	// Note : using std::wstring_view seems to give error's for some reason.
-	inline D3D12_INPUT_ELEMENT_DESC CreateInputLayoutDesc(std::string_view semanticName, DXGI_FORMAT format)
-	{
-		auto semanticNameStr = semanticName.data();
-
-		return
-		{
-				.SemanticName = semanticNameStr,
-				.SemanticIndex = 0,
-				.Format = format,
-				.InputSlot = 0,
-				.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-				.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-				.InstanceDataStepRate = 0
-		};
-	}
-
 	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true)
 	{
 		return D3D12_GRAPHICS_PIPELINE_STATE_DESC 
@@ -112,6 +94,8 @@ namespace helios::gfx::utils
 		};
 	}
 
+	// NOTE : After moving to bindless rendering, all shaders same the same Root Signature but here it is created again and again.
+	// Will address this problem in the Material Class.
 	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT)
 	{
 		wrl::ComPtr<ID3DBlob> vertexBlob;
@@ -125,18 +109,13 @@ namespace helios::gfx::utils
 			ErrorMessage(psShaderPath.data() + std::wstring(L" Not found"));
 		}
 
-		wrl::ComPtr<ID3D12RootSignature> rootSignature;
-		ThrowIfFailed(device->CreateRootSignature(0u, vertexBlob->GetBufferPointer(), vertexBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
-		auto rootSignatureName = materialName.data() + std::wstring(L" Root Signature");
-		rootSignature->SetName(rootSignatureName.c_str());
-
 		wrl::ComPtr<ID3D12PipelineState> pso;
 
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = utils::CreateGraphicsPSODesc(rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format);
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = utils::CreateGraphicsPSODesc(Material::rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format);
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
 		auto psoName = materialName.data() + std::wstring(L" PSO");
 		pso->SetName(psoName.c_str());
 
-		return { rootSignature, pso };
+		return { pso };
 	}
 }

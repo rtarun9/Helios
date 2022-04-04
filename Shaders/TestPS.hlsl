@@ -8,19 +8,7 @@ struct VSOutput
     float4 worldSpacePosition : WORLD_SPACE_POSITION;
 };
 
-struct RenderResources
-{
-    uint positionBufferIndex;
-    uint textureBufferIndex;
-    uint normalBufferIndex;
-    
-    uint mvpCBufferIndex;
-    
-    uint lightCBufferIndex;
-    uint textureIndex;
-};
-
-ConstantBuffer<RenderResources> renderResource : register(b0);
+ConstantBuffer<TestRenderResources> renderResource : register(b0);
 
 SamplerState clampSampler : register(s0, space1);
 SamplerState wrapSampler : register(s1, space1);

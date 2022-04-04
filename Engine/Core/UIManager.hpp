@@ -11,15 +11,15 @@ namespace helios
 	class UIManager
 	{
 	public:
-		void Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor);
-		void ShutDown();
+		void Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor) const;
+		void ShutDown() const;
 
-		void FrameStart();
-		void FrameEnd(ID3D12GraphicsCommandList* commandList);
+		void FrameStart() const;
+		void FrameEnd(ID3D12GraphicsCommandList* commandList) const;
 
-		void Begin(std::wstring_view uiComponentName);
-		void End();
+		void Begin(std::wstring_view uiComponentName) const;
+		void End() const;
 
-		void SetClearColor(std::span<float> clearColor);
+		void SetClearColor(std::span<float> clearColor) const;
 	};
 }

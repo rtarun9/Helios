@@ -82,6 +82,7 @@ private:
 	void LoadMaterials();
 	void LoadTextures(ID3D12GraphicsCommandList* commandList);
 	void LoadModels(ID3D12GraphicsCommandList* commandList);
+	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
 
 	void EnableDebugLayer();
 	void SelectAdapter();

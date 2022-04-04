@@ -38,7 +38,6 @@ namespace helios::gfx
 	public:
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
 
-
 		ID3D12Resource* GetResource() const;
 
 		uint32_t GetSRVIndex() const;
