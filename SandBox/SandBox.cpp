@@ -60,18 +60,11 @@ void SandBox::OnDestroy()
 	m_CommandQueue.FlushQueue();
 
 	m_UIManager.ShutDown();
+
 }
 
 void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 {
-	if (isKeyDown)
-	{
-		if (keycode == VK_SPACE)
-		{
-			m_FOV -= static_cast<float>(Application::GetTimer().GetDeltaTime() * 10);
-		}
-	}
-
 	m_Camera.HandleInput(keycode, isKeyDown);
 }
 
@@ -139,7 +132,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_RTVDescriptor.Offset(rtvHandle, m_OffscreenRT.GetRTVIndex());
 
 	auto dsvHandle = m_DSVDescriptor.GetDescriptorHandleForStart();
-	
+	m_DSVDescriptor.Offset(dsvHandle, m_DepthBuffer.GetBufferIndex());
+
 	m_UIManager.Begin(L"Scene Settings");
 	static std::array<float, 4> clearColor{ 0.10f, 0.10f, 0.1f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
@@ -161,7 +155,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
 
 	TestRenderResources testRenderResource{};
-
+	
 	for (auto& [objectName, gameObject] : m_GameObjects)
 	{
 		auto textureIndex = gameObject.GetTextureIndex();
@@ -169,7 +163,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		{
 			textureIndex = m_Textures[L"TestTexture"].GetTextureIndex();
 		}
-
+	
 		testRenderResource =
 		{
 			.positionBufferIndex = gameObject.GetPositionBufferIndex(),
@@ -251,6 +245,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 void SandBox::InitRendererCore()
 {
+	CreateFactory();
 	EnableDebugLayer();
 	SelectAdapter();
 	CreateDevice();
@@ -268,7 +263,8 @@ void SandBox::InitRendererCore()
 	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 30u, L"SRV_CBV_UAV Descriptor");
 
 	CreateBackBufferRenderTargetViews();
-	CreateDepthBuffer();
+
+	m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_Width, m_Height, L"Depth Stencil Buffer");
 
 	m_Viewport =
 	{
@@ -285,7 +281,7 @@ void SandBox::LoadContent()
 {
 	// Reset command list and allocator for initial setup.
 	auto commandList = m_CommandQueue.GetCommandList();
-
+	
 	LoadMaterials();
 	LoadTextures(commandList.Get());
 	LoadModels(commandList.Get());
@@ -333,8 +329,8 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_Sphere.Init(m_Device.Get(), commandList, L"Assets/Models/Sphere/scene.gltf", m_SRV_CBV_UAV_Descriptor);
-	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.2f, 0.2f, 0.2f);
+	m_Sphere.Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.5f, 0.5f, 0.5f);
 }
 
 void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
@@ -343,6 +339,16 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
 
 	m_OffscreenRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
+}
+
+void SandBox::CreateFactory()
+{
+	UINT dxgiFactoryFlags = 0;
+#ifdef _DEBUG
+	dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+#endif
+
+	ThrowIfFailed(::CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_Factory)));
 }
 
 void SandBox::EnableDebugLayer()
@@ -360,17 +366,8 @@ void SandBox::EnableDebugLayer()
 
 void SandBox::SelectAdapter()
 {
-	wrl::ComPtr<IDXGIFactory6> dxgiFactory;
-	UINT createFactoryFlags = 0;
-
-#ifdef _DEBUG
-	createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-	ThrowIfFailed(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
-
 	// Index 0 will be the GPU with highest preference.
-	ThrowIfFailed(dxgiFactory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&m_Adapter)));
+	ThrowIfFailed(m_Factory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&m_Adapter)));
 	
 #ifdef _DEBUG
 	DXGI_ADAPTER_DESC adapterDesc{};
@@ -418,7 +415,8 @@ void SandBox::CreateDevice()
 	};
 
 	ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
-		
+
+	ThrowIfFailed(m_Device->QueryInterface(IID_PPV_ARGS(&m_DebugDevice)));
 #endif
 }
 
@@ -438,15 +436,6 @@ void SandBox::CheckTearingSupport()
 
 void SandBox::CreateSwapChain()
 {
-	wrl::ComPtr<IDXGIFactory7> dxgiFactory;
-	UINT createFactoryFlags = 0;
-
-#ifdef _DEBUG
-	createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-	ThrowIfFailed(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
-
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc
 	{
 		.Width = m_Width,
@@ -467,10 +456,10 @@ void SandBox::CreateSwapChain()
 	};
 
 	wrl::ComPtr<IDXGISwapChain1> swapChain1;
-	ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
+	ThrowIfFailed(m_Factory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
 	
 	// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-	ThrowIfFailed(dxgiFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
+	ThrowIfFailed(m_Factory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
 	
 	ThrowIfFailed(swapChain1.As(&m_SwapChain));
 
@@ -495,39 +484,3 @@ void SandBox::CreateBackBufferRenderTargetViews()
 		m_RTVDescriptor.OffsetCurrentHandle();
 	}
 }
-
-void SandBox::CreateDepthBuffer()
-{
-	D3D12_CLEAR_VALUE clearValue
-	{
-		.Format = DXGI_FORMAT_D32_FLOAT,
-		.DepthStencil
-		{
-			.Depth = 1.0f,
-			.Stencil = 0u
-		}
-	};
-
-	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_RESOURCE_DESC depthTextureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_Width, m_Height, 1u, 0u, 1u, 0u, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-
-	ThrowIfFailed(m_Device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &depthTextureResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&m_DepthBuffer)));
-
-	// Create DSV for the texture
-	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc
-	{
-		.Format = DXGI_FORMAT_D32_FLOAT,
-		.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
-		.Flags = D3D12_DSV_FLAG_NONE,
-		.Texture2D
-		{
-			.MipSlice = 0u,
-		}
-	};
-
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVDescriptor.GetDescriptorHandleForStart().cpuDescriptorHandle;
-
-	m_Device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsvDesc, dsvHandle);
-	m_DSVDescriptor.OffsetCurrentHandle();
-}
-

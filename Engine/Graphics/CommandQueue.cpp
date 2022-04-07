@@ -12,7 +12,7 @@ namespace helios::gfx
 		// Create the command queue based on list type.
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc
 		{
-			.Type = commandListType,
+			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
 			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
 			.NodeMask = 0
@@ -104,6 +104,31 @@ namespace helios::gfx
 		commandAllocator->Release();
 
 		return fenceValue;
+	}
+
+	void CommandQueue::ExecuteBundle(ID3D12GraphicsCommandList* bundle, ID3D12GraphicsCommandList* commandList)
+	{
+		commandList->Close();
+
+		ID3D12CommandAllocator* commandAllocator{ nullptr };
+		UINT dataSize = sizeof(ID3D12CommandAllocator);
+
+		ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
+
+		std::array<ID3D12CommandList* const, 1> commandLists
+		{
+			commandList
+		};
+
+		commandList->ExecuteBundle(bundle);
+
+		m_CommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), commandLists.data());
+		uint64_t fenceValue = Signal();
+
+		m_CommandAllocatorQueue.emplace(CommandAllocator{ .fenceValue = fenceValue, .commandAllocator = commandAllocator });
+		m_CommandListQueue.emplace(commandList);
+
+		commandAllocator->Release();
 	}
 
 	// Return fence value to for signal.

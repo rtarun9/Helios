@@ -84,6 +84,7 @@ private:
 	void LoadModels(ID3D12GraphicsCommandList* commandList);
 	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
 
+	void CreateFactory();
 	void EnableDebugLayer();
 	void SelectAdapter();
 	void CreateDevice();
@@ -92,11 +93,13 @@ private:
 	void CreateSwapChain();
 
 	void CreateBackBufferRenderTargetViews();
-	void CreateDepthBuffer();
 
 private:
 	// Number of SwapChain backbuffers.
 	static constexpr uint8_t NUMBER_OF_FRAMES = 3;
+
+	// Factory for GPU enumeration, SwapChain creation etc.
+	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
 
 	// Core DirectX12 objects and data.
 	Microsoft::WRL::ComPtr<ID3D12Device8> m_Device;
@@ -108,11 +111,12 @@ private:
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NUMBER_OF_FRAMES> m_BackBuffers{};
 
 	Microsoft::WRL::ComPtr<ID3D12Debug3> m_DebugInterface;
+	Microsoft::WRL::ComPtr<ID3D12DebugDevice2> m_DebugDevice;
 
 	D3D12_VIEWPORT m_Viewport{};
 	D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
+	helios::gfx::DepthStencilBuffer m_DepthBuffer{};
 
 	// Descriptor heaps.
 	helios::gfx::Descriptor m_RTVDescriptor{};

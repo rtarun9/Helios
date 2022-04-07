@@ -176,6 +176,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\DepthStencilBuffer.hpp" />
     <ClInclude Include="Engine\Core\Camera.hpp" />
     <ClInclude Include="Engine\Graphics\CommandQueue.hpp" />
     <ClInclude Include="Engine\Graphics\ConstantBuffer.hpp" />
@@ -201,6 +202,7 @@
     <ClInclude Include="Engine\Graphics\StructuredBuffer.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\DepthStencilBuffer.cpp" />
     <ClCompile Include="Engine\Core\Camera.cpp" />
     <ClCompile Include="Engine\Graphics\CommandQueue.cpp" />
     <ClCompile Include="Engine\Graphics\Descriptor.cpp" />

@@ -10,9 +10,6 @@ struct VSOutput
 
 ConstantBuffer<TestRenderResources> renderResource : register(b0);
 
-SamplerState clampSampler : register(s0, space1);
-SamplerState wrapSampler : register(s1, space1);
-
 struct LightingData
 {
     float4 lightPosition;
@@ -32,7 +29,7 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float angle = max(dot(input.normal, pixelToLightDir), 0.0f);
 
-    float3 surfaceColor = testTexture.Sample(wrapSampler, input.texCoord).xyz;
+    float3 surfaceColor = testTexture.Sample(pointWrapSampler, input.texCoord).xyz;
 
     float3 ambientColor = surfaceColor * 0.1f;
 

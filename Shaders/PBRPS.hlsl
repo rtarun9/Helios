@@ -8,9 +8,6 @@ struct VSOutput
     float4 worldSpacePosition : WORLD_SPACE_POSITION;
 };
 
-SamplerState clampSampler : register(s0, space1);
-SamplerState wrapSampler : register(s1, space1);
-
 struct LightingData
 {
     float4 lightPosition;
@@ -30,7 +27,7 @@ ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
 static const float GAMMA_CORRECTION = 0.454545455f;
 
-static const float MIN_FLOAT_VALUE = 0.0000001f;
+static const float MIN_FLOAT_VALUE = 0.00001f;
 static const float PI = 3.14159265359;
 
 // Fresnel effect : Amount of specular reflection based on the viewing angle to surface.
@@ -95,9 +92,9 @@ float4 PsMain(VSOutput input) : SV_Target
     float distance = length(pixelToLightDir);
     float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
 
-    float metallicFactor = metalRoughnessTexture.Sample(clampSampler, input.texCoord).x;
-    float roughnessFactor = metalRoughnessTexture.Sample(clampSampler, input.texCoord).y;
-    float3 albedo = baseTexture.Sample(clampSampler, input.texCoord).xyz;
+    float metallicFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).x;
+    float roughnessFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).y;
+    float3 albedo = baseTexture.Sample(pointClampSampler, input.texCoord).xyz;
 
     metallicFactor = materialCBuffer.metallicFactor;
     roughnessFactor = materialCBuffer.roughnessFactor;

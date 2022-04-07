@@ -19,5 +19,6 @@
 #include "Graphics/GenerateMipsPSO.hpp"
 #include "Graphics/RenderTarget.hpp"
 #include "Graphics/Material.hpp"
+#include "Graphics/DepthStencilBuffer.hpp"
 
 #include "Model/Model.hpp"

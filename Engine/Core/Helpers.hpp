@@ -8,7 +8,11 @@ static inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
 	{
-		throw std::exception();
+		char hrStrValue[64]{};
+		sprintf_s(hrStrValue, "\nHRESULT of 0x%08X\n", static_cast<UINT>(hr));
+		OutputDebugStringA(hrStrValue);
+
+		throw std::exception(hrStrValue);
 	}
 }
 
