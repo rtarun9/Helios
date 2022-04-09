@@ -106,31 +106,6 @@ namespace helios::gfx
 		return fenceValue;
 	}
 
-	void CommandQueue::ExecuteBundle(ID3D12GraphicsCommandList* bundle, ID3D12GraphicsCommandList* commandList)
-	{
-		commandList->Close();
-
-		ID3D12CommandAllocator* commandAllocator{ nullptr };
-		UINT dataSize = sizeof(ID3D12CommandAllocator);
-
-		ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
-
-		std::array<ID3D12CommandList* const, 1> commandLists
-		{
-			commandList
-		};
-
-		commandList->ExecuteBundle(bundle);
-
-		m_CommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), commandLists.data());
-		uint64_t fenceValue = Signal();
-
-		m_CommandAllocatorQueue.emplace(CommandAllocator{ .fenceValue = fenceValue, .commandAllocator = commandAllocator });
-		m_CommandListQueue.emplace(commandList);
-
-		commandAllocator->Release();
-	}
-
 	// Return fence value to for signal.
 	uint64_t CommandQueue::Signal()
 	{

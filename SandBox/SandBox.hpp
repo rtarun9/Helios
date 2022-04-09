@@ -18,12 +18,18 @@ class SandBox : public helios::Engine
 		dx::XMVECTOR cameraPosition;
 	};
 
+	struct alignas(256) RenderTargetSettingsData
+	{
+		float exposure{};
+	};
+
 	// Render resources.
 	struct alignas(256) RenderResources
 	{
 		uint32_t positionBufferIndex{};
 		uint32_t textureBufferIndex{};
 		uint32_t textureIndex{};
+		uint32_t renderTargetSettingsCBufferIndex{};
 	};
 
 	struct alignas(256) PBRRenderResources
@@ -155,4 +161,5 @@ private:
 
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
+	helios::gfx::ConstantBuffer<RenderTargetSettingsData> m_RenderTargetSettingsData{};
 };

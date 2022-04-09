@@ -68,3 +68,20 @@ static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
 {
 	return static_cast<std::underlying_type<T>::type>(value);
 }
+
+// For Use with Win32 : Take in a RECT and return client region width and height.
+static std::pair<uint32_t, uint32_t> GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
+{
+	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);
+	uint32_t height = static_cast<uint32_t>(rect.bottom - rect.top);
+
+	return { width, height };
+}
+
+static std::pair<uint32_t, uint32_t> GetMonitorDimensions(MONITORINFOEXW& monitorInfo)
+{
+	uint32_t width = static_cast<uint32_t>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
+	uint32_t height = static_cast<uint32_t>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);
+
+	return { width, height };
+}

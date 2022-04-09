@@ -16,8 +16,6 @@ struct LightingData
     float4 cameraPosition;
 };
 
-static const float GAMMA_CORRECTION = 0.454545455f;
-
 float4 PsMain(VSOutput input) : SV_Target
 {
     Texture2D testTexture = ResourceDescriptorHeap[renderResource.textureIndex];
@@ -39,7 +37,7 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float3 shadedColor = (specular * float3(1.0f, 1.0f, 1.0f) + surfaceColor * angle) + ambientColor;
     
-    float4 result = float4(pow(shadedColor, GAMMA_CORRECTION), 1.0f);
+    float4 result = float4(shadedColor, 1.0f);
 
     return result;
 }

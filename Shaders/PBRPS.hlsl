@@ -25,8 +25,6 @@ struct MaterialData
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
-static const float GAMMA_CORRECTION = 0.454545455f;
-
 static const float MIN_FLOAT_VALUE = 0.00001f;
 static const float PI = 3.14159265359;
 
@@ -122,5 +120,5 @@ float4 PsMain(VSOutput input) : SV_Target
     float nDotL = max(dot(normal, pixelToLightDir), 0.0f);
     float3 outgoingLight = BRDF * lightColor * nDotL;
 
-    return float4(pow(outgoingLight, GAMMA_CORRECTION), 1.0f);
+    return float4(outgoingLight, 1.0f);
 }

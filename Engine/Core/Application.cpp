@@ -5,7 +5,7 @@
 
 #include "imgui_impl_win32.h"
 
-// Forward declare message handler from imgui_impl_win32.cpp
+// Forward declare message handler from imgui_impl_win32.cpp.
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace helios
@@ -27,7 +27,7 @@ namespace helios
 			.hCursor = nullptr,
 			.hbrBackground = nullptr,
 			.lpszMenuName = nullptr,
-			.lpszClassName = WINDOW_CLASS_NAME.data(),
+			.lpszClassName = WINDOW_CLASS_NAME,
 			.hIconSm = nullptr
 		};
 
@@ -46,10 +46,7 @@ namespace helios
 
 		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-		::AdjustWindowRect(&s_WindowRect, WS_OVERLAPPEDWINDOW, FALSE);
-
-		s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
-		s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
+		std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect, WS_OVERLAPPEDWINDOW);
 
 		// Get Screen width and height so as to center the window.
 		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
@@ -63,7 +60,7 @@ namespace helios
 		int windowYPos = std::max<int>(0, (screenHeight - s_ClientHeight) / 2);
 
 		// Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc function by reinterpreting the lParam as a LPCREATESTRUCT.
-		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME.data(), engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
+		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
 			s_ClientWidth, s_ClientHeight, 0, 0, instance, engine);
 
 		::GetWindowRect(s_WindowHandle, &s_WindowRect);
@@ -79,6 +76,8 @@ namespace helios
 		{
 			::ShowWindow(s_WindowHandle, SW_SHOW);
 		}
+
+		Application::ToggleFullScreenMode();
 
 		// Main game loop
 		MSG message{};
@@ -98,7 +97,7 @@ namespace helios
 
 		engine->OnDestroy();
 
-		::UnregisterClassW(WINDOW_CLASS_NAME.data(), instance);
+		::UnregisterClassW(WINDOW_CLASS_NAME, instance);
 
 		return static_cast<char>(message.wParam);
 	}
@@ -134,9 +133,8 @@ namespace helios
 		{
 			::GetWindowRect(s_WindowHandle, &s_WindowRect);
 
-			// Set window style to borderless so entire screen is filled by the client region.
+			// Set window style to borderless so entire screen is filled by the client region. The full screen window style is basically 0ed out by these flag's, done here explicitly.
 			UINT fullScreenWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-
 			::SetWindowLongW(s_WindowHandle, GWL_STYLE, fullScreenWindowStyle);
 
 			// Get info of the nearest display in case of multi monior setup or primary display in single monitor setup.
@@ -145,8 +143,7 @@ namespace helios
 			monitorInfo.cbSize = sizeof(MONITORINFOEXW);
 			::GetMonitorInfoW(monitor, &monitorInfo);
 
-			auto width = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
-			auto height = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+			auto [width, height] = GetMonitorDimensions(monitorInfo);
 
 			::SetWindowPos(s_WindowHandle, HWND_TOP,
 				monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
@@ -158,8 +155,7 @@ namespace helios
 		{
 			::SetWindowLong(s_WindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-			s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
-			s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
+			std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
 
 			::SetWindowPos(s_WindowHandle, HWND_NOTOPMOST,
 				s_WindowRect.left, s_WindowRect.top,
@@ -228,8 +224,7 @@ namespace helios
 				{
 					::GetClientRect(s_WindowHandle, &s_WindowRect);
 
-					s_ClientWidth = s_WindowRect.right - s_WindowRect.left;
-					s_ClientHeight = s_WindowRect.bottom - s_WindowRect.top;
+					std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
 				}
 
 				break;

@@ -42,7 +42,7 @@ namespace helios::gfx::utils
 		// Commited resource that acts as the destination resource.
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperites(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, resourceFlags);
-		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperites, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&destinationResource)));
+		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperites, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&destinationResource)));
 
 		// Intermediate upload heap that is needed to transfer CPU buffer data into the GPU memory.
 		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
@@ -94,8 +94,18 @@ namespace helios::gfx::utils
 		};
 	}
 
-	// NOTE : After moving to bindless rendering, all shaders same the same Root Signature but here it is created again and again.
-	// Will address this problem in the Material Class.
+	inline D3D12_COMPUTE_PIPELINE_STATE_DESC CreateComputePSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* computeShaderBlob)
+	{
+		return D3D12_COMPUTE_PIPELINE_STATE_DESC
+		{
+			.pRootSignature = rootSignatureBlob,
+			.CS = CD3DX12_SHADER_BYTECODE(computeShaderBlob),
+			.NodeMask = 0u,
+			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+		};
+	}
+
+	// Creates graphics pipeline state object and returns a Material.
 	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT)
 	{
 		wrl::ComPtr<ID3DBlob> vertexBlob;
@@ -113,6 +123,27 @@ namespace helios::gfx::utils
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = utils::CreateGraphicsPSODesc(Material::rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format);
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		auto psoName = materialName.data() + std::wstring(L" PSO");
+		pso->SetName(psoName.c_str());
+
+		return { pso };
+	}
+
+	// Creates compute pipeline state object and returns a Material.
+	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view csShaderPath, std::wstring_view materialName)
+	{
+		wrl::ComPtr<ID3DBlob> computeBlob;
+		::D3DReadFileToBlob(csShaderPath.data(), &computeBlob);
+
+		if (!computeBlob.Get())
+		{
+			ErrorMessage(csShaderPath.data() + std::wstring(L" Not found"));
+		}
+
+		wrl::ComPtr<ID3D12PipelineState> pso;
+
+		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = utils::CreateComputePSODesc(Material::rootSignature.Get(), computeBlob.Get());
+		ThrowIfFailed(device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
 		auto psoName = materialName.data() + std::wstring(L" PSO");
 		pso->SetName(psoName.c_str());
 

@@ -32,6 +32,8 @@ void SandBox::OnUpdate()
 	m_LightData.Update();
 
 	m_PBRMaterial.Update();
+
+	m_RenderTargetSettingsData.Update();
 }
 
 void SandBox::OnRender()
@@ -119,6 +121,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_LightSource.UpdateData(L"Light Source");
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 
+	ImGui::Begin("Render Target Settings");
+	ImGui::SliderFloat("Exposure", &m_RenderTargetSettingsData.GetBufferData().exposure, 0.1f, 5.0f);
+	ImGui::End();
+
 	// Set the necessary states
 
 	commandList->RSSetViewports(1u, &m_Viewport);
@@ -135,7 +141,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_DSVDescriptor.Offset(dsvHandle, m_DepthBuffer.GetBufferIndex());
 
 	m_UIManager.Begin(L"Scene Settings");
-	static std::array<float, 4> clearColor{ 0.10f, 0.10f, 0.1f, 1.0f };
+	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
 
 	gfx::utils::ClearRTV(commandList, rtvHandle, clearColor);
@@ -230,10 +236,11 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = gfx::RenderTarget::GetPositionBufferIndex(),
 		.textureBufferIndex = gfx::RenderTarget::GetTextureCoordsBufferIndex(),
-		.textureIndex = m_OffscreenRT.GetSRVIndex()
+		.textureIndex = m_OffscreenRT.GetSRVIndex(),
+		.renderTargetSettingsCBufferIndex = m_RenderTargetSettingsData.GetBufferIndex()
 	};
  
-	commandList->SetGraphicsRoot32BitConstants(0u, 12u, &bindlessRenderResource, 0u);
+	commandList->SetGraphicsRoot32BitConstants(0u, 16u, &bindlessRenderResource, 0u);
 
 	commandList->DrawIndexedInstanced(6u, 1u, 0u, 0u, 0u);
 
@@ -259,8 +266,7 @@ void SandBox::InitRendererCore()
 
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 1u, L"DSV Descriptor");
 
-	// Creating 30 descriptor heap slots as of now, just an arbitruary number.
-	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 30u, L"SRV_CBV_UAV Descriptor");
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 50u, L"SRV_CBV_UAV Descriptor");
 
 	CreateBackBufferRenderTargetViews();
 
@@ -292,6 +298,8 @@ void SandBox::LoadContent()
 
 	m_LightData.Init(m_Device.Get(), commandList.Get(), LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");
 	
+	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList.Get(), RenderTargetSettingsData{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
+
 	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
@@ -307,14 +315,18 @@ void SandBox::LoadMaterials()
 	m_Materials[L"LightMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/LightVS.cso", L"Shaders/LightPS.cso", L"Light Material");
 	m_Materials[L"PBRMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
 	m_Materials[L"OffscreenRTMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/CubeFromEquirectTextureCS.cso", L"Cube From Equirect Material");
 }
 
 void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 {
-	m_Textures[L"TestTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", L"Test Texture");
-	m_Textures[L"MarbleTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", L"Marble Texture");
-	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", L"Sphere Base Color Texture", true);
-	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", L"Sphere Roughness Metallic Texture", false);
+	m_Textures[L"TestTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", 1u, true, L"Test Texture");
+	m_Textures[L"MarbleTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", 1u, true, L"Marble Texture");
+	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", 1u, true, L"Sphere Base Color Texture");
+	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true, L"Sphere Roughness Metallic Texture");
+
+	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
@@ -325,6 +337,8 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, m_Textures[L"MarbleTexture"].GetTextureIndex());
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
+
+	m_GameObjects[L"SkyBoxCube"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
@@ -398,7 +412,7 @@ void SandBox::CreateDevice()
 	};
 
 	// Configure queue filter to ignore individual messages using thier ID.
-	std::array<D3D12_MESSAGE_ID, 1> ignoreMessageIDs
+	std::array<D3D12_MESSAGE_ID, 2> ignoreMessageIDs
 	{
 		D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
 	};

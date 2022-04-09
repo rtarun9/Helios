@@ -10,7 +10,11 @@ namespace helios::gfx
 	class Texture
 	{
 	public:
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view path, std::wstring_view textureName, bool isSRGB = true);
+		// For textures of format R8G8B8A8_UNORM or its SRGB Equivalent.
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view texturePath, uint32_t mipLevels, bool isSRGB, std::wstring_view textureName);
+
+		// For HDR textures.
+		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view texturePath, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureName);
 
 		ID3D12Resource* GetTextureResource() const;
 

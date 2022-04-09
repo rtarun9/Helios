@@ -41,10 +41,17 @@ struct RenderTargetRenderResources
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint textureIndex;
+    uint renderTargetSettingsCBufferIndex;
 };
 
 struct LightRenderResources
 {
     uint positionBufferIndex;
     uint mvpCBufferIndex;
+};
+
+struct CubeFromEquirectRenderResources
+{
+    uint textureIndex;
+    uint outputTextureIndex;
 };
