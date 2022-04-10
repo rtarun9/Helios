@@ -30,12 +30,12 @@ namespace helios
         {
             if (!error.empty())
             {
-                OutputDebugStringA(error.c_str());
+				ErrorMessage(StringToWString(error));
             }
 
             if (!warning.empty())
             {
-                OutputDebugStringA(warning.c_str());
+				ErrorMessage(StringToWString(warning));
             }
         }
 
@@ -48,6 +48,7 @@ namespace helios
 		std::vector<uint32_t> indices{};
 
 		tinygltf::Scene& scene = model.scenes[model.defaultScene];
+
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
 			tinygltf::Node& node = model.nodes[scene.nodes[i]]; 

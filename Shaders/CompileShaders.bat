@@ -14,6 +14,9 @@ dxc -T ps_6_6 -E PsMain PBRPS.hlsl -Fo PBRPS.cso
 dxc -T vs_6_6 -E VsMain TestVS.hlsl -Fo TestVS.cso
 dxc -T ps_6_6 -E PsMain TestPS.hlsl -Fo TestPS.cso
 
+dxc -T vs_6_6 -E VsMain SkyBoxVS.hlsl -Fo SkyBoxVS.cso
+dxc -T ps_6_6 -E PsMain SkyBoxPS.hlsl -Fo SkyBoxPS.cso
+
 dxc -T cs_6_6 -E CsMain CubeFromEquirectTextureCS.hlsl -Fo CubeFromEquirectTextureCS.cso
 
 // Note : This can use any shader it wants to. LightVS is a particular small shader, hence why I am using it here.

@@ -218,6 +218,23 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	m_LightSource.Draw(commandList);
 
+	m_SkyBoxModel.UpdateTransformData(commandList, projectionView);
+
+	// Draw sky box
+	m_Materials[L"SkyBoxMaterial"].Bind(commandList);
+	commandList->SetDescriptorHeaps(1u, descriptorHeaps.data());
+
+	SkyBoxRendeResources skyBoxRenderResources
+	{
+		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
+		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
+		.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex()
+	};
+
+	commandList->SetGraphicsRoot32BitConstants(0u, 12u, &skyBoxRenderResources, 0u);
+
+	m_SkyBoxModel.Draw(commandList);
+
 	m_UIManager.End();
 
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -300,6 +317,30 @@ void SandBox::LoadContent()
 	
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList.Get(), RenderTargetSettingsData{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
 
+	// Run compute shader to generate cube map from equirectangular texture.
+	
+	//gfx::utils::TransitionResource(commandList.Get(), m_SkyBoxTextureUAV.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//
+	//std::array<ID3D12DescriptorHeap*, 1> computeDescriptorHeaps
+	//{
+	//	m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
+	//};
+	//
+	//commandList->SetDescriptorHeaps(1u, &computeDescriptorHeaps[0]);
+	//m_Materials[L"EquirectEnvironmentMaterial"].BindCS(commandList.Get());
+	//
+	//CubeFromEquirectRenderResources cubeFromEquirectRenderResources
+	//{
+	//	.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
+	//	.outputTextureIndex = m_SkyBoxTextureUAV.GetUAVIndex()
+	//};
+	//
+	//commandList->SetComputeRoot32BitConstants(0u, 8u, &cubeFromEquirectRenderResources, 0u);
+	//
+	//commandList->Dispatch(1024 / 32, 1024 / 32, 6);
+	//
+	//gfx::utils::TransitionResource(commandList.Get(), m_SkyBoxTextureUAV.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
+
 	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
@@ -316,6 +357,7 @@ void SandBox::LoadMaterials()
 	m_Materials[L"PBRMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
 	m_Materials[L"OffscreenRTMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
 
+	m_Materials[L"SkyBoxMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/SkyBoxVS.cso", L"Shaders/SkyBoxPS.cso", L"Sky Box Material");
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::utils::CreateMaterial(m_Device.Get(), L"Shaders/CubeFromEquirectTextureCS.cso", L"Cube From Equirect Material");
 }
 
@@ -327,6 +369,8 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true, L"Sphere Roughness Metallic Texture");
 
 	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
+
+	m_SkyBoxTextureUAV.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 1024u, 1024u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Sky Box Texture UAV");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
@@ -338,7 +382,7 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
 
-	m_GameObjects[L"SkyBoxCube"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_SkyBoxModel.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);

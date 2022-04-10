@@ -86,8 +86,7 @@ namespace helios::gfx
 	{
 		stbi_set_flip_vertically_on_load(true);
 
-		m_TextureData = stbi_loadf(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
-		m_ComponentCount = 4;
+		m_HDRTextureData = stbi_loadf(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
 
 		D3D12_RESOURCE_DESC textureDesc
 		{
@@ -123,7 +122,7 @@ namespace helios::gfx
 		// Copy data from intermediate buffer to the upload heap.
 		D3D12_SUBRESOURCE_DATA textureSubresourceData
 		{
-			.pData = m_TextureData,
+			.pData = m_HDRTextureData,
 			.RowPitch = static_cast<__int64>(m_Width * m_ComponentCount),
 			.SlicePitch = static_cast<__int64>(m_Height * m_Width * m_ComponentCount)
 		};

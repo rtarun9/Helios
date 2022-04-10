@@ -14,7 +14,7 @@ namespace helios::gfx
 		D3D12_CLEAR_VALUE renderTargetClearValue
 		{
 			.Format = format,
-			.Color = {0.1f, 0.1f, 0.1f, 1.0f},
+			.Color = {0.0f, 0.0f, 0.0f, 1.0f},
 		};
 
 		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &rtvResourceDesc, 

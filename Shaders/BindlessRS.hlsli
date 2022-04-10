@@ -50,6 +50,13 @@ struct LightRenderResources
     uint mvpCBufferIndex;
 };
 
+struct SkyBoxRenderResources
+{
+    uint positionBufferIndex;
+    uint mvpCBufferIndex;
+    uint textureIndex;
+};
+
 struct CubeFromEquirectRenderResources
 {
     uint textureIndex;

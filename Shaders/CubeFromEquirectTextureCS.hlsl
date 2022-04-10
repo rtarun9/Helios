@@ -80,6 +80,4 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float4 result = inputTexture.SampleLevel(pointClampSampler, float2(phi / (2.0f * PI), theta / PI), 0);
     
     outputCubeTexture[threadID] = result;
-    
-
 }

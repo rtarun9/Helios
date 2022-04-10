@@ -18,6 +18,12 @@ namespace helios::gfx
 			commandList->SetGraphicsRootSignature(rootSignature.Get());
 			commandList->SetPipelineState(pipelineState.Get());
 		}
+
+		void BindCS(ID3D12GraphicsCommandList* commandList) const
+		{
+			commandList->SetComputeRootSignature(rootSignature.Get());
+			commandList->SetPipelineState(pipelineState.Get());
+		}
 	};
 }
 

@@ -37,6 +37,13 @@ static inline constexpr std::string WstringToString(std::wstring_view inputWStri
 	return result;
 }
 
+static inline constexpr std::wstring StringToWString(std::string_view inputWString)
+{
+	std::wstring result{ begin(inputWString), end(inputWString) };
+	return result;
+}
+
+
 static enum class Keys : uint8_t
 {
 	W,

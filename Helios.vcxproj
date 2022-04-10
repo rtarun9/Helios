@@ -200,6 +200,7 @@
     <ClInclude Include="Engine\Graphics\Texture.hpp" />
     <ClInclude Include="Engine\Core\UIManager.hpp" />
     <ClInclude Include="Engine\Graphics\StructuredBuffer.hpp" />
+    <ClInclude Include="Engine\Graphics\TextureUAV.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Graphics\DepthStencilBuffer.cpp" />
@@ -225,6 +226,7 @@
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
     <ClCompile Include="Engine\Core\UIManager.cpp" />
     <ClCompile Include="Engine\Graphics\StructuredBuffer.cpp" />
+    <ClCompile Include="Engine\Graphics\TextureUAV.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl">

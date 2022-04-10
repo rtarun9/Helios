@@ -15,13 +15,16 @@ namespace helios::gfx
 
 		// For HDR textures.
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::wstring_view texturePath, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureName);
-
+	
 		ID3D12Resource* GetTextureResource() const;
 
 		uint32_t GetTextureIndex() const;
 
 	private:
-		void* m_TextureData{};
+		unsigned char* m_TextureData{};
+
+		float* m_HDRTextureData{};
+
 		int m_Width{};
 		int m_Height{};
 		int m_ComponentCount{};

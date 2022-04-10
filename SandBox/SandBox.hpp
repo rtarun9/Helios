@@ -67,6 +67,19 @@ class SandBox : public helios::Engine
 		uint32_t textureIndex{};
 	};
 
+	struct SkyBoxRendeResources
+	{
+		uint32_t positionBufferIndex{};
+		uint32_t mvpCBufferIndex{};
+		uint32_t textureIndex{};
+	};
+
+	struct CubeFromEquirectRenderResources
+	{
+		uint32_t textureIndex{};
+		uint32_t outputTextureIndex{};
+	};
+
 public:
 	SandBox(helios::Config& config);
 
@@ -148,6 +161,10 @@ private:
 
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
+
+	// Temporarily here : sky box cube faces and its mesh.
+	helios::gfx::TextureUAV m_SkyBoxTextureUAV{};
+	helios::Model m_SkyBoxModel{};
 
 	helios::Camera m_Camera{};
 
