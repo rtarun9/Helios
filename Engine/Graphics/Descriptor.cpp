@@ -51,6 +51,14 @@ namespace helios::gfx
 		return m_CurrentDescriptorHandle;
 	}
 
+	DescriptorHandle Descriptor::GetDescriptorHandleFromIndex(uint32_t index) const
+	{
+		DescriptorHandle handle= GetDescriptorHandleForStart();
+		Offset(handle, index);
+
+		return handle;
+	}
+
 	uint32_t Descriptor::GetDescriptorIndex(const DescriptorHandle& descriptorHandle) const
 	{
 		return static_cast<uint32_t>((descriptorHandle.gpuDescriptorHandle.ptr - m_DescriptorHandleFromStart.gpuDescriptorHandle.ptr) / m_DescriptorSize);
@@ -77,8 +85,8 @@ namespace helios::gfx
 		descriptorHandle.gpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
-	void Descriptor::OffsetCurrentHandle()
+	void Descriptor::OffsetCurrentHandle(uint32_t offset)
 	{
-		m_CurrentDescriptorHandle.Offset();
+		Offset(m_CurrentDescriptorHandle, offset);
 	}
 }

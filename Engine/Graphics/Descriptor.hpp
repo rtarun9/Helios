@@ -28,17 +28,18 @@ namespace helios::gfx
 
 		DescriptorHandle GetDescriptorHandleForStart() const;
 		DescriptorHandle GetCurrentDescriptorHandle() const;
+		DescriptorHandle GetDescriptorHandleFromIndex(uint32_t index) const;
 
 		// Returns a index that can be used to directly index into a descriptor heap.
 		uint32_t GetDescriptorIndex(const DescriptorHandle& descriptorHandle) const;
 		uint32_t GetCurrentDescriptorIndex() const;
-
+	
 		// Used to offset a X_Handle passed into function.
 		void Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u) const;
 		void Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle, uint32_t offset = 1u) const;
 		void Offset(DescriptorHandle& handle, uint32_t offset = 1u) const;
 
-		void OffsetCurrentHandle();
+		void OffsetCurrentHandle(uint32_t offset = 1u);
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescriptorHeap;

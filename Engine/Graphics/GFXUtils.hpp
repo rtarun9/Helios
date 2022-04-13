@@ -21,7 +21,7 @@ namespace helios::gfx::utils
 
 	inline void ClearDepthBuffer(ID3D12GraphicsCommandList* commandList, DescriptorHandle& dsvHandle, float depthClearValue = 1.0f)
 	{
-		commandList->ClearDepthStencilView(dsvHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 1u, 0u, nullptr);
+		commandList->ClearDepthStencilView(dsvHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, depthClearValue, 0u, 0u, nullptr);
 	}
 
 	// Create a GPU buffer that returns two buffers : The final Destination buffer and an intermediate buffer (that is used to transfer data from the CPU to the GPU).
@@ -103,50 +103,5 @@ namespace helios::gfx::utils
 			.NodeMask = 0u,
 			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
 		};
-	}
-
-	// Creates graphics pipeline state object and returns a Material.
-	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT)
-	{
-		wrl::ComPtr<ID3DBlob> vertexBlob;
-		::D3DReadFileToBlob(vsShaderPath.data(), &vertexBlob);
-
-		wrl::ComPtr<ID3DBlob> pixelBlob;
-		::D3DReadFileToBlob(psShaderPath.data(), &pixelBlob);
-
-		if (!vertexBlob.Get() || !pixelBlob.Get())
-		{
-			ErrorMessage(psShaderPath.data() + std::wstring(L" Not found"));
-		}
-
-		wrl::ComPtr<ID3D12PipelineState> pso;
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = utils::CreateGraphicsPSODesc(Material::rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format);
-		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
-		auto psoName = materialName.data() + std::wstring(L" PSO");
-		pso->SetName(psoName.c_str());
-
-		return { pso };
-	}
-
-	// Creates compute pipeline state object and returns a Material.
-	inline Material CreateMaterial(ID3D12Device* device, std::wstring_view csShaderPath, std::wstring_view materialName)
-	{
-		wrl::ComPtr<ID3DBlob> computeBlob;
-		::D3DReadFileToBlob(csShaderPath.data(), &computeBlob);
-
-		if (!computeBlob.Get())
-		{
-			ErrorMessage(csShaderPath.data() + std::wstring(L" Not found"));
-		}
-
-		wrl::ComPtr<ID3D12PipelineState> pso;
-
-		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = utils::CreateComputePSODesc(Material::rootSignature.Get(), computeBlob.Get());
-		ThrowIfFailed(device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
-		auto psoName = materialName.data() + std::wstring(L" PSO");
-		pso->SetName(psoName.c_str());
-
-		return { pso };
 	}
 }

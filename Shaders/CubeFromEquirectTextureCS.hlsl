@@ -28,47 +28,24 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     switch (threadID.z)
     {
-        // Right face of cube.
         case 0:
-        {    
-            samplingVector = float3(1.0f, uv.y, -uv.x);
+            samplingVector = float3(1.0, uv.y, -uv.x);
             break;
-        }
-        
-        // Left face of cube.
         case 1:
-        {
-            samplingVector = float3(-1.0f, uv.y, uv.x);
+            samplingVector = float3(-1.0, uv.y, uv.x);
             break;
-        }
-        
-        // Top face of cube.
         case 2:
-        {
-            samplingVector = float3(uv.x, 1.0f, -uv.y);
+            samplingVector = float3(uv.x, 1.0, -uv.y);
             break;
-        }
-
-        // Bottom face of cube.
         case 3:
-        {
-            samplingVector = float3(uv.x, -1.0f, uv.y);
+            samplingVector = float3(uv.x, -1.0, uv.y);
             break;
-        }
-        
-        // Forward (front) face of cube.
         case 4:
-        {
-            samplingVector = float3(uv.x, uv.y, 1.0f);
+            samplingVector = float3(uv.x, uv.y, 1.0);
             break;
-        }
-        
-        // Back face of cube.
         case 5:
-        {
-            samplingVector = float3(-uv.x, uv.r, -1.0f);
+            samplingVector = float3(-uv.x, uv.y, -1.0);
             break;
-        }
     }
     
     samplingVector = normalize(samplingVector);
@@ -77,7 +54,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float phi = atan2(samplingVector.z, samplingVector.x);
     float theta = acos(samplingVector.y);
     
-    float4 result = inputTexture.SampleLevel(pointClampSampler, float2(phi / (2.0f * PI), theta / PI), 0);
+    float4 result = inputTexture.SampleLevel(pointWrapSampler, float2(phi / (2.0f * PI), theta / PI), 0);
     
     outputCubeTexture[threadID] = result;
 }

@@ -13,6 +13,8 @@ namespace helios::gfx
 
 		uint32_t GetBufferIndex() const;
 
+		ID3D12Resource* GetResource() const;
+
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthStencilBuffer{};
 		uint32_t m_BufferIndexInDescriptorHeap{};

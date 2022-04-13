@@ -80,6 +80,9 @@ class SandBox : public helios::Engine
 		uint32_t outputTextureIndex{};
 	};
 
+	// Number of 32 bit root constants
+	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64;
+
 public:
 	SandBox(helios::Config& config);
 
@@ -116,7 +119,7 @@ private:
 private:
 	// Number of SwapChain backbuffers.
 	static constexpr uint8_t NUMBER_OF_FRAMES = 3;
-
+	
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
 
@@ -164,6 +167,7 @@ private:
 
 	// Temporarily here : sky box cube faces and its mesh.
 	helios::gfx::TextureUAV m_SkyBoxTextureUAV{};
+	helios::gfx::TextureUAV m_EnvironmentTexture{};
 	helios::Model m_SkyBoxModel{};
 
 	helios::Camera m_Camera{};

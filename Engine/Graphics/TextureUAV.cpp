@@ -4,14 +4,14 @@
 
 namespace helios::gfx
 {
-	void TextureUAV::Init(ID3D12Device* device, Descriptor& srvUAVDescriptor, uint32_t width, uint32_t height, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureUAVName)
+	void TextureUAV::Init(ID3D12Device* device, Descriptor& srvUAVDescriptor, uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureUAVName)
 	{
 		D3D12_RESOURCE_DESC resourceDesc
 		{
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 			.Width = width,
 			.Height = height,
-			.DepthOrArraySize = 1u,
+			.DepthOrArraySize = static_cast<UINT16>(depth),
 			.MipLevels = static_cast<UINT16>(mipLevels),
 			.Format = format,
 			.SampleDesc
@@ -25,37 +25,84 @@ namespace helios::gfx
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_Texture)));
 
-		// Create SRV for the texture
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
+		m_Texture->SetName(textureUAVName.data());
+
+		// Create SRV for the texture 
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		switch (depth)
 		{
-			.Format = resourceDesc.Format,
-			.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-			.Texture2D
+		case 1:
+		{
+			srvDesc =
 			{
-				.MipLevels = 1
-			}
-		};
-
+				.Format = format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D
+				{
+					.MostDetailedMip = 0,
+					.MipLevels = 1u,
+				}
+			};
+		
+			break;
+		}
+		
+		case 6:
+		{
+			srvDesc =
+			{
+				.Format = format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.TextureCube
+				{
+					.MostDetailedMip = 0,
+					.MipLevels = 1u
+				}	
+			};
+			break;
+		}
+		}
 		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvUAVDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
-
 		m_TextureIndexInDescriptorHeap = srvUAVDescriptor.GetCurrentDescriptorIndex();
-
 		srvUAVDescriptor.OffsetCurrentHandle();
 
 		// Create UAV for texture.
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+
+		switch (depth)
 		{
-			.Format = format,
-			.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
-			.Texture2D
+		case 1:
+		{
+			uavDesc =
 			{
-				.MipSlice = 0u
-			}
-		};
+				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+				.Texture2D
+				{
+					.MipSlice = mipLevels
+				}
+			};
+			break;
+		}
 
+		case 6:
+		{
+			uavDesc =
+			{
+				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
+				.Texture2DArray
+				{
+					.MipSlice = mipLevels,
+					.FirstArraySlice = 0u,
+					.ArraySize = 6u
+				}
+			};
+			break;
+		}
+		}
+		
 		device->CreateUnorderedAccessView(m_Texture.Get(), nullptr, &uavDesc, srvUAVDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
-
 		m_UAVIndexInDescriptorHeap = srvUAVDescriptor.GetCurrentDescriptorIndex();
 
 		srvUAVDescriptor.OffsetCurrentHandle();

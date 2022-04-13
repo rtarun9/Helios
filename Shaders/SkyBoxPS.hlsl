@@ -14,5 +14,5 @@ float4 PsMain(VSOutput input) : SV_Target
  
     float3 samplingVector = normalize(input.modelSpacePosition.xyz);
 
-    return environmentTexture.Sample(pointWrapSampler, samplingVector);
+    return environmentTexture.SampleLevel(pointWrapSampler, samplingVector, 0.0f);
 }

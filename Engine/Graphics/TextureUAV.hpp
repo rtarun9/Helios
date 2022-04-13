@@ -9,7 +9,7 @@ namespace helios::gfx
 	class TextureUAV
 	{
 	public:
-		void Init(ID3D12Device* device, Descriptor& srvUAVDescriptor, uint32_t width, uint32_t height, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureUAVName);
+		void Init(ID3D12Device* device, Descriptor& srvUAVDescriptor, uint32_t width, uint32_t height, uint32_t depth, uint32_t mipLevels, DXGI_FORMAT format, std::wstring_view textureUAVName);
 
 		ID3D12Resource* GetTextureResource() const;
 

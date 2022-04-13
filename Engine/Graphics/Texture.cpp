@@ -87,6 +87,7 @@ namespace helios::gfx
 		stbi_set_flip_vertically_on_load(true);
 
 		m_HDRTextureData = stbi_loadf(WstringToString(texturePath).c_str(), &m_Width, &m_Height, &m_ComponentCount, 4u);
+		m_ComponentCount = 4;
 
 		D3D12_RESOURCE_DESC textureDesc
 		{
@@ -123,8 +124,8 @@ namespace helios::gfx
 		D3D12_SUBRESOURCE_DATA textureSubresourceData
 		{
 			.pData = m_HDRTextureData,
-			.RowPitch = static_cast<__int64>(m_Width * m_ComponentCount),
-			.SlicePitch = static_cast<__int64>(m_Height * m_Width * m_ComponentCount)
+			.RowPitch = static_cast<__int64>(m_Width * m_ComponentCount * 4),
+			.SlicePitch = static_cast<__int64>(m_Height * m_Width * m_ComponentCount * 4)
 		};
 
 		UpdateSubresources(commandList, m_Texture.Get(), m_TextureUploadHeap.Get(), 0u, 0u, 1u, &textureSubresourceData);
