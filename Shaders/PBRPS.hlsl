@@ -101,7 +101,7 @@ float4 PsMain(VSOutput input) : SV_Target
     metallicFactor = materialCBuffer.metallicFactor;
     roughnessFactor = materialCBuffer.roughnessFactor;
     albedo = materialCBuffer.albedo;
-
+    
     // Rendering equation (or reflectance equation) for PBR Calculation.
     float3 F0 = float3(0.04f, 0.04f, 0.04f);
     F0 = lerp(F0, albedo, float3(metallicFactor, metallicFactor, metallicFactor));
@@ -109,8 +109,18 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 kS = FresnelSchlick(viewDir, halfWayDir, F0);
     float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
 
+    // For diffuse IBL.
+    TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMap];
+    float3 irradiance = irradianceMap.SampleLevel(linearWrapSampler, normal.xyz, 0.0f).xyz;
+    
     float3 lambertianDiffuse = albedo / PI;
-
+    
+    // TEMP
+    float3 iblKS = FresnelSchlick(viewDir, normal, F0);
+    float3 iblKD = 1.0f - iblKS;
+    
+    float3 ambience = iblKD * lambertianDiffuse * irradiance;
+    
     // Cook - Torrance BRDF Calculation.
     // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))
     float3 NDF = GGXNormalDistribution(normal, halfWayDir, roughnessFactor);
@@ -123,5 +133,5 @@ float4 PsMain(VSOutput input) : SV_Target
     float nDotL = max(dot(normal, pixelToLightDir), 0.0f);
     float3 outgoingLight = BRDF * lightColor * nDotL;
 
-    return float4(outgoingLight, 1.0f);
+    return float4(outgoingLight + ambience, 1.0f);
 }

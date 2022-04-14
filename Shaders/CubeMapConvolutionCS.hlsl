@@ -12,14 +12,13 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     RWTexture2DArray<float4> outputIrradianceMap= ResourceDescriptorHeap[renderResources.outputIrradianceMapIndex];
     
-    float outputTextureWidth, outputTextureHeight, outputTextureDepth;
-    outputIrradianceMap.GetDimensions(outputTextureWidth, outputTextureHeight, outputTextureDepth);
+    float textureWidth, textureHeight, textureDepth;
+    outputIrradianceMap.GetDimensions(textureWidth, textureHeight, textureDepth);
     
-    float2 pixelCoords = threadID.xy / float2(outputTextureWidth, outputTextureHeight);
+    float2 uv = (threadID.xy + float2(0.5f, 0.5f)) / textureWidth;
+    uv = uv * float2(2.0f, 2.0f) - float2(1.0f, 1.0f); 
+    uv.y *= -1.0f;
     
-    // Convert pixelCoords into the range of -1 .. 1 and make sure y goes from top to bottom.
-    float2 uv = 2.0f * float2(pixelCoords.x, 1.0f - pixelCoords.y) - float2(1.0f, 1.0f);
- 
     float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
     
     switch (threadID.z)
@@ -50,21 +49,22 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float3 forward = samplingVector;
     float3 up = float3(0.0f, 0.0f, 1.0f);
     float3 left = normalize(cross(up, forward));
+    up = normalize(cross(forward, left));
     
-    static const int INTEGRATION_STEP_COUNT = 19;
-    static const int SAMPLES = INTEGRATION_STEP_COUNT * INTEGRATION_STEP_COUNT;
+    static const float INTEGRATION_STEP_COUNT = 100.0f;
+    static const float SAMPLES = INTEGRATION_STEP_COUNT * INTEGRATION_STEP_COUNT;
     
-    float3 irradiance = 0.0f;
+    float3 irradiance = float3(0.0f, 0.0f, 0.0f);
     
-    for (int i = 0; i < INTEGRATION_STEP_COUNT; i++)
+    for (float i = 0.0f; i < INTEGRATION_STEP_COUNT; i++)
     {
-        float theta = 2.0f * PI * ((float) i / float(INTEGRATION_STEP_COUNT - 1.0f));
-        for (int j = 0; j < INTEGRATION_STEP_COUNT; j++)
+        float theta = 2.0f * PI * (i / (INTEGRATION_STEP_COUNT - 1.0f));
+        for (float j = 0.0f; j < INTEGRATION_STEP_COUNT; j++)
         {
-            float phi = 0.5f * PI * ((float) j / float(INTEGRATION_STEP_COUNT - 1.0f));
+            float phi = 0.5f * PI * (j / (INTEGRATION_STEP_COUNT - 1.0f));
             float3 tangentSpaceCoordinates = normalize(float3(sin(phi) * cos(theta), sin(phi) * sin(theta), cos(phi)));
             float3 worldSpaceCoordinates = tangentSpaceCoordinates.x * left + tangentSpaceCoordinates.y * up + tangentSpaceCoordinates.z * forward;
-            float3 irradianceValue = textureCubeMap.SampleLevel(anisotropicSampler, worldSpaceCoordinates, 0.0f).xyz;
+            float3 irradianceValue = textureCubeMap.SampleLevel(linearWrapSampler, worldSpaceCoordinates, 0.0f).xyz;
             
             irradiance += irradianceValue * cos(phi) * sin(phi);
         }

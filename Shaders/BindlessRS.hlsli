@@ -3,7 +3,7 @@
     "RootConstants(b0, num32BitConstants=64, visibility = SHADER_VISIBILITY_ALL)," \
     "StaticSampler(s0, space = 1, filter = FILTER_MIN_MAG_MIP_POINT, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP)," \
     "StaticSampler(s1, space = 1, filter = FILTER_MIN_MAG_MIP_POINT, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP)," \
-    "StaticSampler(s2, space = 1, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP), " \
+    "StaticSampler(s2, space = 1, filter = FILTER_MIN_MAG_MIP_LINEAR, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP), " \
     "StaticSampler(s3, space = 1, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)"
 
 // Samplers
@@ -38,6 +38,8 @@ struct PBRRenderResources
     
     uint baseTextureIndex;
     uint metalRoughnessTextureIndex;
+    
+    uint irradianceMap;
 };
 
 struct RenderTargetRenderResources

@@ -45,6 +45,8 @@ class SandBox : public helios::Engine
 
 		uint32_t baseTextureIndex{};
 		uint32_t metalRoughnessTextureIndex{};	
+
+		uint32_t irradianceMap{};
 	};
 
 	struct alignas(256) LightRenderResources

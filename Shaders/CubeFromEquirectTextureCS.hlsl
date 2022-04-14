@@ -54,7 +54,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float phi = atan2(samplingVector.z, samplingVector.x);
     float theta = acos(samplingVector.y);
     
-    float4 result = inputTexture.SampleLevel(anisotropicSampler, float2(phi / (2.0f * PI), theta / PI), 0.0f);
+    float4 result = inputTexture.SampleLevel(linearWrapSampler, float2(phi / (2.0f * PI), theta / PI), 0.0f);
     
     outputCubeTexture[threadID] = result;
 }

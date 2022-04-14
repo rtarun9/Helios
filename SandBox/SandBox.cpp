@@ -174,6 +174,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		.lightCBufferIndex = m_LightData.GetBufferIndex(),
 		.baseTextureIndex = m_Textures[L"SphereAlbedoTexture"].GetTextureIndex(),
 		.metalRoughnessTextureIndex = m_Textures[L"SphereMetalRoughTexture"].GetTextureIndex(),
+		.irradianceMap = m_IrradianceMap.GetTextureIndex()
 	};
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &pbrRenderResources, 0u);
@@ -232,7 +233,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
-		.textureIndex = m_IrradianceMap.GetTextureIndex()
+		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
 	};
 	
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &skyBoxRenderResources, 0u);
