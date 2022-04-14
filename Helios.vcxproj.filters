@@ -160,6 +160,7 @@
     <FxCompile Include="Shaders\PBRPS.hlsl" />
     <FxCompile Include="Shaders\OffscreenRTVS.hlsl" />
     <FxCompile Include="Shaders\OffscreenRTPS.hlsl" />
+    <FxCompile Include="Shaders\CubeMapConvolutionCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

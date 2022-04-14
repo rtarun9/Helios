@@ -59,7 +59,11 @@ float GGXNormalDistribution(float3 normal, float3 halfWayDir, float roughness)
 // Formula : N . X / (N . X) * (1 - k) + k, where k = roughness / 2, X = viewDir for geometry obstruction or lightDir for self shadowing.
 float SchlickBeckmannGS(float roughness, float3 normal, float3 X)
 {
-    float k = roughness / 2;
+    // Roughness is remapped to (roughness + 1) / 2 before squaring.
+    // Source :https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+    
+    roughness = (roughness + 1.0f) / 2.0f;
+    float k = pow((roughness + 1), 2) / 8.0f;
     
     float nDotX = max(dot(normal, X), 0.0f);
     return nDotX / max(nDotX * (1.0f - k) + k, MIN_FLOAT_VALUE);
@@ -103,10 +107,9 @@ float4 PsMain(VSOutput input) : SV_Target
     F0 = lerp(F0, albedo, float3(metallicFactor, metallicFactor, metallicFactor));
     
     float3 kS = FresnelSchlick(viewDir, halfWayDir, F0);
-    float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
-    kD *= (1.0f - metallicFactor);
+    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
 
-    float3 lambertianDiffuse = albedo;
+    float3 lambertianDiffuse = albedo / PI;
 
     // Cook - Torrance BRDF Calculation.
     // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))

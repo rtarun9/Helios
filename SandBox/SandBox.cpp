@@ -4,6 +4,11 @@
 
 using namespace helios;
 
+// Temporary 
+static constexpr uint32_t ENV_TEXTURE_DIMENSION = 2048u;
+static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 32u;
+
+
 SandBox::SandBox(Config& config)
 	: Engine(config)
 {
@@ -102,25 +107,24 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
 
+	// Commented out since testing out PBR & IBL.
 	// TODO : Move to OnUpdate soon.
-	for (auto& [objectName, gameObject] : m_GameObjects)
-	{
-		gameObject.UpdateData(objectName);
-		gameObject.UpdateTransformData(commandList, projectionView);
-	}
+	//for (auto& [objectName, gameObject] : m_GameObjects)
+	//{
+	//	gameObject.UpdateData(objectName);
+	//	gameObject.UpdateTransformData(commandList, projectionView);
+	//}
 	//
-	m_Sphere.UpdateData(L"Sphere");
-	m_Sphere.UpdateTransformData(commandList, projectionView);
-	//
+
 	ImGui::Begin("Material Data");
 	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
 	ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
 	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
 	ImGui::End();
-	//
+
 	m_LightSource.UpdateData(L"Light Source");
 	m_LightSource.UpdateTransformData(commandList, projectionView);
-	//
+
 	ImGui::Begin("Render Target Settings");
 	ImGui::SliderFloat("Exposure", &m_RenderTargetSettingsData.GetBufferData().exposure, 0.1f, 5.0f);
 	ImGui::End();
@@ -152,6 +156,9 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		m_SRV_CBV_UAV_Descriptor.GetDescriptorHeap()
 	};
+
+	m_Sphere.UpdateData(L"Sphere");
+	m_Sphere.UpdateTransformData(commandList, projectionView);
 
 	// Draw sphere (for PBR Test).
 	m_Materials[L"PBRMaterial"].Bind(commandList);
@@ -187,35 +194,33 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	m_LightSource.Draw(commandList);
 
-	m_Materials[L"DefaultMaterial"].Bind(commandList);
-
-	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
-
-	TestRenderResources testRenderResource{};
-	
-	for (auto& [objectName, gameObject] : m_GameObjects)
-	{
-		auto textureIndex = gameObject.GetTextureIndex();
-		if (textureIndex == -1)
-		{
-			textureIndex = m_Textures[L"TestTexture"].GetTextureIndex();
-		}
-	
-		testRenderResource =
-		{
-			.positionBufferIndex = gameObject.GetPositionBufferIndex(),
-			.textureBufferIndex = gameObject.GetTextureCoordsBufferIndex(),
-			.normalBufferIndex = gameObject.GetNormalBufferIndex(),
-			.mvpCBufferIndex = gameObject.GetTransformCBufferIndex(),
-			.lightCBufferIndex = m_LightData.GetBufferIndex(),
-			.textureIndex = textureIndex,
-		};
-	
-		commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &testRenderResource, 0u);
-		gameObject.Draw(commandList);
-	}
-	
-	m_SkyBoxModel.UpdateData(L"Sky Box Cube");
+	//m_Materials[L"DefaultMaterial"].Bind(commandList);
+	//
+	//commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
+	//
+	//TestRenderResources testRenderResource{};
+	//
+	//for (auto& [objectName, gameObject] : m_GameObjects)
+	//{
+	//	auto textureIndex = gameObject.GetTextureIndex();
+	//	if (textureIndex == -1)
+	//	{
+	//		textureIndex = m_Textures[L"TestTexture"].GetTextureIndex();
+	//	}
+	//
+	//	testRenderResource =
+	//	{
+	//		.positionBufferIndex = gameObject.GetPositionBufferIndex(),
+	//		.textureBufferIndex = gameObject.GetTextureCoordsBufferIndex(),
+	//		.normalBufferIndex = gameObject.GetNormalBufferIndex(),
+	//		.mvpCBufferIndex = gameObject.GetTransformCBufferIndex(),
+	//		.lightCBufferIndex = m_LightData.GetBufferIndex(),
+	//		.textureIndex = textureIndex,
+	//	};
+	//
+	//	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &testRenderResource, 0u);
+	//	gameObject.Draw(commandList);
+	//}
 	
 	m_SkyBoxModel.UpdateTransformData(commandList, projectionView);
 	
@@ -227,7 +232,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
-		.textureIndex = m_SkyBoxTextureUAV.GetTextureIndex()
+		.textureIndex = m_IrradianceMap.GetTextureIndex()
 	};
 	
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &skyBoxRenderResources, 0u);
@@ -318,7 +323,7 @@ void SandBox::LoadContent()
 
 	// Run compute shader to generate cube map from equirectangular texture.
 	
-	gfx::utils::TransitionResource(commandList.Get(), m_SkyBoxTextureUAV.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	
 	std::array<ID3D12DescriptorHeap*, 1> computeDescriptorHeaps
 	{
@@ -331,28 +336,32 @@ void SandBox::LoadContent()
 	CubeFromEquirectRenderResources cubeFromEquirectRenderResources
 	{
 		.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
-		.outputTextureIndex = m_SkyBoxTextureUAV.GetUAVIndex()
+		.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex()
 	};
 	
 	commandList->SetComputeRoot32BitConstants(0u, 8u, &cubeFromEquirectRenderResources, 0u);
 	
-	commandList->Dispatch(1024 / 32, 1024 / 32, 6);
+	commandList->Dispatch(ENV_TEXTURE_DIMENSION / 32, ENV_TEXTURE_DIMENSION / 32, 6);
 	
-	gfx::utils::TransitionResource(commandList.Get(), m_SkyBoxTextureUAV.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	// Run compute shader to generate irradiance map from above generated cube map texture.
 
-	// Copy 0th mip level into Environment Texture.
-	gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMap.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	for (uint32_t arraySlice = 0; arraySlice < 6; ++arraySlice)
+	commandList->SetDescriptorHeaps(1u, computeDescriptorHeaps.data());
+	m_Materials[L"CubeMapConvolutionMaterial"].BindCS(commandList.Get());
+
+	CubeMapConvolutionRenderResources cubeMapConvolutionRenderResources
 	{
-		const UINT subresourceIndex = D3D12CalcSubresource(0u, arraySlice, 0u, 0u, 6u);
-		D3D12_TEXTURE_COPY_LOCATION destinationTextureCopyLocation = CD3DX12_TEXTURE_COPY_LOCATION{ m_EnvironmentTexture.GetTextureResource(), subresourceIndex };
-		D3D12_TEXTURE_COPY_LOCATION sourceTextureCopyLocation = CD3DX12_TEXTURE_COPY_LOCATION{ m_SkyBoxTextureUAV.GetTextureResource(), subresourceIndex };
+		.environmentMapIndex = m_EnvironmentTexture.GetTextureIndex(),
+		.outputIrradianceMapIndex = m_IrradianceMap.GetUAVIndex()
+	};
 
-		commandList->CopyTextureRegion(&destinationTextureCopyLocation, 0u, 0u, 0u, &sourceTextureCopyLocation, nullptr);
-	}
+	commandList->SetComputeRoot32BitConstants(0u, 8u, &cubeMapConvolutionRenderResources, 0u);
 
-	gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 32, CONVOLUTED_TEXTURE_DIMENSION / 32, 6);
+
+	gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMap.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
 	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
@@ -371,7 +380,9 @@ void SandBox::LoadMaterials()
 	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/SkyBoxVS.cso", L"Shaders/SkyBoxPS.cso", L"Sky Box Material", DXGI_FORMAT_R16G16B16A16_FLOAT, true);
+	
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeFromEquirectTextureCS.cso", L"Cube From Equirect Material");
+	m_Materials[L"CubeMapConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeMapConvolutionCS.cso", L"Cube Map Convolution Material");
 }
 
 void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
@@ -383,9 +394,8 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 
 	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
 
-	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 1024u, 1024u, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Environment Texture");
-
-	m_SkyBoxTextureUAV.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 1024u, 1024u, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Sky Box Texture UAV");
+	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Sky Box Texture UAV");
+	m_IrradianceMap.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Irradiance Convoluted Cube Map");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)

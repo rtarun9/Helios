@@ -21,13 +21,11 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
     
     ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
-    
-    matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
   
     VSOutput output;
-    output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
-    output.modelSpacePosition = float4(positionBuffer[vertexID].xyz, 1.0f);
-    output.position.z = output.position.w;
+    output.position = mul(mvpCBuffer.projectionViewMatrix, float4(positionBuffer[vertexID], 0.0f));
+    output.modelSpacePosition = float4(positionBuffer[vertexID].xyz, 0.0f);
+    output.position = output.position.xyww; 
     
     return output;
 }

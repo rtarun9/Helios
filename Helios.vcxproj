@@ -229,6 +229,9 @@
     <ClCompile Include="Engine\Graphics\TextureUAV.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\CubeMapConvolutionCS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Shaders\GenerateMipsCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.5</ShaderModel>

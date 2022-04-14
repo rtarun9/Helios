@@ -80,6 +80,12 @@ class SandBox : public helios::Engine
 		uint32_t outputTextureIndex{};
 	};
 
+	struct CubeMapConvolutionRenderResources
+	{
+		uint32_t environmentMapIndex{};
+		uint32_t outputIrradianceMapIndex{};
+	};
+
 	// Number of 32 bit root constants
 	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64;
 
@@ -165,9 +171,9 @@ private:
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
 
-	// Temporarily here : sky box cube faces and its mesh.
-	helios::gfx::TextureUAV m_SkyBoxTextureUAV{};
 	helios::gfx::TextureUAV m_EnvironmentTexture{};
+	helios::gfx::TextureUAV m_IrradianceMap{};
+
 	helios::Model m_SkyBoxModel{};
 
 	helios::Camera m_Camera{};

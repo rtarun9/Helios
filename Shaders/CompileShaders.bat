@@ -19,6 +19,8 @@ dxc -T ps_6_6 -E PsMain SkyBoxPS.hlsl -Fo SkyBoxPS.cso
 
 dxc -T cs_6_6 -E CsMain CubeFromEquirectTextureCS.hlsl -Fo CubeFromEquirectTextureCS.cso
 
+dxc -T cs_6_6 -E CsMain CubeMapConvolutionCS.hlsl -Fo CubeMapConvolutionCS.cso
+
 // Note : This can use any shader it wants to. LightVS is a particular small shader, hence why I am using it here.
 dxc -T vs_6_6 -E VsMain LightVS.hlsl -extractrootsignature -Fo BindlessRS.cso
 

@@ -13,6 +13,7 @@ float4 PsMain(VSOutput input) : SV_Target
     TextureCube environmentTexture = ResourceDescriptorHeap[renderResource.textureIndex];
  
     float3 samplingVector = normalize(input.modelSpacePosition.xyz);
+    samplingVector.y *= -1.0f;
 
-    return environmentTexture.SampleLevel(pointWrapSampler, samplingVector, 0.0f);
+    return environmentTexture.SampleLevel(anisotropicSampler, samplingVector, 0.0f);
 }
