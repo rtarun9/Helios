@@ -1,4 +1,4 @@
-// Calculates the sampling direction vector using teh current pixel's coordinates.
+// Calculates the sampling direction vector using the current pixel's coordinates.
 // Convertes 1 equirectangular projection texture into 6 cube map textures.
 // Main Resource used : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/equirect2cube.hlsl.
 

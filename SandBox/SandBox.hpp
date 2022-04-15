@@ -89,7 +89,7 @@ class SandBox : public helios::Engine
 	};
 
 	// Number of 32 bit root constants
-	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64;
+	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
 
 public:
 	SandBox(helios::Config& config);
@@ -113,6 +113,7 @@ private:
 	void LoadTextures(ID3D12GraphicsCommandList* commandList);
 	void LoadModels(ID3D12GraphicsCommandList* commandList);
 	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
+	void LoadCubeMaps(ID3D12GraphicsCommandList* commandList);
 
 	void CreateFactory();
 	void EnableDebugLayer();
@@ -126,8 +127,12 @@ private:
 
 private:
 	// Number of SwapChain backbuffers.
-	static constexpr uint8_t NUMBER_OF_FRAMES = 3;
+	static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
 	
+	// Dimension of various textures.
+	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 2048u;
+	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 16u;
+
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
 
@@ -173,8 +178,9 @@ private:
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
 
+	// Data for IBL / Skybox.
 	helios::gfx::TextureUAV m_EnvironmentTexture{};
-	helios::gfx::TextureUAV m_IrradianceMap{};
+	helios::gfx::TextureUAV m_IrradianceMapTexture{};
 
 	helios::Model m_SkyBoxModel{};
 

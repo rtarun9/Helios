@@ -36,6 +36,8 @@ namespace helios::gfx
 	class RenderTarget
 	{
 	public:
+		static constexpr uint32_t RT_INDICES_COUNT = 6u;
+
 		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
 
 		ID3D12Resource* GetResource() const;

@@ -4,7 +4,7 @@ ConstantBuffer<CubeMapConvolutionRenderResources> renderResources : register(b0)
 
 static const float PI = 3.14159265359;
 
-[numthreads(32, 32, 1)]
+[numthreads(16, 16, 1)]
 void CsMain(uint3 threadID : SV_DispatchThreadID)
 {
     TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
@@ -51,7 +51,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float3 left = normalize(cross(up, forward));
     up = normalize(cross(forward, left));
     
-    static const float INTEGRATION_STEP_COUNT = 100.0f;
+    static const float INTEGRATION_STEP_COUNT = 125.0f;
     static const float SAMPLES = INTEGRATION_STEP_COUNT * INTEGRATION_STEP_COUNT;
     
     float3 irradiance = float3(0.0f, 0.0f, 0.0f);

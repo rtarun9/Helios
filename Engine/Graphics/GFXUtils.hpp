@@ -64,44 +64,26 @@ namespace helios::gfx::utils
 		return { destinationResource, intermediateResource};
 	}
 
-	inline D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true)
+	// As of now, function works only for one descriptor.
+	inline void SetDescriptorHeaps(ID3D12GraphicsCommandList* commandList, Descriptor& descriptors)
 	{
-		return D3D12_GRAPHICS_PIPELINE_STATE_DESC 
+#if 0
+		std::array<ID3D12DescriptorHeap*, Size>descriptorHeaps{};
+		uint32_t index = 0;
+		for (const Descriptor& descriptor : descriptors)
 		{
-			.pRootSignature = rootSignatureBlob,
-			.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob),
-			.PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob),
-			.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
-			.SampleMask = UINT_MAX,
-			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
-			.DepthStencilState
-			{
-				.DepthEnable = depthEnable,
-				.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
-				.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
-				.StencilEnable = FALSE
-			},
-			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-			.NumRenderTargets = 1u,
-			.RTVFormats = rtvFormat,
-			.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
-			.SampleDesc
-			{
-				.Count = 1u,
-				.Quality = 0u
-			},
-			.NodeMask = 0u,
-		};
-	}
+			descriptorHeaps[index++] = descriptor.GetDescriptorHeap();
+		}
 
-	inline D3D12_COMPUTE_PIPELINE_STATE_DESC CreateComputePSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* computeShaderBlob)
-	{
-		return D3D12_COMPUTE_PIPELINE_STATE_DESC
+		commandList->SetDescriptorHeaps(descriptors.size(), descriptorHeaps.data());
+
+#endif
+
+		std::array<ID3D12DescriptorHeap*, 1>  descriptorHeap
 		{
-			.pRootSignature = rootSignatureBlob,
-			.CS = CD3DX12_SHADER_BYTECODE(computeShaderBlob),
-			.NodeMask = 0u,
-			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+			descriptors.GetDescriptorHeap()
 		};
+
+		commandList->SetDescriptorHeaps(1u, descriptorHeap.data());
 	}
 }

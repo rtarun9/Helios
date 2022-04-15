@@ -13,19 +13,14 @@ namespace helios::gfx
 		
 		static void CreateBindlessRootSignature(ID3D12Device* device, std::wstring_view shaderPath);
 
-		void Bind(ID3D12GraphicsCommandList* commandList) const
-		{
-			commandList->SetGraphicsRootSignature(rootSignature.Get());
-			commandList->SetPipelineState(pipelineState.Get());
-		}
+		void Bind(ID3D12GraphicsCommandList* commandList) const;
+		void BindCS(ID3D12GraphicsCommandList* commandList) const;
 
-		void BindCS(ID3D12GraphicsCommandList* commandList) const
-		{
-			commandList->SetComputeRootSignature(rootSignature.Get());
-			commandList->SetPipelineState(pipelineState.Get());
-		}
+		static void BindRootSignature(ID3D12GraphicsCommandList* commandList);
+		static void BindRootSignatureCS(ID3D12GraphicsCommandList* commandList);
 
-		// Last param temporary.
+		void BindPSO(ID3D12GraphicsCommandList* commandList) const;
+
 		static D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true, bool cubeMap = false);
 		static D3D12_COMPUTE_PIPELINE_STATE_DESC CreateComputePSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* computeShaderBlob);
 

@@ -27,6 +27,7 @@ ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
 static const float MIN_FLOAT_VALUE = 0.00001f;
 static const float PI = 3.14159265359;
+static const uint LIGHT_COUNT = 1u;
 
 // Fresnel effect : Amount of specular reflection based on the viewing angle to surface.
 // F0 : Base reflectivity when view direction is perpendicular to the surface.
@@ -34,6 +35,13 @@ float3 FresnelSchlick(float3 viewDir, float3 halfWayDir, float3 F0)
 {
     float cosTheta = max(dot(viewDir, halfWayDir), 0.0f);
     return F0 + (float3(1.0f, 1.0f, 1.0f) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
+}
+
+// Uses a slightly modified version (from: https://seblagarde.wordpress.com/2011/08/17/hello-world/) to take roughness into account.
+float3 FresnelSchlick(float3 normal, float3 viewDir, float3 F0, float roughness)
+{
+    float cosTheta = max(dot(viewDir, normal), 0.0f);
+    return F0 + (max(float3(1.0f - roughness, 1.0f - roughness, 1.0f - roughness), F0) - F0) * pow(clamp(1.0f - cosTheta, 0.0f, 1.0f), 5.0f);
 }
 
 // PBR Shading model used : Cook Torrence model.
@@ -78,60 +86,75 @@ float SchlickGGXShadowing(float roughness, float3 normal, float3 viewDir, float3
 float4 PsMain(VSOutput input) : SV_Target
 {
     ConstantBuffer<MaterialData> materialCBuffer = ResourceDescriptorHeap[renderResource.materialCBufferIndex];
+        
     ConstantBuffer<LightingData> lightCBuffer = ResourceDescriptorHeap[renderResource.lightCBufferIndex];
-
+   
     Texture2D<float4> baseTexture = ResourceDescriptorHeap[renderResource.baseTextureIndex];
     Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[renderResource.metalRoughnessTextureIndex];
     
-    float3 lightColor = float3(1.0f, 1.0f, 1.0f); 
-
     float3 normal = normalize(input.normal);
-    float3 viewDir = normalize(lightCBuffer.cameraPosition - input.worldSpacePosition).xyz;
-
-    float3 pixelToLightDir = normalize(lightCBuffer.lightPosition - input.worldSpacePosition).xyz;
-    float3 halfWayDir = normalize(viewDir + pixelToLightDir);
-
-    float distance = length(pixelToLightDir);
-    float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
+    
+    float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
 
     float metallicFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).x;
     float roughnessFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).y;
     float3 albedo = baseTexture.Sample(pointClampSampler, input.texCoord).xyz;
 
+    // Ignoring values in textures and using values from a constant buffer instead for testing.
     metallicFactor = materialCBuffer.metallicFactor;
     roughnessFactor = materialCBuffer.roughnessFactor;
     albedo = materialCBuffer.albedo;
     
-    // Rendering equation (or reflectance equation) for PBR Calculation.
     float3 F0 = float3(0.04f, 0.04f, 0.04f);
     F0 = lerp(F0, albedo, float3(metallicFactor, metallicFactor, metallicFactor));
     
-    float3 kS = FresnelSchlick(viewDir, halfWayDir, F0);
-    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+    float3 Lo = float3(0.0f, 0.0f, 0.0f);
+    
+    // Calculate irradiance due to each light source.
+    for (uint i = 0; i < LIGHT_COUNT; ++i)
+    {
+        float3 lightColor = float3(1.0f, 1.0f, 1.0f);
+        float3 pixelToLightDir = normalize(lightCBuffer.lightPosition - input.worldSpacePosition).xyz;
+        float3 halfWayDir = normalize(viewDir + pixelToLightDir);
 
+        float distance = length(pixelToLightDir);
+        float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
+        
+        float3 radiance = lightColor * attenuation;
+        
+        // Cook - Torrance BRDF Calculation.
+        // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))
+        float3 NDF = GGXNormalDistribution(normal, halfWayDir, roughnessFactor);
+        float G = SchlickGGXShadowing(roughnessFactor, normal, viewDir, pixelToLightDir);
+        float3 F = FresnelSchlick(viewDir, halfWayDir, F0);
+        
+        float3 specular = (NDF * G * F) / max(4.0f * max(dot(normal, viewDir), 0.0f) * max(dot(normal, pixelToLightDir), 0.0f), MIN_FLOAT_VALUE) + MIN_FLOAT_VALUE;
+        
+        float3 kS = F;
+        float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+        
+        float nDotL = max(dot(normal, pixelToLightDir), 0.0f);
+        
+        float3 lambertianDiffuse = materialCBuffer.albedo * kD / PI;
+        
+        float3 BRDF = lambertianDiffuse * kD + specular;
+        
+        Lo += (BRDF * radiance * nDotL);
+    }
+    
+    // IBL Calculation.
+    
     // For diffuse IBL.
     TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMap];
     float3 irradiance = irradianceMap.SampleLevel(linearWrapSampler, normal.xyz, 0.0f).xyz;
     
-    float3 lambertianDiffuse = albedo / PI;
-    
-    // TEMP
-    float3 iblKS = FresnelSchlick(viewDir, normal, F0);
-    float3 iblKD = 1.0f - iblKS;
-    
-    float3 ambience = iblKD * lambertianDiffuse * irradiance;
-    
-    // Cook - Torrance BRDF Calculation.
-    // Formula : f(cook-torrance) = DFG / (4(w0.n)(wi.n))
-    float3 NDF = GGXNormalDistribution(normal, halfWayDir, roughnessFactor);
-    float G = SchlickGGXShadowing(roughnessFactor, normal, viewDir, pixelToLightDir);
-    float3 F = kS;
+    float3 kS = FresnelSchlick(normal, viewDir, F0, materialCBuffer.roughnessFactor);
+    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
 
-    float3 specular = (NDF * G * F) / max(4.0f * max(dot(normal, viewDir), 0.0f) * max(dot(normal, pixelToLightDir), 0.0f), MIN_FLOAT_VALUE);
-    float3 BRDF = lambertianDiffuse * kD + specular;
+    float3 diffuse = irradiance * materialCBuffer.albedo;
+    float3 ambient = kD * diffuse;
 
-    float nDotL = max(dot(normal, pixelToLightDir), 0.0f);
-    float3 outgoingLight = BRDF * lightColor * nDotL;
+    float3 outgoingLight = ambient + Lo;
 
-    return float4(outgoingLight + ambience, 1.0f);
+    return float4(outgoingLight, 1.0f);
 }

@@ -19,6 +19,33 @@ namespace helios::gfx
 		rootSignature->SetName(rootSignatureName.c_str());
 	}
 
+	void Material::Bind(ID3D12GraphicsCommandList* commandList) const
+	{
+		commandList->SetGraphicsRootSignature(rootSignature.Get());
+		commandList->SetPipelineState(pipelineState.Get());
+	}
+
+	void Material::BindCS(ID3D12GraphicsCommandList* commandList) const
+	{
+		commandList->SetComputeRootSignature(rootSignature.Get());
+		commandList->SetPipelineState(pipelineState.Get());
+	}
+
+	void Material::BindRootSignature(ID3D12GraphicsCommandList* commandList) 
+	{
+		commandList->SetGraphicsRootSignature(rootSignature.Get());
+	}
+
+	void Material::BindRootSignatureCS(ID3D12GraphicsCommandList* commandList) 
+	{
+		commandList->SetComputeRootSignature(rootSignature.Get());
+	}
+
+	void Material::BindPSO(ID3D12GraphicsCommandList* commandList) const
+	{
+		commandList->SetPipelineState(pipelineState.Get());
+	}
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC Material::CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat, bool depthEnable, bool isCubeMap)
 	{
 		if (isCubeMap)
