@@ -237,7 +237,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
-		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
+		.textureIndex = m_PreFilterMapTexture.GetTextureIndex()
 	};
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &skyBoxRenderResources, 0u);
@@ -338,6 +338,7 @@ void SandBox::LoadMaterials()
 	
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeFromEquirectTextureCS.cso", L"Cube From Equirect Material");
 	m_Materials[L"CubeMapConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeMapConvolutionCS.cso", L"Cube Map Convolution Material");
+	m_Materials[L"PreFilterCubeMapMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/PreFilterCubeMapCS.cso", L"Pre Filter Cube Map");
 }
 
 void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
@@ -351,6 +352,7 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 
 	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Sky Box Texture UAV");
 	m_IrradianceMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Irradiance Convoluted Cube Map");
+	m_PreFilterMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Prefilter Specular Texture Map");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
@@ -401,7 +403,7 @@ void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
 		.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex()
 	};
 
-	commandList->SetComputeRoot32BitConstants(0u, 8u, &cubeFromEquirectRenderResources, 0u);
+	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeFromEquirectRenderResources, 0u);
 
 	commandList->Dispatch(ENV_TEXTURE_DIMENSION / 32u, ENV_TEXTURE_DIMENSION / 32u, 6u);
 
@@ -417,13 +419,29 @@ void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
 		.outputIrradianceMapIndex = m_IrradianceMapTexture.GetUAVIndex()
 	};
 
-	commandList->SetComputeRoot32BitConstants(0u, 8u, &cubeMapConvolutionRenderResources, 0u);
+	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeMapConvolutionRenderResources, 0u);
 
 	commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 16u, CONVOLUTED_TEXTURE_DIMENSION / 16u, 6u);
 
+	// Run compute shader to pre filter environment cube map.
+
+	gfx::utils::TransitionResource(commandList, m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	m_Materials[L"PreFilterCubeMapMaterial"].BindPSO(commandList);
+	
+	PreFilterCubeMapRenderResources preFilterCubeMapRenderResources
+	{
+		.textureCubeMapIndex = m_EnvironmentTexture.GetTextureIndex(),
+		.outputPreFilteredCubeMapIndex = m_PreFilterMapTexture.GetUAVIndex(),
+	};
+
+	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &preFilterCubeMapRenderResources, 0u);
+
+	commandList->Dispatch(PREFILTER_TEXTURE_DIMENSION / 16u, PREFILTER_TEXTURE_DIMENSION / 16u, 6u);
+
 	gfx::utils::TransitionResource(commandList, m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	gfx::utils::TransitionResource(commandList, m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
+	gfx::utils::TransitionResource(commandList, m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 }
 
 void SandBox::CreateFactory()

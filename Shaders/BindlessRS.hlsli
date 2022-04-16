@@ -76,3 +76,9 @@ struct CubeMapConvolutionRenderResources
     uint textureCubeMapIndex;
     uint outputIrradianceMapIndex;
 };
+
+struct PreFilterCubeMapRenderResources
+{
+    uint textureCubeMapIndex;
+    uint outputPreFilteredCubeMapIndex;
+};

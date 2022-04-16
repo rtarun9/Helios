@@ -21,6 +21,8 @@ dxc -T cs_6_6 -E CsMain CubeFromEquirectTextureCS.hlsl -Fo CubeFromEquirectTextu
 
 dxc -T cs_6_6 -E CsMain CubeMapConvolutionCS.hlsl -Fo CubeMapConvolutionCS.cso
 
+dxc -T cs_6_6 -E CsMain PreFilterCubeMapCS.hlsl -Fo PreFilterCubeMapCS.cso
+
 // Note : This can use any shader it wants to. LightVS is a particular small shader, hence why I am using it here.
 dxc -T vs_6_6 -E VsMain LightVS.hlsl -extractrootsignature -Fo BindlessRS.cso
 

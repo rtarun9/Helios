@@ -88,6 +88,12 @@ class SandBox : public helios::Engine
 		uint32_t outputIrradianceMapIndex{};
 	};
 
+	struct PreFilterCubeMapRenderResources
+	{
+		uint32_t textureCubeMapIndex{};
+		uint32_t outputPreFilteredCubeMapIndex{};
+	};
+
 	// Number of 32 bit root constants
 	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
 
@@ -132,6 +138,7 @@ private:
 	// Dimension of various textures.
 	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 2048u;
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 16u;
+	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 128u;
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
@@ -181,6 +188,7 @@ private:
 	// Data for IBL / Skybox.
 	helios::gfx::TextureUAV m_EnvironmentTexture{};
 	helios::gfx::TextureUAV m_IrradianceMapTexture{};
+	helios::gfx::TextureUAV m_PreFilterMapTexture{};
 
 	helios::Model m_SkyBoxModel{};
 
