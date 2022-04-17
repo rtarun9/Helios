@@ -6,6 +6,11 @@ static const float PI = 3.14159265359;
 
 static const float NUM_SAMPLES = 1024.0f;
 
+struct RoughnessCBuffer
+{
+    float roughness;
+};
+
 // Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
 float VanDerCorputRadicalInverse(uint bits)
 {
@@ -20,7 +25,7 @@ float VanDerCorputRadicalInverse(uint bits)
 
 float2 SampleHammersleySequence(uint i)
 {
-    return float2(i / NUM_SAMPLES, VanDerCorputRadicalInverse(i));
+    return float2((float) i / NUM_SAMPLES, VanDerCorputRadicalInverse(i));
 }
 
 // Get sample vector based on Importance Sampling GGX normal distribution function for a fixed value of roughness.
@@ -38,12 +43,13 @@ float3 SampleGGX(float u1, float u2, float roughness)
     return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
-[numthreads(16, 16, 1)]
+[numthreads(32, 32, 1)]
 void CsMain(uint3 threadID : SV_DispatchThreadID)
 {
     // Put in constant buffer later.
 
-    float roughness = 1.0f;
+    ConstantBuffer<RoughnessCBuffer> roughnessCBuffer = ResourceDescriptorHeap[renderResources.roughnessConstantBufferIndex];
+    float roughness = roughnessCBuffer.roughness;
     
     TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
     .textureCubeMapIndex];
@@ -62,9 +68,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float inputTextureWidth, inputTextureHeight, inputTextureDepth;
     textureCubeMap.GetDimensions(0u, inputTextureWidth, inputTextureHeight, inputTextureDepth);
     
-    float2 uv = (threadID.xy + float2(0.5f, 0.5f)) / textureWidth;
-    uv = uv * float2(2.0f, 2.0f) - float2(1.0f, 1.0f);
-    uv.y *= -1.0f;
+    float2 uv = float2(threadID.xy) / float2(textureWidth, textureHeight);
+    uv = 2.0f * float2(uv.x, 1.0f - uv.y) - float2(1.0f, 1.0f);
     
     float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
     
@@ -122,4 +127,5 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     }
     
     outputPreFilterCubeMap[threadID] = float4(preFilteredColor / weight, 1.0f);
+
 }

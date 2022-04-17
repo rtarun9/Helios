@@ -80,7 +80,7 @@ namespace helios::gfx
 				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
 				.Texture2D
 				{
-					.MipSlice = mipLevels
+					.MipSlice = 0u
 				}
 			};
 			break;
@@ -93,7 +93,7 @@ namespace helios::gfx
 				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
 				.Texture2DArray
 				{
-					.MipSlice = mipLevels,
+					.MipSlice = 0u,
 					.FirstArraySlice = 0u,
 					.ArraySize = 6u
 				}
@@ -105,7 +105,54 @@ namespace helios::gfx
 		device->CreateUnorderedAccessView(m_Texture.Get(), nullptr, &uavDesc, srvUAVDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		m_UAVIndexInDescriptorHeap = srvUAVDescriptor.GetCurrentDescriptorIndex();
 
+		m_UAVIndices.push_back(m_UAVIndexInDescriptorHeap);
+
 		srvUAVDescriptor.OffsetCurrentHandle();
+	}
+
+	void TextureUAV::CreateUAV(ID3D12Device* device, Descriptor& descriptor, uint32_t level)
+	{
+		auto resourceDesc = m_Texture->GetDesc();
+
+		auto handle = descriptor.GetCurrentDescriptorHandle();
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+
+		switch (resourceDesc.DepthOrArraySize)
+		{
+		case 1:
+		{
+			uavDesc =
+			{
+				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+				.Texture2D
+				{
+					.MipSlice = level
+				}
+			};
+			break;
+		}
+
+		case 6:
+		{
+			uavDesc =
+			{
+				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
+				.Texture2DArray
+				{
+					.MipSlice = level,
+					.FirstArraySlice = 0u,
+					.ArraySize = 6u
+				}
+			};
+			break;
+		}
+		}
+
+		device->CreateUnorderedAccessView(m_Texture.Get(), nullptr, &uavDesc, handle.cpuDescriptorHandle);
+		m_UAVIndices.push_back(descriptor.GetDescriptorIndex(handle));
+
+		descriptor.OffsetCurrentHandle();
 	}
 
 	ID3D12Resource* TextureUAV::GetTextureResource() const
@@ -118,8 +165,16 @@ namespace helios::gfx
 		return m_TextureIndexInDescriptorHeap;
 	}
 
-	uint32_t TextureUAV::GetUAVIndex() const
+	uint32_t TextureUAV::GetUAVIndex(uint32_t level) const
 	{
-		return m_UAVIndexInDescriptorHeap;
+		if (level == 0u)
+		{
+			return m_UAVIndexInDescriptorHeap;
+		}
+
+		else
+		{
+			return m_UAVIndices.at(level);
+		}
 	}
 }

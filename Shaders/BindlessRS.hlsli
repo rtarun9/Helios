@@ -81,4 +81,5 @@ struct PreFilterCubeMapRenderResources
 {
     uint textureCubeMapIndex;
     uint outputPreFilteredCubeMapIndex;
+    uint roughnessConstantBufferIndex;
 };
