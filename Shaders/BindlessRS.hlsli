@@ -42,6 +42,8 @@ struct PBRRenderResources
     uint metalRoughnessTextureIndex;
     
     uint irradianceMap;
+    uint prefilterMap;
+    uint brdfConvolutionLUTMap;
 };
 
 struct RenderTargetRenderResources
@@ -82,4 +84,9 @@ struct PreFilterCubeMapRenderResources
     uint textureCubeMapIndex;
     uint outputPreFilteredCubeMapIndex;
     uint roughnessConstantBufferIndex;
+};
+
+struct BRDFConvolutionRenderResources
+{
+    uint lutTextureIndex;
 };

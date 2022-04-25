@@ -162,6 +162,7 @@
     <FxCompile Include="Shaders\OffscreenRTPS.hlsl" />
     <FxCompile Include="Shaders\CubeMapConvolutionCS.hlsl" />
     <FxCompile Include="Shaders\PreFilterCubeMapCS.hlsl" />
+    <FxCompile Include="Shaders\BRDFConvolutionCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

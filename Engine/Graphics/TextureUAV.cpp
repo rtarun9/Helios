@@ -64,9 +64,12 @@ namespace helios::gfx
 			break;
 		}
 		}
+
 		device->CreateShaderResourceView(m_Texture.Get(), &srvDesc, srvUAVDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		m_TextureIndexInDescriptorHeap = srvUAVDescriptor.GetCurrentDescriptorIndex();
 		srvUAVDescriptor.OffsetCurrentHandle();
+
+		m_UAVIndices.reserve(mipLevels);
 
 		// Create UAV for texture.
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};

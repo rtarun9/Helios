@@ -1,10 +1,13 @@
 #include "BindlessRS.hlsli"
 
+// References : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/spmap.hlsl.
+
 ConstantBuffer<PreFilterCubeMapRenderResources> renderResources : register(b0);
 
 static const float PI = 3.14159265359;
 
-static const float NUM_SAMPLES = 1024.0f;
+static const float NUM_SAMPLES = 2048.0f;
+static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
 struct RoughnessCBuffer
 {
@@ -25,7 +28,7 @@ float VanDerCorputRadicalInverse(uint bits)
 
 float2 SampleHammersleySequence(uint i)
 {
-    return float2((float) i / NUM_SAMPLES, VanDerCorputRadicalInverse(i));
+    return float2((float) i * INV_NUM_SAMPLES, VanDerCorputRadicalInverse(i));
 }
 
 // Get sample vector based on Importance Sampling GGX normal distribution function for a fixed value of roughness.
@@ -34,7 +37,7 @@ float3 SampleGGX(float u1, float u2, float roughness)
 {
     float alpha = pow(roughness, 2);
     
-    float cosTheta = sqrt((1.0f - u2) / (1.0f + pow(alpha, 2) * u2));
+    float cosTheta = sqrt((1.0f - u2) / (1.0f +  (pow(alpha, 2) - 1.0f) * u2));
     float sinTheta = sqrt(1.0f - pow(cosTheta, 2.0f));
     
     // The Spherical coordinate should be converted to cartesian coordinates before returning.
@@ -43,7 +46,16 @@ float3 SampleGGX(float u1, float u2, float roughness)
     return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
-[numthreads(32, 32, 1)]
+float NDFGGX(float cosLh, float roughness)
+{
+    float alpha = roughness * roughness;
+    float alphaSq = alpha * alpha;
+
+    float denom = (cosLh * cosLh) * (alphaSq - 1.0) + 1.0;
+    return alphaSq / (PI * denom * denom);
+}
+
+[numthreads(16, 16, 1)]
 void CsMain(uint3 threadID : SV_DispatchThreadID)
 {
     // Put in constant buffer later.
@@ -97,13 +109,19 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     samplingVector = normalize(samplingVector);
    
+    // Solid angle that corresponds to cube map texel at mip level zero.
+    float wt = 4.0f * PI / (6.0f * inputTextureWidth * inputTextureHeight);
+    
     float3 normal = samplingVector;
     float3 L0 = normalize(normal);
 
     // Calculate orthonormal basis for conversion from tangent space -> world space.
-    float3 T = normalize(cross(normal, float3(0.0f, 1.0f, 0.0f)));
-    float3 S = normalize(cross(normal, T));
+    float3 T = cross(normal, float3(0.0f, 1.0f, 0.0f));
+    T = lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), T, step(0.00001f, dot(T, T)));
     
+    T = normalize(T);   
+    float3 S = normalize(cross(normal, T));
+
     float weight = 0.0f;
     float3 preFilteredColor = float3(0.0f, 0.0f, 0.0f);
     
@@ -121,7 +139,15 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         float cosTheta = dot(L0, Li);
         if (cosTheta > 0.0f)
         {
-            preFilteredColor += textureCubeMap.Sample(linearWrapSampler, Li).rgb * cosTheta;
+            float cosLH = max(dot(normal, Lh), 0.0f);
+            
+            float pdf = NDFGGX(cosLH, roughness) * 0.25f;
+            
+            float ws = 1.0f / (NUM_SAMPLES * pdf);
+            
+            float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
+           
+            preFilteredColor += textureCubeMap.SampleLevel(linearWrapSampler, Li, mipLevel).rgb * cosTheta;
             weight += cosTheta;
         }
     }

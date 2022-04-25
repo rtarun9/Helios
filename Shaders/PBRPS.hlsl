@@ -109,7 +109,7 @@ float4 PsMain(VSOutput input) : SV_Target
     F0 = lerp(F0, albedo, float3(metallicFactor, metallicFactor, metallicFactor));
     
     float3 Lo = float3(0.0f, 0.0f, 0.0f);
-    
+
     // Calculate irradiance due to each light source.
     for (uint i = 0; i < LIGHT_COUNT; ++i)
     {
@@ -152,9 +152,26 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
 
     float3 diffuse = irradiance * materialCBuffer.albedo;
-    float3 ambient = kD * diffuse;
+    float3 diffuseIBL = kD * diffuse;
+    
+    // For Specular IBL.
+    TextureCube<float4> specularIrradianceMap = ResourceDescriptorHeap[renderResource.prefilterMap];
+    Texture2D<float2> specularBRDF = ResourceDescriptorHeap[renderResource.brdfConvolutionLUTMap];
+    
+    // Get number of mip levels.
+    uint specularTextureWidth, specularTextureHeight, levels;
+    specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
 
-    float3 outgoingLight = ambient + Lo;
+    float cosLO = max(dot(normal, viewDir), 0.0f);
+    float3 LR = reflect(-viewDir, normal);
+    
+    float3 specularIrradiance = specularIrradianceMap.SampleLevel(linearWrapSampler, LR, roughnessFactor / 6.0f).rgb;
+    
+    float2 specularBRDFLUT = specularBRDF.Sample(linearWrapSampler, float2(saturate(dot(normal, viewDir)), roughnessFactor)).rg;
+
+    float3 specularIBL = (F0 * specularBRDFLUT.x + specularBRDFLUT.y) * specularIrradiance;
+    
+    float3 outgoingLight = specularIBL + diffuseIBL + Lo;
 
     return float4(outgoingLight, 1.0f);
 }
