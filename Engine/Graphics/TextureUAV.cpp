@@ -57,7 +57,7 @@ namespace helios::gfx
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.TextureCube
 				{
-					.MostDetailedMip = 0,
+					.MostDetailedMip = 0u,
 					.MipLevels = 1u
 				}	
 			};

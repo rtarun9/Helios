@@ -40,9 +40,6 @@ void SandBox::OnRender()
 {
 	auto commandList = m_CommandQueue.GetCommandList();
 	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
-	
-	std::array<ID3D12RootSignature*, 1> nullRootSignature{ nullptr };
-	std::array<ID3D12PipelineState*, 1> nullPSO{ nullptr };
 
 	PopulateCommandList(commandList.Get(), currentBackBuffer.Get());
 
@@ -239,7 +236,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
-		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
+		.textureIndex = m_IrradianceMapTexture.GetTextureIndex()
 	};
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &skyBoxRenderResources, 0u);
@@ -354,7 +351,7 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 
 	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
 
-	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Cube Map Box Texture UAV");
+	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Cube Map Box Texture UAV");
 	m_IrradianceMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Irradiance Convoluted Cube Map");
 	
 	m_PreFilterMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Prefilter Specular Texture Map");
@@ -405,24 +402,15 @@ void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
 
 	m_Materials[L"EquirectEnvironmentMaterial"].BindPSO(commandList);
 
-	uint32_t environmentMapSize{ ENV_TEXTURE_DIMENSION};
-	for (uint32_t i = 0; i <= 5; i++)
+	CubeFromEquirectRenderResources cubeFromEquirectRenderResources
 	{
-		m_EnvironmentTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, i);
-		
-		CubeFromEquirectRenderResources cubeFromEquirectRenderResources
-		{
-			.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
-			.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex(i + 1u)
-		};
+		.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
+		.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex()
+	};
 
-		const uint32_t numGroups = std::max(1u, environmentMapSize / 32u);
+	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeFromEquirectRenderResources, 0u);
 
-		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeFromEquirectRenderResources, 0u);
-
-		commandList->Dispatch(numGroups, numGroups, 6u);
-		environmentMapSize /= 2;
-	}
+	commandList->Dispatch(ENV_TEXTURE_DIMENSION / 32u, ENV_TEXTURE_DIMENSION / 32u, 6u);
 
 	// Run compute shader to generate irradiance map from above generated cube map texture.
 
@@ -438,7 +426,7 @@ void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
 
 	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeMapConvolutionRenderResources, 0u);
 
-	commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 16u, CONVOLUTED_TEXTURE_DIMENSION / 16u, 6u);
+	commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 32u, CONVOLUTED_TEXTURE_DIMENSION / 32u, 6u);
 
 	// Run compute shader to pre filter environment cube map.
 
@@ -453,6 +441,8 @@ void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
 
 		m_PreFilterConstantBuffer.GetBufferData().roughness = i == 0 ? 0 : 1.0f / i;
 		m_PreFilterConstantBuffer.Update();
+
+		m_PreFilterConstantBuffer.GetBufferData().roughness = 5.0f;
 
 		PreFilterCubeMapRenderResources preFilterCubeMapRenderResources
 		{

@@ -26,6 +26,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
     
+    // Based on cube face 'index', choose a vector.
     switch (threadID.z)
     {
         case 0:
@@ -54,7 +55,5 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float phi = atan2(samplingVector.z, samplingVector.x);
     float theta = acos(samplingVector.y);
     
-    float4 result = inputTexture.SampleLevel(linearWrapSampler, float2(phi / (2.0f * PI), theta / PI), 0.0f);
-    
-    outputCubeTexture[threadID] = result;
+    outputCubeTexture[threadID] = inputTexture.SampleLevel(linearWrapSampler, float2(phi / (2.0f * PI), theta / PI), 0.0f);
 }

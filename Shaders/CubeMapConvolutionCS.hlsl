@@ -4,7 +4,40 @@ ConstantBuffer<CubeMapConvolutionRenderResources> renderResources : register(b0)
 
 static const float PI = 3.14159265359;
 
-[numthreads(16, 16, 1)]
+static const float SAMPLES = 12500.0f;
+static const float INV_SAMPLES = 1.0f / SAMPLES;
+
+// Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
+float VanDerCorputRadicalInverse(uint bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    
+    return float(bits) * 2.3283064365386963e-10;
+}
+
+float2 SampleHammersleySequence(uint i)
+{
+    return float2((float) i * INV_SAMPLES, VanDerCorputRadicalInverse(i));
+}
+
+float3 TangentToWorldCoords(float3 v, float3 n, float3 s, float3 t)
+{
+    return s * v.x + t * v.y + n * v.z;
+}
+
+// Currently not able to find a resource that explains this.
+// TODO : Find out the math behind this (source : https://github.com/Nadrin/PBR/blob/cd61a5d59baa15413c7b0aff4a7da5ed9cc57f61/data/shaders/hlsl/irmap.hlsl#L41). 
+float3 SampleHemisphere(float2 u)
+{
+    float u1P = sqrt(max(0.0f, 1.0f - u.x * u.x));
+    return float3(cos(2.0f * PI * u.y) * u1P, sin(2.0f * PI * u.y) * u1P, u.x);
+}
+
+[numthreads(32, 32, 1)]
 void CsMain(uint3 threadID : SV_DispatchThreadID)
 {
     TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
@@ -15,9 +48,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float textureWidth, textureHeight, textureDepth;
     outputIrradianceMap.GetDimensions(textureWidth, textureHeight, textureDepth);
     
-    float2 uv = (threadID.xy + float2(0.5f, 0.5f)) / textureWidth;
-    uv = uv * float2(2.0f, 2.0f) - float2(1.0f, 1.0f); 
-    uv.y *= -1.0f;
+    float2 uv = threadID.xy / float2(textureWidth, textureHeight);
+    uv = 2.0f * float2(uv.x, 1.0f - uv.y) - float2(1.0f, 1.0f); 
     
     float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
     
@@ -45,31 +77,22 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     samplingVector = normalize(samplingVector);
    
-    // Sampling happens using spherical coordinates.
-    float3 forward = samplingVector;
-    float3 up = float3(0.0f, 0.0f, 1.0f);
-    float3 left = normalize(cross(up, forward));
-    up = normalize(cross(forward, left));
+    // Calculation of basis vectors for converting a vector from Shading / Tangent space to world space.
+    float3 N = samplingVector;
+    float3 T = normalize(cross(N, float3(0.0f, 1.0f, 0.0f)));
+    float3 S = normalize(cross(N, T));
     
-    static const float INTEGRATION_STEP_COUNT = 125.0f;
-    static const float SAMPLES = INTEGRATION_STEP_COUNT * INTEGRATION_STEP_COUNT;
-    
+    // Using Monte Carlo integration to find irradiance of the hemisphere.
     float3 irradiance = float3(0.0f, 0.0f, 0.0f);
     
-    for (float i = 0.0f; i < INTEGRATION_STEP_COUNT; i++)
+    for (uint i = 0; i < SAMPLES; i++)
     {
-        float theta = 2.0f * PI * (i / (INTEGRATION_STEP_COUNT - 1.0f));
-        for (float j = 0.0f; j < INTEGRATION_STEP_COUNT; j++)
-        {
-            float phi = 0.5f * PI * (j / (INTEGRATION_STEP_COUNT - 1.0f));
-            float3 tangentSpaceCoordinates = normalize(float3(sin(phi) * cos(theta), sin(phi) * sin(theta), cos(phi)));
-            float3 worldSpaceCoordinates = tangentSpaceCoordinates.x * left + tangentSpaceCoordinates.y * up + tangentSpaceCoordinates.z * forward;
-            float3 irradianceValue = textureCubeMap.SampleLevel(linearWrapSampler, worldSpaceCoordinates, 0.0f).xyz;
-            
-            irradiance += irradianceValue * cos(phi) * sin(phi);
-        }
+        float2 u = SampleHammersleySequence(i);
+        float3 Li = TangentToWorldCoords(SampleHemisphere(u), N, S, T);
+        
+        float cosTheta = max(dot(Li, N), 0.0f);
+        irradiance += 2.0f * textureCubeMap.SampleLevel(linearWrapSampler, Li, 0).rgb * cosTheta;
     }
-    
-    outputIrradianceMap[threadID] = float4(PI * irradiance / SAMPLES, 0.0f);
+        outputIrradianceMap[threadID] = float4(irradiance / SAMPLES, 0.0f);
 
 }

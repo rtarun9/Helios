@@ -149,7 +149,7 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 irradiance = irradianceMap.SampleLevel(linearWrapSampler, normal.xyz, 0.0f).xyz;
     
     float3 kS = FresnelSchlick(normal, viewDir, F0, materialCBuffer.roughnessFactor);
-    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+    float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
 
     float3 diffuse = irradiance * materialCBuffer.albedo;
     float3 diffuseIBL = kD * diffuse;
@@ -165,13 +165,15 @@ float4 PsMain(VSOutput input) : SV_Target
     float cosLO = max(dot(normal, viewDir), 0.0f);
     float3 LR = reflect(-viewDir, normal);
     
-    float3 specularIrradiance = specularIrradianceMap.SampleLevel(linearWrapSampler, LR, roughnessFactor / 6.0f).rgb;
+    float3 specularIrradiance = specularIrradianceMap.SampleLevel(linearClampSampler, LR, metallicFactor * (levels - 1.0f)).rgb;
+    specularIrradiance = specularIrradianceMap.SampleLevel(linearClampSampler, LR, 0.0f).rgb;
     
-    float2 specularBRDFLUT = specularBRDF.Sample(linearWrapSampler, float2(saturate(dot(normal, viewDir)), roughnessFactor)).rg;
+    float2 specularBRDFLUT = specularBRDF.Sample(linearClampSampler, float2(saturate(dot(normal, viewDir)), roughnessFactor)).rg;
 
     float3 specularIBL = (F0 * specularBRDFLUT.x + specularBRDFLUT.y) * specularIrradiance;
     
     float3 outgoingLight = specularIBL + diffuseIBL + Lo;
-
+    outgoingLight = diffuseIBL + Lo;
+    
     return float4(outgoingLight, 1.0f);
 }
