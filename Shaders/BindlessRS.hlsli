@@ -11,7 +11,7 @@
 SamplerState pointClampSampler : register(s0);
 SamplerState pointWrapSampler : register(s1);
 SamplerState linearWrapSampler : register(s2);
-SamplerState linearClampSampler: register(s2);
+SamplerState linearClampSampler: register(s3);
 SamplerState anisotropicSampler : register(s4);
 
 // All *RenderResources structs are placed here to prevent having them in multiple places.
@@ -32,14 +32,19 @@ struct PBRRenderResources
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint normalBufferIndex;
+    uint biTangetBufferIndex;
+    uint tangetBufferIndex;
     
     uint mvpCBufferIndex;
     
     uint materialCBufferIndex;
     uint lightCBufferIndex;
     
-    uint baseTextureIndex;
+    uint albedoTextureIndex;
     uint metalRoughnessTextureIndex;
+    uint emissiveTextureIndex;
+    uint normalTextureIndex;
+    uint aoTextureIndex;
     
     uint irradianceMap;
     uint prefilterMap;
@@ -83,7 +88,7 @@ struct PreFilterCubeMapRenderResources
 {
     uint textureCubeMapIndex;
     uint outputPreFilteredCubeMapIndex;
-    uint roughnessConstantBufferIndex;
+    uint mipLevel;
 };
 
 struct BRDFConvolutionRenderResources

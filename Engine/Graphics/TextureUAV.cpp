@@ -111,10 +111,17 @@ namespace helios::gfx
 		m_UAVIndices.push_back(m_UAVIndexInDescriptorHeap);
 
 		srvUAVDescriptor.OffsetCurrentHandle();
+
+		m_MipLevels = mipLevels;
 	}
 
 	void TextureUAV::CreateUAV(ID3D12Device* device, Descriptor& descriptor, uint32_t level)
 	{
+		if (level == 0)
+		{
+			return;
+		}
+
 		auto resourceDesc = m_Texture->GetDesc();
 
 		auto handle = descriptor.GetCurrentDescriptorHandle();
@@ -179,5 +186,10 @@ namespace helios::gfx
 		{
 			return m_UAVIndices.at(level);
 		}
+	}
+
+	uint32_t TextureUAV::GetMipLevels() const
+	{
+		return m_MipLevels;
 	}
 }

@@ -33,15 +33,19 @@ namespace helios
 		ID3D12Resource* GetPositionBuffer() const;
 		ID3D12Resource* GetTextureCoordsBuffer() const;
 		ID3D12Resource* GetNormalBuffer() const;
+		ID3D12Resource* GetBiTangetBuffer() const;
+		ID3D12Resource* GetTangetBuffer() const;
 
 		uint32_t GetPositionBufferIndex() const;
 		uint32_t GetTextureCoordsBufferIndex() const;
 		uint32_t GetNormalBufferIndex() const;
+		uint32_t GetBiTangentBufferIndex() const;
+		uint32_t GetTangentBufferIndex() const;
 
 		uint32_t GetTransformCBufferIndex() const;
 
 		uint32_t GetTextureIndex() const;
-	
+
 		TransformComponent& GetTransform();
 		void UpdateData(std::wstring_view objectName);
 
@@ -53,6 +57,8 @@ namespace helios
 		gfx::StructuredBuffer m_PositionBuffer{};
 		gfx::StructuredBuffer m_TextureCoordsBuffer{};
 		gfx::StructuredBuffer m_NormalBuffer{};
+		gfx::StructuredBuffer m_BitangentBuffer{};
+		gfx::StructuredBuffer m_TangentBuffer{};
 
 		gfx::IndexBuffer m_IndexBuffer{};
 		gfx::ConstantBuffer<Transform> m_TransformConstantBuffer{};

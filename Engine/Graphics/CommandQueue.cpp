@@ -106,6 +106,12 @@ namespace helios::gfx
 		return fenceValue;
 	}
 
+	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList* commandList)
+	{
+		uint32_t signalValue = ExecuteCommandList(commandList);
+		FlushQueue();
+	}
+
 	// Return fence value to for signal.
 	uint64_t CommandQueue::Signal()
 	{

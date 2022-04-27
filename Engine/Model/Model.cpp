@@ -44,6 +44,8 @@ namespace helios
 		std::vector<dx::XMFLOAT3> modelPositions{};
 		std::vector<dx::XMFLOAT2> modelTextureCoords{};
 		std::vector<dx::XMFLOAT3> modelNormals{};
+		std::vector<dx::XMFLOAT3> modelBiTangents{};
+		std::vector<dx::XMFLOAT3> modelTangents{};
 
 		std::vector<uint32_t> indices{};
 
@@ -86,7 +88,7 @@ namespace helios
 				int normalByteStride = normalAccesor.ByteStride(normalBufferView);
 				uint8_t* normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
 
-				// Tangent and BITangent data (commented out for now).
+				// Tangent data.
 				tinygltf::Accessor& tangentAccesor = model.accessors[primitive.attributes["TANGENT"]];
 				tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccesor.bufferView];
 				tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
@@ -111,9 +113,23 @@ namespace helios
 					normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
 					normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
 
+					dx::XMFLOAT4 tangent{};
+					tangent.x = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0];
+					tangent.y = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1];
+					tangent.z = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2];
+					tangent.w = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3];
+
+					dx::XMFLOAT3 tangentCoord{ tangent.x, tangent.y, tangent.z };
+					dx::XMFLOAT3 biTangent{};
+					XMVECTOR biTangentVec = XMVectorScale(XMVector3Cross(XMLoadFloat3(&normal), XMLoadFloat3(&tangentCoord)), tangent.w);
+
+					XMStoreFloat3(&biTangent, XMVector3Normalize(biTangentVec));
+
 					modelPositions.emplace_back(position);
 					modelTextureCoords.emplace_back(textureCoord);
 					modelNormals.emplace_back(normal);
+					modelBiTangents.emplace_back(biTangent);
+					modelTangents.emplace_back(tangentCoord);
 				}
 
 				// Get the index buffer data.
@@ -135,6 +151,8 @@ namespace helios
 		m_PositionBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, L"Position Buffer");
 		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
 		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
+		m_BitangentBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelBiTangents, D3D12_RESOURCE_FLAG_NONE, L"Bi Tanget Buffer");
+		m_TangentBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, L"Tanget Buffer");
 
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
@@ -162,6 +180,16 @@ namespace helios
 		return m_NormalBuffer.GetResource();
 	}
 
+	ID3D12Resource* Model::GetBiTangetBuffer() const
+	{
+		return m_BitangentBuffer.GetResource();
+	}
+
+	ID3D12Resource* Model::GetTangetBuffer() const
+	{
+		return m_TangentBuffer.GetResource();
+	}
+
 	uint32_t Model::GetPositionBufferIndex() const
 	{
 		return m_PositionBuffer.GetSRVIndex();
@@ -175,6 +203,16 @@ namespace helios
 	uint32_t Model::GetNormalBufferIndex() const
 	{
 		return m_NormalBuffer.GetSRVIndex();
+	}
+
+	uint32_t Model::GetBiTangentBufferIndex() const
+	{
+		return m_BitangentBuffer.GetSRVIndex();
+	}
+
+	uint32_t Model::GetTangentBufferIndex() const
+	{
+		return m_TangentBuffer.GetSRVIndex();
 	}
 
 	uint32_t Model:: GetTransformCBufferIndex() const

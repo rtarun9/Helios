@@ -3,6 +3,7 @@
 ConstantBuffer<CubeMapConvolutionRenderResources> renderResources : register(b0);
 
 static const float PI = 3.14159265359;
+static const float MIN_FLOAT_VALUE = 0.00001f;
 
 static const float SAMPLES = 12500.0f;
 static const float INV_SAMPLES = 1.0f / SAMPLES;
@@ -79,7 +80,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
    
     // Calculation of basis vectors for converting a vector from Shading / Tangent space to world space.
     float3 N = samplingVector;
-    float3 T = normalize(cross(N, float3(0.0f, 1.0f, 0.0f)));
+    float3 T = T = cross(N, float3(0.0, 1.0, 0.0));
+    T = normalize(lerp(cross(N, float3(1.0, 0.0, 0.0)), T, step(MIN_FLOAT_VALUE, dot(T, T))));
     float3 S = normalize(cross(N, T));
     
     // Using Monte Carlo integration to find irradiance of the hemisphere.
@@ -93,6 +95,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         float cosTheta = max(dot(Li, N), 0.0f);
         irradiance += 2.0f * textureCubeMap.SampleLevel(linearWrapSampler, Li, 0).rgb * cosTheta;
     }
-        outputIrradianceMap[threadID] = float4(irradiance / SAMPLES, 0.0f);
+
+    float4 result = float4(irradiance / SAMPLES, 0.0f); 
+    outputIrradianceMap[threadID] = result;
 
 }

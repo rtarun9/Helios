@@ -46,15 +46,6 @@ float3 SampleGGX(float u1, float u2, float roughness)
     return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
-float NDFGGX(float cosLh, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alphaSq = alpha * alpha;
-
-    float denom = (cosLh * cosLh) * (alphaSq - 1.0) + 1.0;
-    return alphaSq / (PI * denom * denom);
-}
-
 float SchlickGGX(float cosTheta, float k)
 {
     return cosTheta / (cosTheta * (1.0f - k) + k);
@@ -111,6 +102,6 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         }
     }
     
-    lutTexture[threadID.xy] = float2(DFG1, 1.0f - DFG2) * INV_NUM_SAMPLES;
+    lutTexture[threadID.xy] = float2(DFG1, DFG2) * INV_NUM_SAMPLES;
 
 }

@@ -18,11 +18,6 @@ class SandBox : public helios::Engine
 		dx::XMVECTOR cameraPosition;
 	};
 
-	struct alignas(256) PreFilterCubeMapData
-	{
-		float roughness{};
-	};
-
 	struct alignas(256) RenderTargetSettingsData
 	{
 		float exposure{};
@@ -42,14 +37,19 @@ class SandBox : public helios::Engine
 		uint32_t positionBufferIndex{};
 		uint32_t textureBufferIndex{};
 		uint32_t normalBufferIndex{};
+		uint32_t biTangetBufferIndex{};
+		uint32_t tangetBufferIndex{};
 
 		uint32_t mvpCBufferIndex{};
 
 		uint32_t materialCBufferIndex{};
 		uint32_t lightCBufferIndex{};
 
-		uint32_t baseTextureIndex{};
+		uint32_t albedoTextureIndex{};
 		uint32_t metalRoughnessTextureIndex{};	
+		uint32_t emissiveTextureIndex{};
+		uint32_t normalTextureIndex{};
+		uint32_t aoTextureIndex{};
 
 		uint32_t irradianceMap{};
 
@@ -100,7 +100,7 @@ class SandBox : public helios::Engine
 	{
 		uint32_t textureCubeMapIndex{};
 		uint32_t outputPreFilteredCubeMapIndex{};
-		uint32_t roughnessCBufferIndex{};
+		uint32_t currentMipLevel{};	// Unsure if the render resource structs should contains non - index data, but using this for simplicity.
 	};
 
 	struct BRDFConvolutionRenderResources
@@ -133,7 +133,7 @@ private:
 	void LoadTextures(ID3D12GraphicsCommandList* commandList);
 	void LoadModels(ID3D12GraphicsCommandList* commandList);
 	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
-	void LoadCubeMaps(ID3D12GraphicsCommandList* commandList);
+	void LoadCubeMaps();
 
 	void CreateFactory();
 	void EnableDebugLayer();
@@ -152,8 +152,8 @@ private:
 	// Dimension of various textures.
 	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 1024u;
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 128u;
-	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 256u;
-	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 256u;
+	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 128u;
+	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 512u	;
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
@@ -194,7 +194,7 @@ private:
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 	std::map<std::wstring_view, helios::Model> m_GameObjects{};
 
-	helios::Model m_Sphere{};
+	helios::Model m_DamagedHelmet{};
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
 
 	helios::Model m_LightSource{};
@@ -205,8 +205,6 @@ private:
 	helios::gfx::TextureUAV m_IrradianceMapTexture{};
 	helios::gfx::TextureUAV m_PreFilterMapTexture{};
 	helios::gfx::TextureUAV m_BRDFConvolutionTexture{};
-
-	helios::gfx::ConstantBuffer<PreFilterCubeMapData> m_PreFilterConstantBuffer{};
 
 	helios::Model m_SkyBoxModel{};
 

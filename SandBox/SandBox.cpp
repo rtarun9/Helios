@@ -126,8 +126,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	ImGui::SliderFloat("Exposure", &m_RenderTargetSettingsData.GetBufferData().exposure, 0.1f, 5.0f);
 	ImGui::End();
 
-	m_Sphere.UpdateData(L"Sphere");
-	m_Sphere.UpdateTransformData(commandList, projectionView);
+	m_DamagedHelmet.UpdateData(L"Damaged Helmet");
+	m_DamagedHelmet.UpdateTransformData(commandList, projectionView);
 
 
 	m_SkyBoxModel.UpdateTransformData(commandList, projectionView);
@@ -180,14 +180,19 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	PBRRenderResources pbrRenderResources
 	{
-		.positionBufferIndex = m_Sphere.GetPositionBufferIndex(),
-		.textureBufferIndex = m_Sphere.GetTextureIndex(),
-		.normalBufferIndex = m_Sphere.GetNormalBufferIndex(),
-		.mvpCBufferIndex = m_Sphere.GetTransformCBufferIndex(),
+		.positionBufferIndex = m_DamagedHelmet.GetPositionBufferIndex(),
+		.textureBufferIndex = m_DamagedHelmet.GetTextureCoordsBufferIndex(),
+		.normalBufferIndex = m_DamagedHelmet.GetNormalBufferIndex(),
+		.biTangetBufferIndex = m_DamagedHelmet.GetBiTangentBufferIndex(),
+		.tangetBufferIndex = m_DamagedHelmet.GetTangentBufferIndex(),
+		.mvpCBufferIndex = m_DamagedHelmet.GetTransformCBufferIndex(),
 		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
 		.lightCBufferIndex = m_LightData.GetBufferIndex(),
-		.baseTextureIndex = m_Textures[L"SphereAlbedoTexture"].GetTextureIndex(),
-		.metalRoughnessTextureIndex = m_Textures[L"SphereMetalRoughTexture"].GetTextureIndex(),
+		.albedoTextureIndex = m_Textures[L"SciFiHelmetAlbedo"].GetTextureIndex(),
+		.metalRoughnessTextureIndex = m_Textures[L"SciFiHelmetMetalRoughness"].GetTextureIndex(),
+		.emissiveTextureIndex = m_Textures[L"SciFiHelmetEmissive"].GetTextureIndex(),
+		.normalTextureIndex = m_Textures[L"SciFiHelmetNormal"].GetTextureIndex(),
+		.aoTextureIndex = m_Textures[L"SciFiHelmetAO"].GetTextureIndex(),
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
 		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
@@ -195,7 +200,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &pbrRenderResources, 0u);
 
-	m_Sphere.Draw(commandList);
+	m_DamagedHelmet.Draw(commandList);
 
 #if 0
 	m_Materials[L"DefaultMaterial"].Bind(commandList);
@@ -236,7 +241,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
-		.textureIndex = m_IrradianceMapTexture.GetTextureIndex()
+		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
 	};
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &skyBoxRenderResources, 0u);
@@ -289,7 +294,7 @@ void SandBox::InitRendererCore()
 
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 5u, L"DSV Descriptor");
 
-	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 55u, L"SRV_CBV_UAV Descriptor");
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 75u, L"SRV_CBV_UAV Descriptor");
 
 	CreateBackBufferRenderTargetViews();
 
@@ -315,13 +320,14 @@ void SandBox::LoadContent()
 	LoadTextures(commandList.Get());
 	LoadModels(commandList.Get());
 	LoadRenderTargets(commandList.Get());
-	LoadCubeMaps(commandList.Get());
 
 	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
 	m_CommandQueue.FlushQueue();
+
+	LoadCubeMaps();
 }
 
 void SandBox::LoadMaterials()
@@ -349,13 +355,18 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", 1u, true, L"Sphere Base Color Texture");
 	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true, L"Sphere Roughness Metallic Texture");
 
+	m_Textures[L"SciFiHelmetAlbedo"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_BaseColor.png", 1u, true, L"Damaged Helmet Albedo");
+	m_Textures[L"SciFiHelmetAO"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_AmbientOcclusion.png", 1u, false, L"Damaged Helmet AO");
+	m_Textures[L"SciFiHelmetEmissive"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg", 1u, true, L"Damaged Helmet Emmisive");
+	m_Textures[L"SciFiHelmetMetalRoughness"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_MetallicRoughness.png", 1u, false, L"Damaged Helmet Metal Roughness");
+	m_Textures[L"SciFiHelmetNormal"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_Normal.png", 1u, false, L"Damaged Helmet Normal");
+
 	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
 
-	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Cube Map Box Texture UAV");
+	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Environment Cube Box Texture UAV");
 	m_IrradianceMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Irradiance Convoluted Cube Map");
 	
 	m_PreFilterMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Prefilter Specular Texture Map");
-	m_PreFilterConstantBuffer.Init(m_Device.Get(), commandList, PreFilterCubeMapData{ .roughness = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Pre Filter Constant Buffer");
 
 	m_BRDFConvolutionTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, BRDF_CONVOLUTION_TEXTURE_DIMENSION, BRDF_CONVOLUTION_TEXTURE_DIMENSION, 1u, 0u, DXGI_FORMAT_R16G16_FLOAT, L"BRDF Convolution Texture");
 }
@@ -374,8 +385,7 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_Sphere.Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor);
-	m_Sphere.GetTransform().scale = dx::XMFLOAT3(0.5f, 0.5f, 0.5f);
+	m_DamagedHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor);
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList, MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 	m_LightData.Init(m_Device.Get(), commandList, LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");
@@ -391,95 +401,134 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList, RenderTargetSettingsData{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
 }
 
-void SandBox::LoadCubeMaps(ID3D12GraphicsCommandList* commandList)
+void SandBox::LoadCubeMaps()
 {
 	// Run compute shader to generate cube map from equirectangular texture.
-
-	gfx::utils::TransitionResource(commandList, m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	gfx::utils::SetDescriptorHeaps(commandList, m_SRV_CBV_UAV_Descriptor);
-	gfx::Material::BindRootSignatureCS(commandList);
-
-	m_Materials[L"EquirectEnvironmentMaterial"].BindPSO(commandList);
-
-	CubeFromEquirectRenderResources cubeFromEquirectRenderResources
 	{
-		.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
-		.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex()
-	};
+		auto commandList = m_CommandQueue.GetCommandList();
 
-	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeFromEquirectRenderResources, 0u);
+		gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	commandList->Dispatch(ENV_TEXTURE_DIMENSION / 32u, ENV_TEXTURE_DIMENSION / 32u, 6u);
+		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+		gfx::Material::BindRootSignatureCS(commandList.Get());
+
+		m_Materials[L"EquirectEnvironmentMaterial"].BindPSO(commandList.Get());
+
+		uint32_t size{ ENV_TEXTURE_DIMENSION };
+		for (uint32_t i = 0; i < m_EnvironmentTexture.GetMipLevels(); ++i)
+		{
+			m_EnvironmentTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, i);
+
+			CubeFromEquirectRenderResources cubeFromEquirectRenderResources
+			{
+				.textureIndex = m_Textures[L"EquirectEnvironmentTexture"].GetTextureIndex(),
+				.outputTextureIndex = m_EnvironmentTexture.GetUAVIndex(i)
+			};
+
+			commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeFromEquirectRenderResources, 0u);
+
+			const uint32_t numGroups = std::max(1u, size / 32u);
+
+			commandList->Dispatch(numGroups, numGroups, 6u);
+
+			size /= 2;
+		}
+		
+		gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+		m_CommandQueue.ExecuteAndFlush(commandList.Get());
+	}
 
 	// Run compute shader to generate irradiance map from above generated cube map texture.
-
-	gfx::utils::TransitionResource(commandList, m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	m_Materials[L"CubeMapConvolutionMaterial"].BindPSO(commandList);
-
-	CubeMapConvolutionRenderResources cubeMapConvolutionRenderResources
 	{
-		.environmentMapIndex = m_EnvironmentTexture.GetTextureIndex(),
-		.outputIrradianceMapIndex = m_IrradianceMapTexture.GetUAVIndex()
-	};
+		auto commandList = m_CommandQueue.GetCommandList();
 
-	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeMapConvolutionRenderResources, 0u);
+		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+		gfx::Material::BindRootSignatureCS(commandList.Get());
 
-	commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 32u, CONVOLUTED_TEXTURE_DIMENSION / 32u, 6u);
+		gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	// Run compute shader to pre filter environment cube map.
+		m_Materials[L"CubeMapConvolutionMaterial"].BindPSO(commandList.Get());
 
-	gfx::utils::TransitionResource(commandList, m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	m_Materials[L"PreFilterCubeMapMaterial"].BindPSO(commandList);
-	
-	uint32_t size{ PREFILTER_TEXTURE_DIMENSION};
-	for (uint32_t i = 0; i <= 5; i++)
-	{
-		m_PreFilterMapTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, i);
-
-		m_PreFilterConstantBuffer.GetBufferData().roughness = i == 0 ? 0 : 1.0f / i;
-		m_PreFilterConstantBuffer.Update();
-
-		m_PreFilterConstantBuffer.GetBufferData().roughness = 5.0f;
-
-		PreFilterCubeMapRenderResources preFilterCubeMapRenderResources
+		CubeMapConvolutionRenderResources cubeMapConvolutionRenderResources
 		{
-			.textureCubeMapIndex = m_EnvironmentTexture.GetTextureIndex(),
-			.outputPreFilteredCubeMapIndex = m_PreFilterMapTexture.GetUAVIndex(i + 1u),
-			.roughnessCBufferIndex = m_PreFilterConstantBuffer.GetBufferIndex()
+			.environmentMapIndex = m_EnvironmentTexture.GetTextureIndex(),
+			.outputIrradianceMapIndex = m_IrradianceMapTexture.GetUAVIndex()
 		};
 
+		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeMapConvolutionRenderResources, 0u);
 
-		const uint32_t numGroups = std::max(1u, size / 16u);
+		commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 32u, CONVOLUTED_TEXTURE_DIMENSION / 32u, 6u);
 
-		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &preFilterCubeMapRenderResources, 0u);
+		// Run compute shader to pre filter environment cube map.
 
-		commandList->Dispatch(numGroups, numGroups, 6u);
-		size /= 2;
+		gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
+
+		m_CommandQueue.ExecuteAndFlush(commandList.Get());
+	}
+
+	// Run compute shader to generate the prefilter cube map (for specular IBL).
+	{
+		auto commandList = m_CommandQueue.GetCommandList();
+
+		gfx::utils::TransitionResource(commandList.Get(), m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+		gfx::Material::BindRootSignatureCS(commandList.Get());
+
+		m_Materials[L"PreFilterCubeMapMaterial"].BindPSO(commandList.Get());
+
+		uint32_t size{ PREFILTER_TEXTURE_DIMENSION };
+		for (uint32_t i = 0; i < m_PreFilterMapTexture.GetMipLevels(); i++)
+		{
+			m_PreFilterMapTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, i);
+
+			PreFilterCubeMapRenderResources preFilterCubeMapRenderResources
+			{
+				.textureCubeMapIndex = m_EnvironmentTexture.GetTextureIndex(),
+				.outputPreFilteredCubeMapIndex = m_PreFilterMapTexture.GetUAVIndex(i),
+				.currentMipLevel = i
+			};
+
+
+			const uint32_t numGroups = std::max(1u, size / 32u);
+
+			commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &preFilterCubeMapRenderResources, 0u);
+
+			commandList->Dispatch(numGroups, numGroups, 6u);
+			size /= 2;
+		}
+
+		gfx::utils::TransitionResource(commandList.Get(), m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		m_CommandQueue.ExecuteAndFlush(commandList.Get());
 	}
 
 	// Run compute shader to generate BRDF Convolution Texture.
-	gfx::utils::TransitionResource(commandList, m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	m_Materials[L"BRDFConvolutionMaterial"].BindPSO(commandList);
-
-	m_BRDFConvolutionTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 0u);
-
-	BRDFConvolutionRenderResources brdfConvolutionRenderResources
 	{
-		.lutIndex = m_BRDFConvolutionTexture.GetUAVIndex()
-	};
+		auto commandList = m_CommandQueue.GetCommandList();
 
-	commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &brdfConvolutionRenderResources, 0u);
+		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+		gfx::Material::BindRootSignatureCS(commandList.Get());
 
-	commandList->Dispatch(BRDF_CONVOLUTION_TEXTURE_DIMENSION / 32u, BRDF_CONVOLUTION_TEXTURE_DIMENSION / 32u, 1u);
+		gfx::utils::TransitionResource(commandList.Get(), m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	gfx::utils::TransitionResource(commandList, m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-	gfx::utils::TransitionResource(commandList, m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-	gfx::utils::TransitionResource(commandList, m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-	gfx::utils::TransitionResource(commandList, m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		m_Materials[L"BRDFConvolutionMaterial"].BindPSO(commandList.Get());
+
+		m_BRDFConvolutionTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 0u);
+
+		BRDFConvolutionRenderResources brdfConvolutionRenderResources
+		{
+			.lutIndex = m_BRDFConvolutionTexture.GetUAVIndex()
+		};
+
+		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &brdfConvolutionRenderResources, 0u);
+
+		commandList->Dispatch(BRDF_CONVOLUTION_TEXTURE_DIMENSION / 32u, BRDF_CONVOLUTION_TEXTURE_DIMENSION / 32u, 1u);
+
+		gfx::utils::TransitionResource(commandList.Get(), m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		
+		m_CommandQueue.ExecuteAndFlush(commandList.Get());
+	}
 }
 
 void SandBox::CreateFactory()

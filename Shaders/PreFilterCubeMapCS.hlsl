@@ -9,11 +9,6 @@ static const float PI = 3.14159265359;
 static const float NUM_SAMPLES = 2048.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
-struct RoughnessCBuffer
-{
-    float roughness;
-};
-
 // Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
 float VanDerCorputRadicalInverse(uint bits)
 {
@@ -55,15 +50,10 @@ float NDFGGX(float cosLh, float roughness)
     return alphaSq / (PI * denom * denom);
 }
 
-[numthreads(16, 16, 1)]
+[numthreads(32, 32, 1)]
 void CsMain(uint3 threadID : SV_DispatchThreadID)
 {
-    // Put in constant buffer later.
-
-    ConstantBuffer<RoughnessCBuffer> roughnessCBuffer = ResourceDescriptorHeap[renderResources.roughnessConstantBufferIndex];
-    float roughness = roughnessCBuffer.roughness;
-    
-    TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
+     TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
     .textureCubeMapIndex];
     
     RWTexture2DArray<float4> outputPreFilterCubeMap = ResourceDescriptorHeap[renderResources.outputPreFilteredCubeMapIndex];
@@ -77,8 +67,10 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         return;
     }
     
-    float inputTextureWidth, inputTextureHeight, inputTextureDepth;
-    textureCubeMap.GetDimensions(0u, inputTextureWidth, inputTextureHeight, inputTextureDepth);
+    float inputTextureWidth, inputTextureHeight, inputTextureMipLevels;
+    textureCubeMap.GetDimensions(0u, inputTextureWidth, inputTextureHeight, inputTextureMipLevels);
+    
+    float roughness = renderResources.mipLevel / 5.0f;
     
     float2 uv = float2(threadID.xy) / float2(textureWidth, textureHeight);
     uv = 2.0f * float2(uv.x, 1.0f - uv.y) - float2(1.0f, 1.0f);
@@ -136,7 +128,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         // Get incident direction by reflecting view dir around half way vector.
         float3 Li = normalize(2.0f * dot(L0, Lh) * Lh - L0);
         
-        float cosTheta = dot(L0, Li);
+        float cosTheta = saturate(dot(L0, Li));
         if (cosTheta > 0.0f)
         {
             float cosLH = max(dot(normal, Lh), 0.0f);
@@ -147,11 +139,11 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
             
             float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
            
-            preFilteredColor += textureCubeMap.SampleLevel(linearWrapSampler, Li, mipLevel).rgb * cosTheta;
+            preFilteredColor += textureCubeMap.SampleLevel(linearClampSampler, Li, mipLevel).rgb * cosTheta;
             weight += cosTheta;
         }
     }
     
-    outputPreFilterCubeMap[threadID] = float4(preFilteredColor / weight, 1.0f);
+    outputPreFilterCubeMap[threadID] = float4(preFilteredColor / max(weight, 0.001f), 1.0f);
 
 }

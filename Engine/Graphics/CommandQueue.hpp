@@ -27,6 +27,8 @@ namespace helios::gfx
 		[[nodiscard]]
 		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
 
+		void ExecuteAndFlush(ID3D12GraphicsCommandList* commandList);
+
 		// Return fence value to for signal.
 		[[nodiscard]]
 		uint64_t Signal();

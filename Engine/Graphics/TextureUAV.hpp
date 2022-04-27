@@ -18,11 +18,14 @@ namespace helios::gfx
 		uint32_t GetTextureIndex() const;
 		uint32_t GetUAVIndex(uint32_t level = 0u) const;
 
+		uint32_t GetMipLevels() const;
+
 	private:
-		void* m_TextureData{};
 		int m_Width{};
 		int m_Height{};
 		int m_ComponentCount{};
+
+		uint32_t m_MipLevels{};
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_TextureUploadHeap;
