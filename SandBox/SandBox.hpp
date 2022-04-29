@@ -2,7 +2,6 @@
 
 #include "Helios.hpp"
 
-
 class SandBox : public helios::Engine
 {
 	struct alignas(256) MaterialData

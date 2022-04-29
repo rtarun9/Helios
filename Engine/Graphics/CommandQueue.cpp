@@ -108,7 +108,7 @@ namespace helios::gfx
 
 	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList* commandList)
 	{
-		uint32_t signalValue = ExecuteCommandList(commandList);
+		uint64_t signalValue = ExecuteCommandList(commandList);
 		FlushQueue();
 	}
 

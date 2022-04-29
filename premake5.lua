@@ -1,5 +1,6 @@
 workspace "Helios"
     architecture "x64"
+    location "VsFiles"
 
     configurations
     {
@@ -9,9 +10,15 @@ workspace "Helios"
 
 project "Helios"
     kind "WindowedApp"
-    language "C++"
-    targetdir "Bin/%{cfg.buildcfg}"
 
+    language "C++"
+    cppdialect "C++latest"
+
+    targetdir "Bin/%{cfg.buildcfg}"
+    objdir "Bin/Obj/%{cfg.buildcfg}"
+
+    debugdir "."
+    
     links 
     { 
         "d3d12", 
@@ -32,10 +39,11 @@ project "Helios"
     files
     {
         "Engine/**.hpp",
-        "Engine/Graphics/d3dx12.h",      -- The extension has not been changed to .hpp, as this is a third party file which is included amongst the Engine's source file.
         "Engine/**.cpp",
         "SandBox/**.hpp",   
-        "SandBox/**.cpp"
+        "SandBox/**.cpp",
+        "Shaders/**.hlsl",
+        "Shaders/**.hlsli"
     }
 
     pchsource "Engine/Pch.cpp"
@@ -46,14 +54,24 @@ project "Helios"
     runtime "Debug"
     systemversion "latest"
 
-    filter "configurations:Debug"
-        defines "_DEBUG"
-        optimize "On"
-
-    filter "configurations:Release"
-        optimize "On"
+    prebuildcommands
+    {
+        -- Since Visual studio doesnt support a lot of SM 6.6's features, this cannot be included as a prebuild command step for now.
+        -- "{COPYDIR} ../ThirdParty/DXC_2021_12_08/bin/x64 ../Bin/%{cfg.buildcfg}/",
+        -- "call ../CompileShaders.bat"
+    }
 
     postbuildcommands 
     {
-        "copy ThirdParty\\DirectXAgilitySDK\\build\\native\\bin\\x64 Bin\\Debug\\D3D12\\",
+        "{COPYDIR} ../ThirdParty/DirectXAgilitySDK/build/native/bin/x64 ../Bin/%{cfg.buildcfg}/D3D12/",
     }
+
+    filter "configurations:Debug"
+        defines "_DEBUG"
+        optimize "Debug"
+
+    filter "configurations:Release"
+        optimize "Full"
+
+    filter "files:**.hlsl"
+        buildaction "None"

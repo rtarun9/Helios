@@ -21,7 +21,7 @@
 #include <DirectXMath.h>
 
 // D3D12 extension library.
-#include "Graphics/d3dx12.h"
+#include "Graphics/d3dx12.hpp"
 
 // For the ComPtr<> template class.
 #include <wrl/client.h>
@@ -45,10 +45,10 @@
 
 #include "Core/Helpers.hpp"
 
-// For setting the Agility SDK paramters.
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u; }
-extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
-
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;
 namespace dx = DirectX;
+
+// For setting the Agility SDK paramters.
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
