@@ -11,6 +11,8 @@ namespace helios
 		uint32_t height{};
 	};
 
+	// The Base Engine class is passed into the Application static classe's Run method.
+	// All SandBoxes / Test Environment's are to derive from the Engine class.
 	class Engine
 	{
 	public:
@@ -25,11 +27,11 @@ namespace helios
 		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown);
 		virtual void OnResize();
 
-		uint32_t GetWidth() const;
-		uint32_t GetHeight() const;
-		std::wstring GetTitle() const;
+		uint32_t GetWidth() const { return m_Width; }
+		uint32_t GetHeight() const { return m_Height; };
+		std::wstring GetTitle() const { return m_Title; };
 
-	protected:
+	public:
 		uint32_t m_Width{};
 		uint32_t m_Height{};
 		std::wstring m_Title{};

@@ -77,6 +77,7 @@ namespace helios
 			::ShowWindow(s_WindowHandle, SW_SHOW);
 		}
 
+		// Application initially starts in FullScreen mode by default.
 		Application::ToggleFullScreenMode();
 
 		// Main game loop
@@ -100,31 +101,6 @@ namespace helios
 		::UnregisterClassW(WINDOW_CLASS_NAME, instance);
 
 		return static_cast<char>(message.wParam);
-	}
-
-	HWND Application::GetWindowHandle()
-	{
-		return s_WindowHandle;
-	}
-
-	uint32_t Application::GetClientWidth()
-	{
-		return s_ClientWidth;
-	}
-
-	uint32_t Application::GetClientHeight()
-	{
-		return s_ClientHeight;
-	}
-
-	RECT& Application::GetWindowRect()
-	{
-		return s_WindowRect;
-	}
-
-	Timer& Application::GetTimer()
-	{
-		return s_Timer;
 	}
 
 	void Application::ToggleFullScreenMode()

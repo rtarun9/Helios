@@ -1,0 +1,4 @@
+// Use the following commands in power shell (from this directory).
+
+Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.700.10-preview -OutFile agility.zip
+Expand-Archive agility.zip DirectXAgilitySDK

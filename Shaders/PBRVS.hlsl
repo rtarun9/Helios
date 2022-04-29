@@ -33,6 +33,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 
     matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
 
+    
     VSOutput output;
     output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
     output.texCoord = textureCoordsBuffer[vertexID];

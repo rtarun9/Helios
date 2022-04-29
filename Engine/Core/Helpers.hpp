@@ -2,17 +2,11 @@
 
 #include "Pch.hpp"
 
-#include <stdexcept>
-
 static inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
 	{
-		char hrStrValue[64]{};
-		sprintf_s(hrStrValue, "\nHRESULT of 0x%08X\n", static_cast<UINT>(hr));
-		OutputDebugStringA(hrStrValue);
-
-		throw std::exception(hrStrValue);
+		throw std::exception("Failed HRESULT.");
 	}
 }
 
@@ -44,7 +38,7 @@ static inline constexpr std::wstring StringToWString(std::string_view inputWStri
 }
 
 
-static enum class Keys : uint8_t
+enum class Keys : uint8_t
 {
 	W,
 	A,
@@ -57,7 +51,6 @@ static enum class Keys : uint8_t
 	TotalKeyCount
 };
 
-// TODO : See a way to make this constexpr (the EnumClassValue function is constexpr, but making INPUT_MAP also constexpr would be preferrable).
 static std::map<uint8_t, Keys> INPUT_MAP 
 {
 	{'W', Keys::W},

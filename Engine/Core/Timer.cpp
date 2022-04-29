@@ -12,14 +12,4 @@ namespace helios
 
 		m_PreviousFrameTime = m_CurrentFrameTime;
 	}
-
-	double Timer::GetDeltaTime() const
-	{
-		return m_DeltaTime;
-	}
-
-	double Timer::GetTotalTime() const
-	{
-		return m_TotalTime;
-	}
 }

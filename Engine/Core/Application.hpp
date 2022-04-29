@@ -8,26 +8,31 @@ namespace helios
 {
 	class Engine;
 
+	// The Application Static Class holds the window and has the main game loop.
+	// It communicates with the engine via the OnUpdate(), OnRender() etc function.
 	class Application
 	{
 	public:
 		static int Run(Engine* engine, HINSTANCE instance);
 		
-		static HWND GetWindowHandle();
-		static uint32_t GetClientWidth();
-		static uint32_t GetClientHeight();
+		static HWND GetWindowHandle() { return s_WindowHandle; };
+		static uint32_t GetClientWidth() { return s_ClientWidth; }
+		static uint32_t GetClientHeight() { return s_ClientHeight; }
 
-		static RECT& GetWindowRect();
+		static RECT& GetWindowRect() { return s_WindowRect; };
 
-		static Timer& GetTimer();
+		static Timer& GetTimer() { return s_Timer; };
 
 	private:
+		// The Application class is only accesible via its static member functions.
+		Application() = default;
+
 		static void ToggleFullScreenMode();
 
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
-		static constexpr auto WINDOW_CLASS_NAME{L"Base Window Class"};
+		static constexpr inline const wchar_t* WINDOW_CLASS_NAME{L"Base Window Class"};
 		
 		static inline HWND s_WindowHandle{};
 

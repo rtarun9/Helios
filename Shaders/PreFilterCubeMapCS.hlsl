@@ -139,7 +139,10 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
             
             float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
            
-            preFilteredColor += textureCubeMap.SampleLevel(linearClampSampler, Li, mipLevel).rgb * cosTheta;
+            float3 samplingVector = Li;
+            samplingVector.y = 1.0f - samplingVector.y;
+            
+            preFilteredColor += textureCubeMap.SampleLevel(linearClampSampler, samplingVector, mipLevel).rgb * cosTheta;
             weight += cosTheta;
         }
     }

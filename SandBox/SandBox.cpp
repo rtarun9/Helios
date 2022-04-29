@@ -1,6 +1,6 @@
 #include "Pch.hpp"
-
 #include "SandBox.hpp"
+#include "BindlessRS.hlsli" 
 
 using namespace helios;
 
@@ -64,12 +64,12 @@ void SandBox::OnDestroy()
 	m_UIManager.ShutDown();
 }
 
-void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
+void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown) 
 {
 	m_Camera.HandleInput(keycode, isKeyDown);
 }
 
-void SandBox::OnResize()
+void SandBox::OnResize() 
 {
 	if (m_Width != Application::GetClientWidth() || m_Height != Application::GetClientHeight())
 	{
@@ -237,7 +237,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	// Draw sky box
 	m_Materials[L"SkyBoxMaterial"].BindPSO(commandList);
 
-	SkyBoxRendeResources skyBoxRenderResources
+	SkyBoxRenderResources skyBoxRenderResources
 	{
 		.positionBufferIndex = m_SkyBoxModel.GetPositionBufferIndex(),
 		.mvpCBufferIndex = m_SkyBoxModel.GetTransformCBufferIndex(),
@@ -261,7 +261,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	m_Materials[L"OffscreenRTMaterial"].BindPSO(commandList);
 
-	RenderResources bindlessRenderResource
+	RenderTargetRenderResources bindlessRenderResource
 	{
 		.positionBufferIndex = gfx::RenderTarget::GetPositionBufferIndex(),
 		.textureBufferIndex = gfx::RenderTarget::GetTextureCoordsBufferIndex(),
@@ -452,7 +452,7 @@ void SandBox::LoadCubeMaps()
 
 		CubeMapConvolutionRenderResources cubeMapConvolutionRenderResources
 		{
-			.environmentMapIndex = m_EnvironmentTexture.GetTextureIndex(),
+			.textureCubeMapIndex = m_EnvironmentTexture.GetTextureIndex(),
 			.outputIrradianceMapIndex = m_IrradianceMapTexture.GetUAVIndex()
 		};
 
@@ -487,7 +487,7 @@ void SandBox::LoadCubeMaps()
 			{
 				.textureCubeMapIndex = m_EnvironmentTexture.GetTextureIndex(),
 				.outputPreFilteredCubeMapIndex = m_PreFilterMapTexture.GetUAVIndex(i),
-				.currentMipLevel = i
+				.mipLevel = i
 			};
 
 
@@ -518,7 +518,7 @@ void SandBox::LoadCubeMaps()
 
 		BRDFConvolutionRenderResources brdfConvolutionRenderResources
 		{
-			.lutIndex = m_BRDFConvolutionTexture.GetUAVIndex()
+			.lutTextureIndex = m_BRDFConvolutionTexture.GetUAVIndex()
 		};
 
 		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &brdfConvolutionRenderResources, 0u);

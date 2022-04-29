@@ -2,6 +2,7 @@
 
 #include "Helios.hpp"
 
+
 class SandBox : public helios::Engine
 {
 	struct alignas(256) MaterialData
@@ -21,91 +22,6 @@ class SandBox : public helios::Engine
 	struct alignas(256) RenderTargetSettingsData
 	{
 		float exposure{};
-	};
-
-	// Render resources.
-	struct alignas(256) RenderResources
-	{
-		uint32_t positionBufferIndex{};
-		uint32_t textureBufferIndex{};
-		uint32_t textureIndex{};
-		uint32_t renderTargetSettingsCBufferIndex{};
-	};
-
-	struct alignas(256) PBRRenderResources
-	{
-		uint32_t positionBufferIndex{};
-		uint32_t textureBufferIndex{};
-		uint32_t normalBufferIndex{};
-		uint32_t biTangetBufferIndex{};
-		uint32_t tangetBufferIndex{};
-
-		uint32_t mvpCBufferIndex{};
-
-		uint32_t materialCBufferIndex{};
-		uint32_t lightCBufferIndex{};
-
-		uint32_t albedoTextureIndex{};
-		uint32_t metalRoughnessTextureIndex{};	
-		uint32_t emissiveTextureIndex{};
-		uint32_t normalTextureIndex{};
-		uint32_t aoTextureIndex{};
-
-		uint32_t irradianceMap{};
-
-		uint32_t prefilterMap;
-		uint32_t brdfConvolutionLUTMap;
-	};
-
-	struct alignas(256) LightRenderResources
-	{
-		uint32_t positionBufferIndex{};
-		
-		uint32_t mvpCBufferIndex{};
-	};
-
-	// Test -> For Test shaders.
-	struct TestRenderResources
-	{
-		uint32_t positionBufferIndex{};
-		uint32_t textureBufferIndex{};
-		uint32_t normalBufferIndex{};
-
-		uint32_t mvpCBufferIndex{};
-
-		uint32_t lightCBufferIndex{};
-		uint32_t textureIndex{};
-	};
-
-	struct SkyBoxRendeResources
-	{
-		uint32_t positionBufferIndex{};
-		uint32_t mvpCBufferIndex{};
-		uint32_t textureIndex{};
-	};
-
-	struct CubeFromEquirectRenderResources
-	{
-		uint32_t textureIndex{};
-		uint32_t outputTextureIndex{};
-	};
-
-	struct CubeMapConvolutionRenderResources
-	{
-		uint32_t environmentMapIndex{};
-		uint32_t outputIrradianceMapIndex{};
-	};
-
-	struct PreFilterCubeMapRenderResources
-	{
-		uint32_t textureCubeMapIndex{};
-		uint32_t outputPreFilteredCubeMapIndex{};
-		uint32_t currentMipLevel{};	// Unsure if the render resource structs should contains non - index data, but using this for simplicity.
-	};
-
-	struct BRDFConvolutionRenderResources
-	{
-		uint32_t lutIndex{};
 	};
 
 	// Number of 32 bit root constants

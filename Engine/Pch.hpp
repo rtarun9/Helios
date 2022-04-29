@@ -41,11 +41,12 @@
 #include <map>
 #include <type_traits>
 #include <optional>
+#include <stdexcept>
 
 #include "Core/Helpers.hpp"
 
 // For setting the Agility SDK paramters.
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 600u; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
 // To be used only in the .cpp files.

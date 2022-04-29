@@ -1,3 +1,9 @@
+#ifdef __cplusplus
+using uint = uint32_t;
+#endif
+
+#ifndef __cplusplus
+
 #define BindlessRootSignature           \
     "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED)," \
     "RootConstants(b0, num32BitConstants=64, visibility = SHADER_VISIBILITY_ALL)," \
@@ -13,6 +19,8 @@ SamplerState pointWrapSampler : register(s1);
 SamplerState linearWrapSampler : register(s2);
 SamplerState linearClampSampler: register(s3);
 SamplerState anisotropicSampler : register(s4);
+
+#endif 
 
 // All *RenderResources structs are placed here to prevent having them in multiple places.
 struct TestRenderResources

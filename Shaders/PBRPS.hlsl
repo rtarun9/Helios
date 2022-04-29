@@ -103,12 +103,17 @@ float4 PsMain(VSOutput input) : SV_Target
     Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalTextureIndex];
     Texture2D<float4> aoTexture = ResourceDescriptorHeap[renderResource.aoTextureIndex];
     
-    float3 normal = 2.0f * normalTexture.Sample(anisotropicSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f);
-    float3 tangent = normalize(input.tangent.xyz);
-    float3 bitangent = normalize(cross(normal, tangent)) * input.tangent.w;
+    input.normal = normalize(input.normal);
     
-    normal = mul(normal, float3x3(tangent, bitangent, normal));
-    normal = normalize(mul(normal, input.modelMatrix));
+    float3 normal = 2.0f * pow(normalTexture.Sample(anisotropicSampler, input.texCoord).xyz, 1 / 2.2f) - float3(1.0f, 1.0f, 1.0f);
+    input.tangent.xyz = normalize(input.tangent.xyz);
+    float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
+    
+    float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
+    tbn = transpose(tbn);
+    
+    normal = normalize(mul(tbn, normal));
+    //normal = normalize(mul(normal, input.modelMatrix));
     
     float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
 
@@ -191,6 +196,7 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float3 specularIBL = specularIrradiance * (F * specularBRDFLUT.x + specularBRDFLUT.y);
     
-    float3 outgoingLight = specularIBL;
+    float3 outgoingLight = (diffuseIBL + specularIBL) * ao;
+    
     return float4(outgoingLight, 1.0f);
 }   

@@ -45,7 +45,7 @@ namespace helios
 		std::vector<dx::XMFLOAT2> modelTextureCoords{};
 		std::vector<dx::XMFLOAT3> modelNormals{};
 		std::vector<dx::XMFLOAT3> modelBiTangents{};
-		std::vector<dx::XMFLOAT3> modelTangents{};
+		std::vector<dx::XMFLOAT4> modelTangents{};
 
 		std::vector<uint32_t> indices{};
 
@@ -129,7 +129,7 @@ namespace helios
 					modelTextureCoords.emplace_back(textureCoord);
 					modelNormals.emplace_back(normal);
 					modelBiTangents.emplace_back(biTangent);
-					modelTangents.emplace_back(tangentCoord);
+					modelTangents.emplace_back(tangent);
 				}
 
 				// Get the index buffer data.
@@ -152,7 +152,7 @@ namespace helios
 		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
 		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
 		m_BitangentBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelBiTangents, D3D12_RESOURCE_FLAG_NONE, L"Bi Tanget Buffer");
-		m_TangentBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, L"Tanget Buffer");
+		m_TangentBuffer.Init<dx::XMFLOAT4>(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, L"Tanget Buffer");
 
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
