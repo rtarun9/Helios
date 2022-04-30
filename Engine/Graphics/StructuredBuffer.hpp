@@ -7,18 +7,22 @@
 
 namespace helios::gfx
 {
+	// The engine heavily uses StructuredBuffer's instead of Vertex Buffer's.
+	template <typename T>
 	class StructuredBuffer
 	{
 	public:
-		template <typename T>
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor, std::span<const T> data, D3D12_RESOURCE_FLAGS resourceFlag = D3D12_RESOURCE_FLAG_NONE, std::wstring_view bufferName = "Structured Buffer")
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, Descriptor& srvDescriptor, std::span<const T> data, D3D12_RESOURCE_FLAGS resourceFlag = D3D12_RESOURCE_FLAG_NONE, std::wstring_view bufferName = "Structured Buffer")
 		{
-			auto gpuBuffer = gfx::utils::CreateGPUBuffer<T>(device, commandList, data, resourceFlag);
+			std::pair<ID3D12Resource*, ID3D12Resource*> gpuBuffer =  gfx::utils::CreateGPUBuffer<T>(device, commandList, data, resourceFlag);
+
 			m_DestinationResource = gpuBuffer.first;
 			m_IntermediateResource = gpuBuffer.second;
 
 			m_DestinationResource->SetName(bufferName.data());
-			m_IntermediateResource->SetName(bufferName.data());
+			
+			std::wstring intermediateBufferName = bufferName.data() + std::wstring(L" Intermediate Buffer");
+			m_IntermediateResource->SetName(intermediateBufferName.c_str());
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
 			{
@@ -40,9 +44,9 @@ namespace helios::gfx
 			srvDescriptor.OffsetCurrentHandle();
 		}
 
-		ID3D12Resource* GetResource() const;
+		ID3D12Resource* const GetResource() const { return m_DestinationResource.Get(); }
 
-		uint32_t GetSRVIndex() const;
+		uint32_t GetSRVIndex() const {return m_SRVIndexInDescriptorHeap;};
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_DestinationResource;

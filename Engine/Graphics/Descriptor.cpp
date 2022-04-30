@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void Descriptor::Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName)
+	void Descriptor::Init(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc
 		{
@@ -29,26 +29,6 @@ namespace helios::gfx
 		m_DescriptorHandleFromStart.descriptorSize = m_DescriptorSize;
 
 		m_CurrentDescriptorHandle = m_DescriptorHandleFromStart;
-	}
-
-	ID3D12DescriptorHeap* Descriptor::GetDescriptorHeap() const
-	{
-		return m_DescriptorHeap.Get();
-	}
-
-	uint32_t Descriptor::GetDescriptorSize() const
-	{
-		return m_DescriptorSize;
-	}
-
-	DescriptorHandle Descriptor::GetDescriptorHandleForStart() const
-	{
-		return m_DescriptorHandleFromStart;
-	}
-
-	DescriptorHandle Descriptor::GetCurrentDescriptorHandle() const
-	{
-		return m_CurrentDescriptorHandle;
 	}
 
 	DescriptorHandle Descriptor::GetDescriptorHandleFromIndex(uint32_t index) const

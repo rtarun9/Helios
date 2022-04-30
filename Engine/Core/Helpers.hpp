@@ -25,43 +25,21 @@ static inline void GetBlobMessage(ID3DBlob* blob)
 	}
 }
 
-static inline constexpr std::string WstringToString(std::wstring_view inputWString)
+static inline std::string WstringToString(std::wstring_view inputWString) 
 {
-	std::string result{ begin(inputWString), end(inputWString) };
-	return result;
+	std::string result{};
+	std::wstring wideStringData = inputWString.data();
+	CW2A cw2a(wideStringData.c_str());
+	return std::string(cw2a);
 }
 
-static inline constexpr std::wstring StringToWString(std::string_view inputWString)
+static inline std::wstring StringToWString(std::string_view inputString)
 {
-	std::wstring result{ begin(inputWString), end(inputWString) };
-	return result;
+	std::wstring result{};
+	std::string stringData = inputString.data();
+	CA2W ca2w(stringData.c_str());
+	return std::wstring(ca2w);
 }
-
-
-enum class Keys : uint8_t
-{
-	W,
-	A,
-	S,
-	D,
-	AUp,
-	ALeft,
-	ADown,
-	ARight,
-	TotalKeyCount
-};
-
-static std::map<uint8_t, Keys> INPUT_MAP 
-{
-	{'W', Keys::W},
-	{'A', Keys::A},
-	{'S', Keys::S},
-	{'D', Keys::D},
-	{VK_UP, Keys::AUp},
-	{VK_LEFT, Keys::ALeft},
-	{VK_DOWN, Keys::ADown},
-	{VK_RIGHT, Keys::ARight}
-};
 
 template <typename T>
 static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
@@ -69,7 +47,6 @@ static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
 	return static_cast<std::underlying_type<T>::type>(value);
 }
 
-// For Use with Win32 : Take in a RECT and return client region width and height.
 static std::pair<uint32_t, uint32_t> GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);

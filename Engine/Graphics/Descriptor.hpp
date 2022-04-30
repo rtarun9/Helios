@@ -18,16 +18,19 @@ namespace helios::gfx
 		}
 	};
 
+	// Descriptor abstraction that has a 'current descriptor' that comes in handy while initializing resource (Texture's, buffer's etc).
+	// Has methods to return index of current descriptor : most resource abstarctions (texture's, buffer's) etc store this index and use for bindless rendering.
 	class Descriptor
 	{
 	public:
-		void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName);
+		void Init(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName);
 
-		ID3D12DescriptorHeap* GetDescriptorHeap() const;
-		uint32_t GetDescriptorSize() const;
+		ID3D12DescriptorHeap* const GetDescriptorHeap() const { return m_DescriptorHeap.Get(); }
+		uint32_t GetDescriptorSize() const { return m_DescriptorSize; };
 
-		DescriptorHandle GetDescriptorHandleForStart() const;
-		DescriptorHandle GetCurrentDescriptorHandle() const;
+		DescriptorHandle GetDescriptorHandleForStart() const { return m_DescriptorHandleFromStart; };
+		DescriptorHandle GetCurrentDescriptorHandle() const { return m_CurrentDescriptorHandle; };
+
 		DescriptorHandle GetDescriptorHandleFromIndex(uint32_t index) const;
 
 		// Returns a index that can be used to directly index into a descriptor heap.

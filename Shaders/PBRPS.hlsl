@@ -110,9 +110,8 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
     
     float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
-    tbn = transpose(tbn);
     
-    normal = normalize(mul(tbn, normal));
+    normal = normalize(mul(normal, tbn));
     //normal = normalize(mul(normal, input.modelMatrix));
     
     float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
@@ -188,7 +187,6 @@ float4 PsMain(VSOutput input) : SV_Target
     // Get number of mip levels.
     uint specularTextureWidth, specularTextureHeight, levels;
     specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
-
 
     float3 specularIrradiance = specularIrradianceMap.SampleLevel(anisotropicSampler, LR, roughnessFactor * 5.0f ).rgb;
     

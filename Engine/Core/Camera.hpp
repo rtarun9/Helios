@@ -4,6 +4,31 @@
 
 namespace helios
 {
+	enum class Keys : uint8_t
+	{
+		W,
+		A,
+		S,
+		D,
+		AUp,
+		ALeft,
+		ADown,
+		ARight,
+		TotalKeyCount
+	};
+
+	static std::map<uint8_t, Keys> INPUT_MAP
+	{
+		{'W', Keys::W},
+		{'A', Keys::A},
+		{'S', Keys::S},
+		{'D', Keys::D},
+		{VK_UP, Keys::AUp},
+		{VK_LEFT, Keys::ALeft},
+		{VK_DOWN, Keys::ADown},
+		{VK_RIGHT, Keys::ARight}
+	};
+
 	class Camera
 	{
 	public:

@@ -10,18 +10,19 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
 
+	// Command Queue abstraction : has a circular queue for command list and allocators.
 	// Note : The command allocator and command list are not named since these are for internal use only.
 	// This might change in the future.
 	class CommandQueue
 	{
 	public:
-		void Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT, std::wstring_view commandQueueName = L"Main Command Queue");
+		void Init(ID3D12Device* const device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT, std::wstring_view commandQueueName = L"Main Command Queue");
 
 		[[nodiscard]]
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList();
 
 		[[nodiscard]]
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const { return m_CommandQueue; }
 
 		// Returns the fence value to wait for to notify when command list has finished execution.
 		[[nodiscard]]

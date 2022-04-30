@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void DepthStencilBuffer::Init(ID3D12Device* device, Descriptor& dsvDescriptor, uint32_t width, uint32_t height, std::wstring_view bufferName)
+	void DepthStencilBuffer::Init(ID3D12Device* const device, Descriptor& dsvDescriptor, uint32_t width, uint32_t height, std::wstring_view bufferName)
 	{
 		D3D12_CLEAR_VALUE clearValue
 		{
@@ -41,15 +41,5 @@ namespace helios::gfx
 
 		m_BufferIndexInDescriptorHeap = dsvDescriptor.GetCurrentDescriptorIndex();
 		dsvDescriptor.OffsetCurrentHandle();
-	}
-
-	uint32_t DepthStencilBuffer::GetBufferIndex() const
-	{
-		return m_BufferIndexInDescriptorHeap;
-	}
-
-	ID3D12Resource* DepthStencilBuffer::GetResource() const
-	{
-		return m_DepthStencilBuffer.Get();
 	}
 }

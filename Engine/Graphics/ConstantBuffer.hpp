@@ -6,13 +6,12 @@
 
 namespace helios::gfx
 {
+	// Constant buffer abstraction : requires the data to be 256 byte aligned. The buffer is mapped once and unmapped at the end.
 	template <typename T>
 	class ConstantBuffer
 	{
 	public:
-		// Reason for the data paramter to be a r value expression : It is needed here just to set the initial value of the constant buffer.
-		// This class has a m_BufferData variable that is accessed via the GetBufferData() function. Any further changes will happen through this.
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, T&& data, Descriptor& cbDescriptor, std::wstring_view cbufferName)
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, const T& data, Descriptor& cbDescriptor, std::wstring_view cbufferName)
 		{
 			CD3DX12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			CD3DX12_RESOURCE_DESC cbufferUploadDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(T));
@@ -33,13 +32,13 @@ namespace helios::gfx
 		
 			CD3DX12_RANGE readRange(0, 0);       
 			ThrowIfFailed(m_Buffer->Map(0, &readRange, reinterpret_cast<void**>(&m_Data)));
-			void* dataPtr = reinterpret_cast<void*>(&data);
+			void* dataPtr = (void*)(&data);
 			memcpy(m_Data, dataPtr, sizeof(T));
 
 			m_BufferData = data;
 		}
 
-		ID3D12Resource* GetResource() const
+		ID3D12Resource* const GetResource() const
 		{
 			return m_Buffer.Get();
 		}

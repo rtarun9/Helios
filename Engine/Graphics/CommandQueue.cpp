@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void CommandQueue::Init(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE commandListType, std::wstring_view commandQueueName)
+	void CommandQueue::Init(ID3D12Device* const device, D3D12_COMMAND_LIST_TYPE commandListType, std::wstring_view commandQueueName)
 	{
 		m_Device = device;
 		m_CommandListType = commandListType;
@@ -75,13 +75,8 @@ namespace helios::gfx
 		return commandList;
 	}
 
-	wrl::ComPtr<ID3D12CommandQueue> CommandQueue::GetCommandQueue() const
-	{
-		return m_CommandQueue;
-	}
-
 	// Returns the fence value to wait for to notify when command list has finished execution.
-	uint64_t CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
+	uint64_t CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* const commandList)
 	{
 		commandList->Close();
 
@@ -106,7 +101,7 @@ namespace helios::gfx
 		return fenceValue;
 	}
 
-	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList* commandList)
+	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList* const commandList)
 	{
 		uint64_t signalValue = ExecuteCommandList(commandList);
 		FlushQueue();

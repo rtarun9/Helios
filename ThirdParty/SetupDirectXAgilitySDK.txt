@@ -2,3 +2,6 @@
 
 Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.602.0 -OutFile agility.zip
 Expand-Archive agility.zip DirectXAgilitySDK
+
+// Note, that the only files needed are 'D3D12Core.dll, d3d12SDKLayers.dll and d3dconfig.exe'. Other files
+// may be deleted (applicable for arm, arm64, win32 and x64 versions).

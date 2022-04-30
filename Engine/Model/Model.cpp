@@ -15,8 +15,10 @@ using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::wstring_view modelPath, gfx::Descriptor& srvCbDescriptor, uint32_t textureIndex)
+	void Model::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::wstring_view modelPath, gfx::Descriptor& srvCbDescriptor, std::wstring_view modelName, uint32_t textureIndex)
 	{
+		m_ModelName = modelName.data();
+
         auto modelPathStr = WstringToString(modelPath);
 
         std::string warning{};
@@ -44,7 +46,6 @@ namespace helios
 		std::vector<dx::XMFLOAT3> modelPositions{};
 		std::vector<dx::XMFLOAT2> modelTextureCoords{};
 		std::vector<dx::XMFLOAT3> modelNormals{};
-		std::vector<dx::XMFLOAT3> modelBiTangents{};
 		std::vector<dx::XMFLOAT4> modelTangents{};
 
 		std::vector<uint32_t> indices{};
@@ -72,28 +73,28 @@ namespace helios
 				tinygltf::Buffer& positionBuffer = model.buffers[positionBufferView.buffer];
 				
 				int positionByteStride = positionAccesor.ByteStride(positionBufferView);
-				uint8_t* positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
+				uint8_t const* const positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
 
 				// TextureCoord data.
 				tinygltf::Accessor& textureCoordAccesor = model.accessors[primitive.attributes["TEXCOORD_0"]];
 				tinygltf::BufferView& textureCoordBufferView = model.bufferViews[textureCoordAccesor.bufferView];
 				tinygltf::Buffer& textureCoordBuffer = model.buffers[textureCoordBufferView.buffer];
 				int textureCoordBufferStride = textureCoordAccesor.ByteStride(textureCoordBufferView);
-				uint8_t* texcoords = &textureCoordBuffer.data[textureCoordBufferView.byteOffset + textureCoordAccesor.byteOffset];
+				uint8_t const* const texcoords = &textureCoordBuffer.data[textureCoordBufferView.byteOffset + textureCoordAccesor.byteOffset];
 
 				// Normal data.
 				tinygltf::Accessor& normalAccesor = model.accessors[primitive.attributes["NORMAL"]];
 				tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccesor.bufferView];
 				tinygltf::Buffer& normalBuffer = model.buffers[normalBufferView.buffer];
 				int normalByteStride = normalAccesor.ByteStride(normalBufferView);
-				uint8_t* normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
+				uint8_t const* const normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
 
 				// Tangent data.
 				tinygltf::Accessor& tangentAccesor = model.accessors[primitive.attributes["TANGENT"]];
 				tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccesor.bufferView];
 				tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
 				int tangentByteStride = tangentAccesor.ByteStride(tangentBufferView);
-				uint8_t  const* tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
+				uint8_t  const* const tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
 
 				// Fill in the vertices array.
 				for (size_t i = 0; i < positionAccesor.count; ++i)
@@ -119,16 +120,9 @@ namespace helios
 					tangent.z = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2];
 					tangent.w = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3];
 
-					dx::XMFLOAT3 tangentCoord{ tangent.x, tangent.y, tangent.z };
-					dx::XMFLOAT3 biTangent{};
-					XMVECTOR biTangentVec = XMVectorScale(XMVector3Cross(XMLoadFloat3(&normal), XMLoadFloat3(&tangentCoord)), tangent.w);
-
-					XMStoreFloat3(&biTangent, XMVector3Normalize(biTangentVec));
-
 					modelPositions.emplace_back(position);
 					modelTextureCoords.emplace_back(textureCoord);
 					modelNormals.emplace_back(normal);
-					modelBiTangents.emplace_back(biTangent);
 					modelTangents.emplace_back(tangent);
 				}
 
@@ -136,7 +130,7 @@ namespace helios
 				tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccesor.bufferView];
 				tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
 				int indexByteStride = indexAccesor.ByteStride(indexBufferView);
-				uint8_t* indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
+				uint8_t const* const indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
 				// Fill indices array.
 				for (size_t i = 0; i < indexAccesor.count; ++i)
@@ -148,91 +142,29 @@ namespace helios
 			}
 		}
 
-		m_PositionBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, L"Position Buffer");
-		m_TextureCoordsBuffer.Init<dx::XMFLOAT2>(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, L"Texture Coords Buffer");
-		m_NormalBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, L"Normal Buffer");
-		m_BitangentBuffer.Init<dx::XMFLOAT3>(device, commandList, srvCbDescriptor, modelBiTangents, D3D12_RESOURCE_FLAG_NONE, L"Bi Tanget Buffer");
-		m_TangentBuffer.Init<dx::XMFLOAT4>(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, L"Tanget Buffer");
+		m_PositionBuffer.Init(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Position Buffer");
+		m_TextureCoordsBuffer.Init(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Texture Coords Buffer");
+		m_NormalBuffer.Init(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Normal Buffer");
+		m_TangentBuffer.Init(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Tanget Buffer");
 
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
 		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
 		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
-			srvCbDescriptor, L"Transform CBuffer");
+			srvCbDescriptor, m_ModelName + L" Transform CBuffer");
 
 		m_TextureIndex = textureIndex;
 
 		m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
 	}
-
-	ID3D12Resource* Model::GetPositionBuffer() const
-	{
-		return m_PositionBuffer.GetResource();
-	}
-
-	ID3D12Resource* Model::GetTextureCoordsBuffer() const
-	{
-		return m_TextureCoordsBuffer.GetResource();
-	}
-
-	ID3D12Resource* Model::GetNormalBuffer() const
-	{
-		return m_NormalBuffer.GetResource();
-	}
-
-	ID3D12Resource* Model::GetBiTangetBuffer() const
-	{
-		return m_BitangentBuffer.GetResource();
-	}
-
-	ID3D12Resource* Model::GetTangetBuffer() const
-	{
-		return m_TangentBuffer.GetResource();
-	}
-
-	uint32_t Model::GetPositionBufferIndex() const
-	{
-		return m_PositionBuffer.GetSRVIndex();
-	}
-
-	uint32_t Model::GetTextureCoordsBufferIndex() const
-	{
-		return m_TextureCoordsBuffer.GetSRVIndex();
-	}
-
-	uint32_t Model::GetNormalBufferIndex() const
-	{
-		return m_NormalBuffer.GetSRVIndex();
-	}
-
-	uint32_t Model::GetBiTangentBufferIndex() const
-	{
-		return m_BitangentBuffer.GetSRVIndex();
-	}
-
-	uint32_t Model::GetTangentBufferIndex() const
-	{
-		return m_TangentBuffer.GetSRVIndex();
-	}
-
-	uint32_t Model:: GetTransformCBufferIndex() const
-	{
-		return m_TransformCBufferIndexInDescriptorHeap;
-	}
-
-	uint32_t Model::GetTextureIndex() const
-	{
-		return m_TextureIndex;
-	}
-
-	TransformComponent& Model::GetTransform()
-	{
-		return m_TransformData;
-	}
 	
-	void Model::UpdateData(std::wstring_view objectName)
+	void Model::UpdateData()
 	{
-		ImGui::Begin(WstringToString(objectName.data()).c_str());
+		ImGui::Begin(WstringToString(m_ModelName).c_str());
+
+		ImGui::SliderFloat("Scale", &m_TransformData.scale.x, 0.1f, 10.0f);
+		m_TransformData.scale.y = m_TransformData.scale.x;
+		m_TransformData.scale.z = m_TransformData.scale.x;
 
 		ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
 		ImGui::SliderFloat3("Rotate", &m_TransformData.rotation.x, -90.0f, 90.0f);
@@ -240,11 +172,13 @@ namespace helios
 		ImGui::End();
 	}
 
-	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX projectionViewMatrix)
+	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX& projectionViewMatrix)
 	{
-		auto scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);
-		auto rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
-		auto translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
+		UpdateData();
+
+		dx::XMVECTOR scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);
+		dx::XMVECTOR rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
+		dx::XMVECTOR translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
 
 		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixScalingFromVector(scalingVector) *  dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixTranslationFromVector(translationVector);
 		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix);
@@ -253,7 +187,7 @@ namespace helios
 		m_TransformConstantBuffer.Update();
 	}
 
-    void Model::Draw(ID3D12GraphicsCommandList* commandList)
+    void Model::Draw(ID3D12GraphicsCommandList* const commandList)
     {
 		auto indexBufferView = m_IndexBuffer.GetBufferView();
 

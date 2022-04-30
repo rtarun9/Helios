@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void Material::CreateBindlessRootSignature(ID3D12Device* device, std::wstring_view shaderPath) 
+	void Material::CreateBindlessRootSignature(ID3D12Device* const device, std::wstring_view shaderPath) 
 	{
 		wrl::ComPtr<ID3DBlob> shaderBlob;
 		::D3DReadFileToBlob(shaderPath.data(), &shaderBlob);
@@ -19,34 +19,34 @@ namespace helios::gfx
 		rootSignature->SetName(rootSignatureName.c_str());
 	}
 
-	void Material::Bind(ID3D12GraphicsCommandList* commandList) const
+	void Material::Bind(ID3D12GraphicsCommandList* const commandList) const
 	{
 		commandList->SetGraphicsRootSignature(rootSignature.Get());
 		commandList->SetPipelineState(pipelineState.Get());
 	}
 
-	void Material::BindCS(ID3D12GraphicsCommandList* commandList) const
+	void Material::BindCS(ID3D12GraphicsCommandList* const commandList) const
 	{
 		commandList->SetComputeRootSignature(rootSignature.Get());
 		commandList->SetPipelineState(pipelineState.Get());
 	}
 
-	void Material::BindRootSignature(ID3D12GraphicsCommandList* commandList) 
+	void Material::BindRootSignature(ID3D12GraphicsCommandList* const commandList) 
 	{
 		commandList->SetGraphicsRootSignature(rootSignature.Get());
 	}
 
-	void Material::BindRootSignatureCS(ID3D12GraphicsCommandList* commandList) 
+	void Material::BindRootSignatureCS(ID3D12GraphicsCommandList* const commandList) 
 	{
 		commandList->SetComputeRootSignature(rootSignature.Get());
 	}
 
-	void Material::BindPSO(ID3D12GraphicsCommandList* commandList) const
+	void Material::BindPSO(ID3D12GraphicsCommandList* const commandList) const
 	{
 		commandList->SetPipelineState(pipelineState.Get());
 	}
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC Material::CreateGraphicsPSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* vertexShaderBlob, ID3DBlob* pixelShaderBlob, DXGI_FORMAT rtvFormat, bool depthEnable, bool isCubeMap)
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC Material::CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, DXGI_FORMAT rtvFormat, bool depthEnable, bool isCubeMap)
 	{
 		if (isCubeMap)
 		{
@@ -92,12 +92,6 @@ namespace helios::gfx
 			.SampleMask = UINT_MAX,
 			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT),
-			//{
-			//	.DepthEnable = depthEnable,
-			//	.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
-			//	.DepthFunc = D3D12_COMPARISON_FUNC_LESS,
-			//	.StencilEnable = FALSE,
-			//}
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1u,
 			.RTVFormats = rtvFormat,
@@ -111,7 +105,7 @@ namespace helios::gfx
 		};
 	}
 
-	D3D12_COMPUTE_PIPELINE_STATE_DESC Material::CreateComputePSODesc(ID3D12RootSignature* rootSignatureBlob, ID3DBlob* computeShaderBlob)
+	D3D12_COMPUTE_PIPELINE_STATE_DESC Material::CreateComputePSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const computeShaderBlob)
 	{
 		return D3D12_COMPUTE_PIPELINE_STATE_DESC
 		{
@@ -122,7 +116,7 @@ namespace helios::gfx
 		};
 	}
 
-	Material Material::CreateMaterial(ID3D12Device* device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format, bool isCubeMap)
+	Material Material::CreateMaterial(ID3D12Device* const device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format, bool isCubeMap)
 	{
 		wrl::ComPtr<ID3DBlob> vertexBlob;
 		::D3DReadFileToBlob(vsShaderPath.data(), &vertexBlob);
@@ -145,7 +139,7 @@ namespace helios::gfx
 		return { pso };
 	}
 
-	Material Material::CreateMaterial(ID3D12Device* device, std::wstring_view csShaderPath, std::wstring_view materialName)
+	Material Material::CreateMaterial(ID3D12Device* const device, std::wstring_view csShaderPath, std::wstring_view materialName)
 	{
 		wrl::ComPtr<ID3DBlob> computeBlob;
 		::D3DReadFileToBlob(csShaderPath.data(), &computeBlob);

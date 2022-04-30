@@ -119,14 +119,12 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
 	ImGui::End();
 
-	m_LightSource.UpdateData(L"Light Source");
 	m_LightSource.UpdateTransformData(commandList, projectionView);
 
 	ImGui::Begin("Render Target Settings");
 	ImGui::SliderFloat("Exposure", &m_RenderTargetSettingsData.GetBufferData().exposure, 0.1f, 5.0f);
 	ImGui::End();
 
-	m_DamagedHelmet.UpdateData(L"Damaged Helmet");
 	m_DamagedHelmet.UpdateTransformData(commandList, projectionView);
 
 
@@ -183,7 +181,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		.positionBufferIndex = m_DamagedHelmet.GetPositionBufferIndex(),
 		.textureBufferIndex = m_DamagedHelmet.GetTextureCoordsBufferIndex(),
 		.normalBufferIndex = m_DamagedHelmet.GetNormalBufferIndex(),
-		.biTangetBufferIndex = m_DamagedHelmet.GetBiTangentBufferIndex(),
 		.tangetBufferIndex = m_DamagedHelmet.GetTangentBufferIndex(),
 		.mvpCBufferIndex = m_DamagedHelmet.GetTransformCBufferIndex(),
 		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
@@ -350,42 +347,42 @@ void SandBox::LoadMaterials()
 
 void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 {
-	m_Textures[L"TestTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/TestTexture.png", 1u, true, L"Test Texture");
-	m_Textures[L"MarbleTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Marble.jpg", 1u, true, L"Marble Texture");
-	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", 1u, true, L"Sphere Base Color Texture");
-	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true, L"Sphere Roughness Metallic Texture");
+	m_Textures[L"TestTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Textures/TestTexture.png", 1u, true}, L"Test Texture");
+	m_Textures[L"MarbleTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Textures/Marble.jpg", 1u, true }, L"Marble Texture");
+	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", 1u, true}, L"Sphere Base Color Texture");
+	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true }, L"Sphere Roughness Metallic Texture");
 
-	m_Textures[L"SciFiHelmetAlbedo"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_BaseColor.png", 1u, true, L"Damaged Helmet Albedo");
-	m_Textures[L"SciFiHelmetAO"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_AmbientOcclusion.png", 1u, false, L"Damaged Helmet AO");
-	m_Textures[L"SciFiHelmetEmissive"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg", 1u, true, L"Damaged Helmet Emmisive");
-	m_Textures[L"SciFiHelmetMetalRoughness"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_MetallicRoughness.png", 1u, false, L"Damaged Helmet Metal Roughness");
-	m_Textures[L"SciFiHelmetNormal"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_Normal.png", 1u, false, L"Damaged Helmet Normal");
+	m_Textures[L"SciFiHelmetAlbedo"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_BaseColor.png", 1u, true }, L"Damaged Helmet Albedo");
+	m_Textures[L"SciFiHelmetAO"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_AmbientOcclusion.png", 1u, false}, L"Damaged Helmet AO");
+	m_Textures[L"SciFiHelmetEmissive"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg", 1u, true}, L"Damaged Helmet Emmisive");
+	m_Textures[L"SciFiHelmetMetalRoughness"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_MetallicRoughness.png", 1u, false}, L"Damaged Helmet Metal Roughness");
+	m_Textures[L"SciFiHelmetNormal"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_Normal.png", 1u, false}, L"Damaged Helmet Normal");
 
-	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT, L"Environment Equirect Texture");
+	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::HDRTextureData{ L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT }, L"Environment Equirect Texture");
 
-	m_EnvironmentTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Environment Cube Box Texture UAV");
-	m_IrradianceMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 0u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Irradiance Convoluted Cube Map");
+	m_EnvironmentTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{ ENV_TEXTURE_DIMENSION, ENV_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT }, L"Environment Cube Box Texture UAV");
+	m_IrradianceMapTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{ CONVOLUTED_TEXTURE_DIMENSION, CONVOLUTED_TEXTURE_DIMENSION, 6u, 1u, DXGI_FORMAT_R16G16B16A16_FLOAT }, L"Irradiance Convoluted Cube Map");
 	
-	m_PreFilterMapTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT, L"Prefilter Specular Texture Map");
+	m_PreFilterMapTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{ PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT }, L"Prefilter Specular Texture Map");
 
-	m_BRDFConvolutionTexture.Init(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, BRDF_CONVOLUTION_TEXTURE_DIMENSION, BRDF_CONVOLUTION_TEXTURE_DIMENSION, 1u, 0u, DXGI_FORMAT_R16G16_FLOAT, L"BRDF Convolution Texture");
+	m_BRDFConvolutionTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{BRDF_CONVOLUTION_TEXTURE_DIMENSION, BRDF_CONVOLUTION_TEXTURE_DIMENSION, 1u, 01, DXGI_FORMAT_R16G16_FLOAT}, L"BRDF Convolution Texture");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 {
-	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, m_Textures[L"TestTexture"].GetTextureIndex());
+	m_GameObjects[L"Cube"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Cube", m_Textures[L"TestTexture"].GetTextureIndex());
 	m_GameObjects[L"Cube"].GetTransform().translate = dx::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
-	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, m_Textures[L"MarbleTexture"].GetTextureIndex());
+	m_GameObjects[L"Floor"].Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Floor", m_Textures[L"MarbleTexture"].GetTextureIndex());
 	m_GameObjects[L"Floor"].GetTransform().translate = dx::XMFLOAT3(0.0f, -2.0f, 0.0f);
 	m_GameObjects[L"Floor"].GetTransform().scale = dx::XMFLOAT3(10.0f, 0.1f, 10.0f);
 
-	m_SkyBoxModel.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_SkyBoxModel.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Sky Box Model");
 
-	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Light Source");
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_DamagedHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor);
+	m_DamagedHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList, MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 	m_LightData.Init(m_Device.Get(), commandList, LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");

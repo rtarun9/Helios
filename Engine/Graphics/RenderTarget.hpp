@@ -29,27 +29,29 @@ namespace helios::gfx
 
 	static constexpr std::array<uint32_t, 6> RT_INDICES
 	{
-		0, 1, 2,
-		0, 2, 3
+		0u, 1u, 2u,
+		0u, 2u, 3u
 	};
 
+	// Abstraction for render target.
+	// Contains static methods that will init common data (Position and Texture buffers). These static methods need to be called *before* calling other methods.
 	class RenderTarget
 	{
 	public:
 		static constexpr uint32_t RT_INDICES_COUNT = 6u;
 
-		void Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
 
-		ID3D12Resource* GetResource() const;
+		ID3D12Resource* const GetResource() const { return m_Resource.Get(); }
 
-		uint32_t GetSRVIndex() const;
-		uint32_t GetRTVIndex() const;
+		uint32_t GetSRVIndex() const { return m_SRVIndexInDescriptorHeap; }
+		uint32_t GetRTVIndex() const { return m_RTVIndexInDescriptorHeap; };
 
-		static uint32_t GetPositionBufferIndex();
-		static uint32_t GetTextureCoordsBufferIndex();
+		static uint32_t GetPositionBufferIndex() { return s_PositionBuffer.GetSRVIndex(); };
+		static uint32_t GetTextureCoordsBufferIndex() { return s_TextureCoordsBuffer.GetSRVIndex(); };
 
-		static void InitBuffers(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, Descriptor& srvDescriptor);
-		static void Bind(ID3D12GraphicsCommandList* commandList);
+		static void InitBuffers(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, Descriptor& srvDescriptor);
+		static void Bind(ID3D12GraphicsCommandList* const commandList);
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
@@ -62,7 +64,7 @@ namespace helios::gfx
 
 		static inline IndexBuffer s_IndexBuffer{};
 
-		static inline StructuredBuffer s_PositionBuffer{};
-		static inline StructuredBuffer s_TextureCoordsBuffer{};
+		static inline StructuredBuffer<DirectX::XMFLOAT2> s_PositionBuffer{};
+		static inline StructuredBuffer<DirectX::XMFLOAT2> s_TextureCoordsBuffer{};
 	};
 }

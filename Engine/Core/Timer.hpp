@@ -9,8 +9,8 @@ namespace helios
 	public:
 		void Tick();
 
-		double GetDeltaTime() const { return m_DeltaTime; };
-		double GetTotalTime() const { return m_TotalTime; };
+		inline double GetDeltaTime() const { return m_DeltaTime; };
+		inline double GetTotalTime() const { return m_TotalTime; };
 
 	private:
 		std::chrono::high_resolution_clock m_Clock{};

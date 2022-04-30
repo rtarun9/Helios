@@ -49,16 +49,16 @@ project "Helios"
     pchsource "Engine/Pch.cpp"
     pchheader "Pch.hpp"
 
-    cppdialect "C++20"
     staticruntime "off"
     runtime "Debug"
     systemversion "latest"
 
     prebuildcommands
     {
-        -- Since Visual studio doesnt support a lot of SM 6.6's features, this cannot be included as a prebuild command step for now.
-        -- "{COPYDIR} ../ThirdParty/DXC_2021_12_08/bin/x64 ../Bin/%{cfg.buildcfg}/",
-        -- "call ../CompileShaders.bat"
+        "{COPYDIR} ../ThirdParty/DirectXShaderCompiler/bin/x64 ../Shaders",
+        "{CHDIR} ../Shaders/",
+        "call CompileShaders.bat",
+        "{CHDIR} ../"
     }
 
     postbuildcommands 

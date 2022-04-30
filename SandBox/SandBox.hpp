@@ -116,10 +116,10 @@ private:
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
 
 	// Data for IBL / Skybox.
-	helios::gfx::TextureUAV m_EnvironmentTexture{};
-	helios::gfx::TextureUAV m_IrradianceMapTexture{};
-	helios::gfx::TextureUAV m_PreFilterMapTexture{};
-	helios::gfx::TextureUAV m_BRDFConvolutionTexture{};
+	helios::gfx::Texture m_EnvironmentTexture{};
+	helios::gfx::Texture m_IrradianceMapTexture{};
+	helios::gfx::Texture m_PreFilterMapTexture{};
+	helios::gfx::Texture m_BRDFConvolutionTexture{};
 
 	helios::Model m_SkyBoxModel{};
 

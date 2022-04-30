@@ -6,9 +6,9 @@
 
 namespace helios::gfx
 {
-	void IndexBuffer::Init(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, std::span<const uint32_t> data, std::wstring_view indexBufferName)
+	void IndexBuffer::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::span<const uint32_t> data, std::wstring_view indexBufferName)
 	{
-		auto indexBuffer = utils::CreateGPUBuffer<uint32_t>(device, commandList, data);
+		std::pair<ID3D12Resource*, ID3D12Resource*> indexBuffer = utils::CreateGPUBuffer<uint32_t>(device, commandList, data);
 		m_Buffer = indexBuffer.first;
 		m_IntermediateBuffer = indexBuffer.second;
 
@@ -20,10 +20,5 @@ namespace helios::gfx
 			.SizeInBytes = static_cast<UINT>(data.size_bytes()),
 			.Format = DXGI_FORMAT_R32_UINT
 		};
-	}
-
-	D3D12_INDEX_BUFFER_VIEW IndexBuffer::GetBufferView() const
-	{
-		return m_BufferView;
 	}
 }

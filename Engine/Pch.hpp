@@ -26,6 +26,10 @@
 // For the ComPtr<> template class.
 #include <wrl/client.h>
 
+// For converting wstring to string and vice versa.
+#include <atlbase.h>
+#include <atlconv.h>
+
 // STL Includes.
 #include <string>
 #include <vector>
@@ -40,8 +44,8 @@
 #include <queue>
 #include <map>
 #include <type_traits>
-#include <optional>
 #include <stdexcept>
+#include <variant>
 
 #include "Core/Helpers.hpp"
 

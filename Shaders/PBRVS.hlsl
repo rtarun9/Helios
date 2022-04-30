@@ -26,7 +26,6 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
     StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
     StructuredBuffer<float3> normalBuffer = ResourceDescriptorHeap[renderResource.normalBufferIndex];
-    StructuredBuffer<float3> biTangetBuffer = ResourceDescriptorHeap[renderResource.biTangetBufferIndex];
     StructuredBuffer<float4> tangetBuffer = ResourceDescriptorHeap[renderResource.tangetBufferIndex];
     
     ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
@@ -43,8 +42,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 
     float3 normal = normalize(normalBuffer[vertexID].xyz);
     float3 tangent = normalize(tangetBuffer[vertexID].xyz);
-    float3 biTangent = normalize(biTangetBuffer[vertexID].xyz);
-    
+    float3 biTangent = normalize(tangetBuffer[vertexID].xyz);
     float3 T = normalize(tangent);
     float3 B = normalize(biTangent);
     float3 N = normalize(normal);

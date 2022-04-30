@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-using uint = uint32_t;
-#endif
-
 #ifndef __cplusplus
 
 #define BindlessRootSignature           \
@@ -20,7 +16,9 @@ SamplerState linearWrapSampler : register(s2);
 SamplerState linearClampSampler: register(s3);
 SamplerState anisotropicSampler : register(s4);
 
-#endif 
+#else // ifdef __cplusplus
+#define uint uint32_t
+#endif
 
 // All *RenderResources structs are placed here to prevent having them in multiple places.
 struct TestRenderResources
@@ -40,7 +38,6 @@ struct PBRRenderResources
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint normalBufferIndex;
-    uint biTangetBufferIndex;
     uint tangetBufferIndex;
     
     uint mvpCBufferIndex;
