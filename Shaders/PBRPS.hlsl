@@ -6,8 +6,7 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
     float3 normal : NORMAL;
     float4 tangent : TANGENT;
-    float4 worldSpacePosition : WORLD_SPACE_POSITION;
-    float3x3 TBN : TBN_MATRIX;
+    float3 worldSpacePosition : WORLD_SPACE_POSITION;
     float3x3 modelMatrix : MODEL_MATRIX;
 };
 
@@ -49,7 +48,7 @@ float3 FresnelSchlick(float3 normal, float3 viewDir, float3 F0, float roughness)
 
 float3 FresnelSchlickR(float angle, float3 F0, float roughness)
 {
-    return F0 + (max(1.0 - roughness, F0) - F0) * pow(1.0 - angle, 5.0);
+    return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - angle, 5.0);
 
 }
 // PBR Shading model used : Cook Torrence model.
@@ -100,27 +99,34 @@ float4 PsMain(VSOutput input) : SV_Target
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoTextureIndex];
     Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[renderResource.metalRoughnessTextureIndex];
     Texture2D<float4> emissiveTexture = ResourceDescriptorHeap[renderResource.emissiveTextureIndex];
-    Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalTextureIndex];
-    Texture2D<float4> aoTexture = ResourceDescriptorHeap[renderResource.aoTextureIndex];
     
-    input.normal = normalize(input.normal);
+    float3 normal = normalize(input.normal);
+    if (renderResource.normalTextureIndex != 0)
+    {
+        Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalTextureIndex];
+        input.normal = normalize(input.normal);
+        normal = normalize(2.0f * normalTexture.Sample(pointClampSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+        input.tangent.xyz = normalize(input.tangent.xyz);
+        float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
+        float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
     
-    float3 normal = 2.0f * pow(normalTexture.Sample(anisotropicSampler, input.texCoord).xyz, 1 / 2.2f) - float3(1.0f, 1.0f, 1.0f);
-    input.tangent.xyz = normalize(input.tangent.xyz);
-    float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
+        normal = mul(normal, tbn);
+        normal = normalize(mul(normal, input.modelMatrix));
+    }
     
-    float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
-    
-    normal = normalize(mul(normal, tbn));
-    //normal = normalize(mul(normal, input.modelMatrix));
+    float3 ao = float3(1.0f, 1.0f, 1.0f);
+    if (renderResource.aoTextureIndex != 0)
+    {
+        Texture2D<float4> aoTexture = ResourceDescriptorHeap[renderResource.aoTextureIndex];
+        ao = aoTexture.Sample(pointClampSampler, input.texCoord).xyz;        
+    }
     
     float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
-
-    float metallicFactor = metalRoughnessTexture.Sample(anisotropicSampler, input.texCoord).b;
-    float roughnessFactor = metalRoughnessTexture.Sample(anisotropicSampler, input.texCoord).g;
-    float3 albedo = albedoTexture.Sample(anisotropicSampler, input.texCoord).xyz;
-    float3 emissive = emissiveTexture.Sample(anisotropicSampler, input.texCoord).xyz;
-    float3 ao = aoTexture.Sample(anisotropicSampler, input.texCoord).xyz;
+    
+    float metallicFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).b;
+    float roughnessFactor = metalRoughnessTexture.Sample(pointClampSampler, input.texCoord).g;
+    float3 albedo = albedoTexture.Sample(pointClampSampler, input.texCoord).xyz;
+    float3 emissive = emissiveTexture.Sample(pointClampSampler, input.texCoord).xyz;
     
     //// Ignoring values in textures and using values from textures.
     //metallicFactor = materialCBuffer.metallicFactor;
@@ -135,7 +141,7 @@ float4 PsMain(VSOutput input) : SV_Target
     for (uint i = 0; i < LIGHT_COUNT; ++i)
     {
         float3 lightColor = float3(1.0f, 1.0f, 1.0f);
-        float3 pixelToLightDir = normalize(lightCBuffer.lightPosition - input.worldSpacePosition).xyz;
+        float3 pixelToLightDir = normalize(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz).xyz;
         float3 halfWayDir = normalize(viewDir + pixelToLightDir);
 
         float distance = length(pixelToLightDir);
@@ -167,18 +173,17 @@ float4 PsMain(VSOutput input) : SV_Target
     
     // For diffuse IBL.
     TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMap];
-    float3 irradiance = irradianceMap.SampleLevel(anisotropicSampler, normal.xyz, 0.0f).xyz;
+    float3 irradiance = irradianceMap.SampleLevel(pointClampSampler, normal.xyz, 0.0f).xyz;
 
     float cosLO = max(dot(normal, viewDir), 0.0f);
     float3 LR = reflect(-viewDir, normal);
 
-        
     float3 kS = FresnelSchlickR(cosLO, F0, roughnessFactor);
-    float3 kD = (1.0 - kS) * (1.0 - metallicFactor);
+    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
 
     float3 F = kS;
     
-    float3 diffuseIBL = kD * irradiance * albedo;
+    float3 diffuseIBL = irradiance * albedo;
     
     // For Specular IBL.
     TextureCube<float4> specularIrradianceMap = ResourceDescriptorHeap[renderResource.prefilterMap];
@@ -188,13 +193,14 @@ float4 PsMain(VSOutput input) : SV_Target
     uint specularTextureWidth, specularTextureHeight, levels;
     specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
 
-    float3 specularIrradiance = specularIrradianceMap.SampleLevel(anisotropicSampler, LR, roughnessFactor * 5.0f ).rgb;
+    float3 specularIrradiance = specularIrradianceMap.SampleLevel(pointClampSampler, LR, roughnessFactor * 5.0f ).rgb;
     
-    float2 specularBRDFLUT = specularBRDF.Sample(anisotropicSampler, float2(min(cosLO, 0.999), roughnessFactor), 0.0f).rg;
+    float2 specularBRDFLUT = specularBRDF.Sample(anisotropicSampler, float2(cosLO, roughnessFactor), 0.0f).rg;
 
-    float3 specularIBL = specularIrradiance * (F * specularBRDFLUT.x + specularBRDFLUT.y);
+    float3 specularIBL = specularIrradiance * (F0 * specularBRDFLUT.x + specularBRDFLUT.y);
     
-    float3 outgoingLight = (diffuseIBL + specularIBL) * ao;
+    float3 outgoingLight = (specularIBL + diffuseIBL * kD) * ao;
+
     
     return float4(outgoingLight, 1.0f);
 }   

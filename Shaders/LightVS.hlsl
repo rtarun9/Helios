@@ -9,7 +9,8 @@ struct TransformData
 {
     matrix modelMatrix;
     matrix inverseModelMatrix;
-    matrix projectionViewMatrix;
+    matrix viewMatrix;
+    matrix projectionMatrix;
 };
 
 ConstantBuffer<LightRenderResources> renderResource : register(b0);
@@ -21,10 +22,10 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     
     ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
     
-    matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
+    matrix mvpMatrix = mul(mul(mvpCBuffer.modelMatrix, mvpCBuffer.viewMatrix), mvpCBuffer.projectionMatrix);
 
     VSOutput output;
-    output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
+    output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
 
     return output;
 }

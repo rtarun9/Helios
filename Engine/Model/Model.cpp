@@ -135,9 +135,14 @@ namespace helios
 				// Fill indices array.
 				for (size_t i = 0; i < indexAccesor.count; ++i)
 				{
-					uint32_t index = (uint32_t)(reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0];
-	
-					indices.push_back(index);
+					if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
+					}
+					else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+					{
+						indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
+					}
 				}
 			}
 		}
@@ -150,7 +155,7 @@ namespace helios
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
 		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
-		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .projectionViewMatrix = dx::XMMatrixIdentity() },
+		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity()},
 			srvCbDescriptor, m_ModelName + L" Transform CBuffer");
 
 		m_TextureIndex = textureIndex;
@@ -172,7 +177,7 @@ namespace helios
 		ImGui::End();
 	}
 
-	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX& projectionViewMatrix)
+	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix)
 	{
 		UpdateData();
 
@@ -180,9 +185,10 @@ namespace helios
 		dx::XMVECTOR rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
 		dx::XMVECTOR translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
 
-		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixScalingFromVector(scalingVector) *  dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixTranslationFromVector(translationVector);
-		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix);
-		m_TransformConstantBuffer.GetBufferData().projectionViewMatrix = projectionViewMatrix;
+		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixTranspose(dx::XMMatrixScalingFromVector(scalingVector) *  dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixTranslationFromVector(translationVector));
+		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix));
+		m_TransformConstantBuffer.GetBufferData().projectionMatrix = projectionMatrix;
+		m_TransformConstantBuffer.GetBufferData().viewMatrix = viewMatrix;
 
 		m_TransformConstantBuffer.Update();
 	}

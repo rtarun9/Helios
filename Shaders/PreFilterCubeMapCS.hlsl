@@ -6,7 +6,7 @@ ConstantBuffer<PreFilterCubeMapRenderResources> renderResources : register(b0);
 
 static const float PI = 3.14159265359;
 
-static const float NUM_SAMPLES = 2048.0f;
+static const float NUM_SAMPLES = 1240.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
 // Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
@@ -126,9 +126,9 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         float3 Lh = S * samplePoint.x + T * samplePoint.y + normal * samplePoint.z;
         
         // Get incident direction by reflecting view dir around half way vector.
-        float3 Li = normalize(2.0f * dot(L0, Lh) * Lh - L0);
+        float3 Li = (2.0f * dot(L0, Lh) * Lh - L0);
         
-        float cosTheta = saturate(dot(L0, Li));
+        float cosTheta = dot(L0, Li);
         if (cosTheta > 0.0f)
         {
             float cosLH = max(dot(normal, Lh), 0.0f);
@@ -138,11 +138,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
             float ws = 1.0f / (NUM_SAMPLES * pdf);
             
             float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
-           
-            float3 samplingVector = Li;
-            samplingVector.y = 1.0f - samplingVector.y;
-            
-            preFilteredColor += textureCubeMap.SampleLevel(linearClampSampler, samplingVector, mipLevel).rgb * cosTheta;
+                       
+            preFilteredColor += textureCubeMap.SampleLevel(anisotropicSampler, Li, 0.0f).rgb * cosTheta;
             weight += cosTheta;
         }
     }

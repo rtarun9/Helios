@@ -67,14 +67,14 @@ private:
 	// Dimension of various textures.
 	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 1024u;
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 128u;
-	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 128u;
-	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 512u	;
+	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 256u;
+	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 256u;
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
 
 	// Core DirectX12 objects and data.
-	Microsoft::WRL::ComPtr<ID3D12Device8> m_Device;
+	Microsoft::WRL::ComPtr<ID3D12Device5> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
@@ -109,8 +109,10 @@ private:
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 	std::map<std::wstring_view, helios::Model> m_GameObjects{};
 
-	helios::Model m_DamagedHelmet{};
+	helios::Model m_SciFiHelmet{};
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
+
+	helios::Model m_Spheres{};
 
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};

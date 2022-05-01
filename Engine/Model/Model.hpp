@@ -14,7 +14,8 @@ namespace helios
 	{
 		DirectX::XMMATRIX modelMatrix{DirectX::XMMatrixIdentity()};
 		DirectX::XMMATRIX inverseModelMatrix{ DirectX::XMMatrixIdentity() };
-		DirectX::XMMATRIX projectionViewMatrix{ DirectX::XMMatrixIdentity() };
+		DirectX::XMMATRIX viewMatrix{ DirectX::XMMatrixIdentity() };
+		DirectX::XMMATRIX projectionMatrix{ DirectX::XMMatrixIdentity() };
 	};
 
 	struct TransformComponent
@@ -49,7 +50,7 @@ namespace helios
 		TransformComponent& GetTransform() { return m_TransformData; };
 
 		void UpdateData();
-		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionViewMatrix);
+		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix);
 
 		void Draw(ID3D12GraphicsCommandList* const commandList);
 

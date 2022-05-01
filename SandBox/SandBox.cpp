@@ -20,8 +20,8 @@ void SandBox::OnUpdate()
 {
 	m_Camera.Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
 
-	m_ViewMatrix = m_Camera.GetViewMatrix();
-	m_ProjectionMatrix = dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f);
+	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
+	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
 	
 	m_LightSource.GetTransform().translate.x = 2.0f;
 	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 2.0f));
@@ -98,37 +98,23 @@ void SandBox::OnResize()
 
 void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12Resource* currentBackBuffer)
 {
+
 	m_UIManager.FrameStart();
-
-	auto projectionView = m_ViewMatrix * m_ProjectionMatrix;
-
-	// Disabled since testing out PBR & IBL.
-	// TODO : Move to OnUpdate soon.
-
-#if 0
-	for (auto& [objectName, gameObject] : m_GameObjects)
-	{
-		gameObject.UpdateData(objectName);
-		gameObject.UpdateTransformData(commandList, projectionView);
-	}
-#endif
-
+	
 	ImGui::Begin("Material Data");
 	ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
 	ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
 	ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
 	ImGui::End();
 
-	m_LightSource.UpdateTransformData(commandList, projectionView);
-
 	ImGui::Begin("Render Target Settings");
 	ImGui::SliderFloat("Exposure", &m_RenderTargetSettingsData.GetBufferData().exposure, 0.1f, 5.0f);
 	ImGui::End();
 
-	m_DamagedHelmet.UpdateTransformData(commandList, projectionView);
-
-
-	m_SkyBoxModel.UpdateTransformData(commandList, projectionView);
+	m_LightSource.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+	m_Spheres.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+	m_SciFiHelmet.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+	m_SkyBoxModel.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 
 	// Set the necessary states
 
@@ -145,7 +131,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_UIManager.Begin(L"Scene Settings");
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
-
 
 	gfx::utils::ClearRTV(commandList, rtvHandle, clearColor);
 	gfx::utils::ClearDepthBuffer(commandList, dsvHandle);
@@ -173,16 +158,16 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	m_LightSource.Draw(commandList);
 
-	// Draw sphere (for PBR Test).
+	// Draw PBR materials.
 	m_Materials[L"PBRMaterial"].BindPSO(commandList);
 
 	PBRRenderResources pbrRenderResources
 	{
-		.positionBufferIndex = m_DamagedHelmet.GetPositionBufferIndex(),
-		.textureBufferIndex = m_DamagedHelmet.GetTextureCoordsBufferIndex(),
-		.normalBufferIndex = m_DamagedHelmet.GetNormalBufferIndex(),
-		.tangetBufferIndex = m_DamagedHelmet.GetTangentBufferIndex(),
-		.mvpCBufferIndex = m_DamagedHelmet.GetTransformCBufferIndex(),
+		.positionBufferIndex = m_SciFiHelmet.GetPositionBufferIndex(),
+		.textureBufferIndex = m_SciFiHelmet.GetTextureCoordsBufferIndex(),
+		.normalBufferIndex = m_SciFiHelmet.GetNormalBufferIndex(),
+		.tangetBufferIndex = m_SciFiHelmet.GetTangentBufferIndex(),
+		.mvpCBufferIndex = m_SciFiHelmet.GetTransformCBufferIndex(),
 		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
 		.lightCBufferIndex = m_LightData.GetBufferIndex(),
 		.albedoTextureIndex = m_Textures[L"SciFiHelmetAlbedo"].GetTextureIndex(),
@@ -197,39 +182,31 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &pbrRenderResources, 0u);
 
-	m_DamagedHelmet.Draw(commandList);
-
-#if 0
-	m_Materials[L"DefaultMaterial"].Bind(commandList);
-
-	commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
+	m_SciFiHelmet.Draw(commandList);
 
 
-	TestRenderResources testRenderResource{};
-
-	for (auto& [objectName, gameObject] : m_GameObjects)
+	pbrRenderResources = 
 	{
-		auto textureIndex = gameObject.GetTextureIndex();
-		if (textureIndex == -1)
-		{
-			textureIndex = m_Textures[L"TestTexture"].GetTextureIndex();
-		}
+		.positionBufferIndex = m_Spheres.GetPositionBufferIndex(),
+		.textureBufferIndex = m_Spheres.GetTextureCoordsBufferIndex(),
+		.normalBufferIndex = m_Spheres.GetNormalBufferIndex(),
+		.tangetBufferIndex = m_Spheres.GetTangentBufferIndex(),
+		.mvpCBufferIndex = m_Spheres.GetTransformCBufferIndex(),
+		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
+		.lightCBufferIndex = m_LightData.GetBufferIndex(),
+		.albedoTextureIndex = m_Textures[L"SphereAlbedoTexture"].GetTextureIndex(),
+		.metalRoughnessTextureIndex = m_Textures[L"SphereMetalRoughTexture"].GetTextureIndex(),
+		.emissiveTextureIndex = m_Textures[L"SciFiHelmetEmissive"].GetTextureIndex(),
+		.normalTextureIndex = -0u,
+		.aoTextureIndex = 0u,
+		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
+		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
+		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
+	};
 
-		testRenderResource =
-		{
-			.positionBufferIndex = gameObject.GetPositionBufferIndex(),
-			.textureBufferIndex = gameObject.GetTextureCoordsBufferIndex(),
-			.normalBufferIndex = gameObject.GetNormalBufferIndex(),
-			.mvpCBufferIndex = gameObject.GetTransformCBufferIndex(),
-			.lightCBufferIndex = m_LightData.GetBufferIndex(),
-			.textureIndex = textureIndex,
-		};
+	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &pbrRenderResources, 0u);
 
-		commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &testRenderResource, 0u);
-		gameObject.Draw(commandList);
-	}
-
-#endif
+	m_Spheres.Draw(commandList);
 
 	// Draw sky box
 	m_Materials[L"SkyBoxMaterial"].BindPSO(commandList);
@@ -306,6 +283,8 @@ void SandBox::InitRendererCore()
 		.MinDepth = 0.0f,
 		.MaxDepth = 1.0f
 	};
+	
+	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 }
 
 void SandBox::LoadContent()
@@ -318,7 +297,6 @@ void SandBox::LoadContent()
 	LoadModels(commandList.Get());
 	LoadRenderTargets(commandList.Get());
 
-	m_UIManager.Init(m_Device.Get(), NUMBER_OF_FRAMES, m_SRV_CBV_UAV_Descriptor);
 
 	// Close command list and execute it (for the initial setup).
 	m_FrameFenceValues[m_CurrentBackBufferIndex] =  m_CommandQueue.ExecuteCommandList(commandList.Get());
@@ -352,11 +330,11 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 	m_Textures[L"SphereAlbedoTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/MetalRoughSpheres/glTF/Spheres_BaseColor.png", 1u, true}, L"Sphere Base Color Texture");
 	m_Textures[L"SphereMetalRoughTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Models/MetalRoughSpheres/glTF/Spheres_MetalRough.png", 1u, true }, L"Sphere Roughness Metallic Texture");
 
-	m_Textures[L"SciFiHelmetAlbedo"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_BaseColor.png", 1u, true }, L"Damaged Helmet Albedo");
-	m_Textures[L"SciFiHelmetAO"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_AmbientOcclusion.png", 1u, false}, L"Damaged Helmet AO");
-	m_Textures[L"SciFiHelmetEmissive"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg", 1u, true}, L"Damaged Helmet Emmisive");
-	m_Textures[L"SciFiHelmetMetalRoughness"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_MetallicRoughness.png", 1u, false}, L"Damaged Helmet Metal Roughness");
-	m_Textures[L"SciFiHelmetNormal"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_Normal.png", 1u, false}, L"Damaged Helmet Normal");
+	m_Textures[L"SciFiHelmetAlbedo"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{ L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_BaseColor.png", 1u, true }, L"-SciFi Helmet Albedo");
+	m_Textures[L"SciFiHelmetAO"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_AmbientOcclusion.png", 1u, false}, L"SciFi Helmet AO");
+	m_Textures[L"SciFiHelmetEmissive"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/DamagedHelmet/glTF/Default_emissive.jpg", 1u, true}, L"SciFi Helmet Emmisive");
+	m_Textures[L"SciFiHelmetMetalRoughness"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_MetallicRoughness.png", 1u, false}, L"SciFi Helmet Metal Roughness");
+	m_Textures[L"SciFiHelmetNormal"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::NonHDRTextureData{L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet_Normal.png", 1u, false}, L"SciFi Helmet Normal");
 
 	m_Textures[L"EquirectEnvironmentTexture"].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::HDRTextureData{ L"Assets/Textures/Environment.hdr", 1u, DXGI_FORMAT_R32G32B32A32_FLOAT }, L"Environment Equirect Texture");
 
@@ -365,7 +343,7 @@ void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
 	
 	m_PreFilterMapTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{ PREFILTER_TEXTURE_DIMENSION, PREFILTER_TEXTURE_DIMENSION, 6u, 6u, DXGI_FORMAT_R16G16B16A16_FLOAT }, L"Prefilter Specular Texture Map");
 
-	m_BRDFConvolutionTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{BRDF_CONVOLUTION_TEXTURE_DIMENSION, BRDF_CONVOLUTION_TEXTURE_DIMENSION, 1u, 01, DXGI_FORMAT_R16G16_FLOAT}, L"BRDF Convolution Texture");
+	m_BRDFConvolutionTexture.Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::UAVTextureData{BRDF_CONVOLUTION_TEXTURE_DIMENSION, BRDF_CONVOLUTION_TEXTURE_DIMENSION, 1u, 1u, DXGI_FORMAT_R16G16_FLOAT}, L"BRDF Convolution Texture");
 }
 
 void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
@@ -382,7 +360,8 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Light Source");
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
-	m_DamagedHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
+	m_Spheres.Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
+	m_SciFiHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList, MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
 	m_LightData.Init(m_Device.Get(), commandList, LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");
@@ -456,8 +435,6 @@ void SandBox::LoadCubeMaps()
 		commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &cubeMapConvolutionRenderResources, 0u);
 
 		commandList->Dispatch(CONVOLUTED_TEXTURE_DIMENSION / 32u, CONVOLUTED_TEXTURE_DIMENSION / 32u, 6u);
-
-		// Run compute shader to pre filter environment cube map.
 
 		gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
 

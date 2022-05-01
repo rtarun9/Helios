@@ -6,8 +6,7 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
     float3 normal : NORMAL;
     float4 tangent : TANGENT;
-    float4 worldSpacePosition : WORLD_SPACE_POSITION;
-    float3x3 TBN : TBN_MATRIX;
+    float3 worldSpacePosition : WORLD_SPACE_POSITION;
     float3x3 modelMatrix : MODEL_MATRIX;
 };
 
@@ -15,7 +14,8 @@ struct TransformData
 {
     matrix modelMatrix;
     matrix inverseModelMatrix;
-    matrix projectionViewMatrix;
+    matrix viewMatrix;
+    matrix projectionMatrix;
 };
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);
@@ -30,25 +30,16 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     
     ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
 
-    matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
+    matrix mvpMatrix = mul(mul(mvpCBuffer.modelMatrix, mvpCBuffer.viewMatrix), mvpCBuffer.projectionMatrix);
 
     
     VSOutput output;
-    output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));
+    output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
     output.texCoord = textureCoordsBuffer[vertexID];
     output.normal = normalBuffer[vertexID];
     output.tangent = tangetBuffer[vertexID];
-    output.worldSpacePosition = mul(mvpCBuffer.modelMatrix, float4(positionBuffer[vertexID], 1.0f));
-
-    float3 normal = normalize(normalBuffer[vertexID].xyz);
-    float3 tangent = normalize(tangetBuffer[vertexID].xyz);
-    float3 biTangent = normalize(tangetBuffer[vertexID].xyz);
-    float3 T = normalize(tangent);
-    float3 B = normalize(biTangent);
-    float3 N = normalize(normal);
-    
-    output.TBN = float3x3(N, B, T);
+    output.worldSpacePosition = mul(positionBuffer[vertexID], (float3x3) mvpCBuffer.modelMatrix);
    
-    output.modelMatrix = (float3x3) mvpCBuffer.modelMatrix;
+    output.modelMatrix = (float3x3) (mvpCBuffer.modelMatrix);
     return output;
 }

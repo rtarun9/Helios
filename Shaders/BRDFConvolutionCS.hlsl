@@ -6,7 +6,7 @@ ConstantBuffer<BRDFConvolutionRenderResources> renderResources : register(b0);
 
 static const float PI = 3.14159265359;
 
-static const float NUM_SAMPLES = 2048.0f;
+static const float NUM_SAMPLES = 1024.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
 struct LUTCBuffer
@@ -67,10 +67,10 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     float textureWidth, textureHeight;
     lutTexture.GetDimensions(textureWidth, textureHeight);
     
-    float cosLO = threadID.x / textureWidth;
-    float roughness = threadID.y / textureHeight;
+    float cosLO = (threadID.x + 1) / textureWidth;
+    float roughness = (threadID.y + 1) / textureHeight;
     
-    cosLO = max(cosLO, 0.001f);
+    cosLO = max(cosLO, 0.00001f);
     
     float3 LO = float3(sqrt(1.0f - cosLO * cosLO), 0.0f, cosLO);
     
@@ -87,8 +87,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
 		// Compute incident direction (Li) by reflecting viewing direction (Lo) around half-vector (Lh).
         float3 Li = 2.0 * dot(LO, Lh) * Lh - LO;
 
-        float cosLi = Li.z;
-        float cosLh = Lh.z;
+        float cosLi = max(Li.z, 0.0f);
+        float cosLh = max(Lh.z, 0.0f);
         float cosLoLh = max(dot(LO, Lh), 0.0);
 
         if (cosLi > 0.0)
@@ -103,5 +103,4 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     }
     
     lutTexture[threadID.xy] = float2(DFG1, DFG2) * INV_NUM_SAMPLES;
-
 }
