@@ -16,6 +16,17 @@ namespace helios::gfx
 			{
 				NonHDRTextureData data = std::get<NonHDRTextureData>(textureData);
 				
+				if (s_LoadedTextues.find(data.texturePath.data()) != s_LoadedTextues.end())
+				{
+					Texture texture = s_LoadedTextues[data.texturePath.data()];
+					texture.GetTextureResource()->SetName(textureName.data());
+					std::wstring intermediateBufferName{ textureName.data() + std::wstring(L" Intermediate Buffer") };
+					texture.GetIntermediateTextureResource()->SetName(intermediateBufferName.c_str());
+
+					*this = texture;
+					return;
+				}
+
 				stbi_set_flip_vertically_on_load(true);
 
 				int componentCount{};
@@ -94,12 +105,27 @@ namespace helios::gfx
 				m_UAVIndicesInDescriptorHeap.reserve(0u);
 
 				m_TextureData = data;
+
+
+				s_LoadedTextues[data.texturePath.data()] = *this;
 			}
 			break;
 
 			case EnumClassValue(TextureTypes::HDRTextureData):
 			{
 				HDRTextureData data = std::get<HDRTextureData>(textureData);
+
+				if (s_LoadedTextues.find(data.texturePath.data()) != s_LoadedTextues.end())
+				{
+					Texture texture = s_LoadedTextues[data.texturePath.data()];
+					texture.GetTextureResource()->SetName(textureName.data());
+					std::wstring intermediateBufferName{ textureName.data() + std::wstring(L" Intermediate Buffer") };
+					texture.GetIntermediateTextureResource()->SetName(intermediateBufferName.c_str());
+
+					*this = texture;
+					return;
+				}
+
 				stbi_set_flip_vertically_on_load(true);
 
 				int componentCount{};
@@ -171,6 +197,8 @@ namespace helios::gfx
 				srvUavDescriptor.OffsetCurrentHandle();
 
 				m_TextureData = data;
+
+				s_LoadedTextues[data.texturePath.data()] = *this;
 			}
 			break;
 

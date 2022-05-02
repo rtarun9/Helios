@@ -1,4 +1,5 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
@@ -6,13 +7,6 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
     float3 normal : NORMAL;
     float4 worldSpacePosition : WORLD_SPACE_POSITION;
-};
-
-struct TransformData
-{
-    matrix modelMatrix;
-    matrix inverseModelMatrix;
-    matrix projectionViewMatrix;
 };
 
 ConstantBuffer<TestRenderResources> renderResource : register(b0);
@@ -26,7 +20,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 
     ConstantBuffer<TransformData> mvpCBuffer = ResourceDescriptorHeap[renderResource.mvpCBufferIndex];
     
-    matrix mvpMatrix = mul(mvpCBuffer.projectionViewMatrix, mvpCBuffer.modelMatrix);
+    matrix mvpMatrix = mul(mvpCBuffer.projectionMatrix, mvpCBuffer.modelMatrix);
 
     VSOutput output;
     output.position = mul(mvpMatrix, float4(positionBuffer[vertexID], 1.0f));

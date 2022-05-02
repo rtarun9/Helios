@@ -9,11 +9,6 @@ static const float PI = 3.14159265359;
 static const float NUM_SAMPLES = 1024.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
-struct LUTCBuffer
-{
-    float lutIndex;
-};
-
 // Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
 float VanDerCorputRadicalInverse(uint bits)
 {

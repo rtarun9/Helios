@@ -1,16 +1,10 @@
 #include "BindlessRS.hlsli"
 
+#include "ConstantBuffers.hlsli"
+
 struct VSOutput
 {
     float4 position : SV_Position;
-};
-
-struct TransformData
-{
-    matrix modelMatrix;
-    matrix inverseModelMatrix;
-    matrix viewMatrix;
-    matrix projectionMatrix;
 };
 
 ConstantBuffer<LightRenderResources> renderResource : register(b0);
@@ -27,5 +21,6 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
 
+ 
     return output;
 }

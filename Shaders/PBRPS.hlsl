@@ -1,4 +1,5 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
@@ -8,21 +9,6 @@ struct VSOutput
     float4 tangent : TANGENT;
     float3 worldSpacePosition : WORLD_SPACE_POSITION;
     float3x3 modelMatrix : MODEL_MATRIX;
-};
-
-struct LightingData
-{
-    float4 lightPosition;
-    float4 cameraPosition;
-};
-
-struct MaterialData
-{
-    float3 albedo;
-    float metallicFactor;
-    float roughnessFactor;
-    float ao;
-    float2 padding;
 };
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);

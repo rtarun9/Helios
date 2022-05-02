@@ -48,6 +48,7 @@ namespace helios::gfx
 		void CreateUAV(ID3D12Device* device, Descriptor& descriptor, uint32_t level);
 
 		ID3D12Resource* const GetTextureResource() const { return m_Texture.Get(); }
+		ID3D12Resource* const GetIntermediateTextureResource() const { return m_TextureUploadHeap.Get(); }
 
 		uint32_t GetTextureIndex() const { return m_TextureIndexInDescriptorHeap; };
 		uint32_t GetUAVIndex(uint32_t level = 0u) const { return m_UAVIndicesInDescriptorHeap.at(level); }
@@ -66,6 +67,9 @@ namespace helios::gfx
 
 		uint32_t m_TextureIndexInDescriptorHeap{};
 		std::vector<uint32_t> m_UAVIndicesInDescriptorHeap{};
+
+		// Holds all the textures loaded in (key : texture path). If texture has already been loaded, it need not go through loading process again.
+		static inline std::map<std::wstring, Texture> s_LoadedTextues{};
 	};
 }
 

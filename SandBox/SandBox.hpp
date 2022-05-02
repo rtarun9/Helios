@@ -2,27 +2,11 @@
 
 #include "Helios.hpp"
 
+// File with all constant buffer structs shared between C++ and HLSL.
+#include "ConstantBuffers.hlsli"
+
 class SandBox : public helios::Engine
 {
-	struct alignas(256) MaterialData
-	{
-		DirectX::XMFLOAT3 albedo{};
-		float metallicFactor{};
-		float roughnessFactor{};
-		float ao{};
-	};
-
-	struct alignas(256) LightingData
-	{
-		dx::XMFLOAT4 lightPosition;
-		dx::XMVECTOR cameraPosition;
-	};
-
-	struct alignas(256) RenderTargetSettingsData
-	{
-		float exposure{};
-	};
-
 	// Number of 32 bit root constants
 	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
 
@@ -137,5 +121,5 @@ private:
 
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
-	helios::gfx::ConstantBuffer<RenderTargetSettingsData> m_RenderTargetSettingsData{};
+	helios::gfx::ConstantBuffer<RenderTargetSettings> m_RenderTargetSettingsData{};
 };

@@ -1,3 +1,6 @@
+#ifndef __BINDLESS_RS_HLSLI__
+#define __BINDLESS_RS_HLSLI__
+
 #ifndef __cplusplus
 
 #define BindlessRootSignature           \
@@ -7,14 +10,22 @@
     "StaticSampler(s1, filter = FILTER_MIN_MAG_MIP_POINT, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP)," \
     "StaticSampler(s2, filter = FILTER_MIN_MAG_MIP_LINEAR, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP), " \
     "StaticSampler(s3, filter = FILTER_MIN_MAG_MIP_LINEAR, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP), " \
-    "StaticSampler(s4, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)"
+    "StaticSampler(s4, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP)," \
+    "StaticSampler(s5, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP)," \
+    "StaticSampler(s6, filter = FILTER_MIN_MAG_POINT_MIP_LINEAR, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP), " \
+    "StaticSampler(s7, filter = FILTER_MIN_MAG_POINT_MIP_LINEAR, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP), " \
+    "StaticSampler(s8, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)"
 
 // Samplers
 SamplerState pointClampSampler : register(s0);
 SamplerState pointWrapSampler : register(s1);
 SamplerState linearWrapSampler : register(s2);
 SamplerState linearClampSampler: register(s3);
-SamplerState anisotropicSampler : register(s4);
+SamplerState minMapLinearMipPointClampSampler : register(s4);
+SamplerState minMapLinearMipPointWrapSampler : register(s5);
+SamplerState minMapPointMipLinearClampSampler : register(s6);
+SamplerState minMapPointMipLinearWrapSampler : register(s7);
+SamplerState anisotropicSampler : register(s8);
 
 #else // ifdef __cplusplus
 #define uint uint32_t
@@ -100,3 +111,5 @@ struct BRDFConvolutionRenderResources
 {
     uint lutTextureIndex;
 };
+
+#endif

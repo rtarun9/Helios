@@ -1,17 +1,10 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
     float4 modelSpacePosition : POSITION;
-};
-
-struct TransformData
-{
-    matrix modelMatrix;
-    matrix inverseModelMatrix;
-    matrix viewMatrix;
-    matrix projectionMatrix;
 };
 
 ConstantBuffer<SkyBoxRenderResources> renderResource : register(b0);

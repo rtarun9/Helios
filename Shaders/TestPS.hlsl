@@ -1,4 +1,5 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
@@ -10,11 +11,6 @@ struct VSOutput
 
 ConstantBuffer<TestRenderResources> renderResource : register(b0);
 
-struct LightingData
-{
-    float4 lightPosition;
-    float4 cameraPosition;
-};
 
 float4 PsMain(VSOutput input) : SV_Target
 {

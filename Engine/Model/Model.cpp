@@ -1,7 +1,8 @@
 #include "Pch.hpp"
 
-#include "Model.hpp"
 #include "Core/UIManager.hpp"
+
+#include "Graphics/Texture.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
@@ -9,6 +10,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "tiny_gltf.h"
+
+#include "Model.hpp"
 
 // Some operator overloads are in the namespace, hence declaring it in global namespace here.
 using namespace DirectX;
@@ -19,29 +22,71 @@ namespace helios
 	{
 		m_ModelName = modelName.data();
 
-        auto modelPathStr = WstringToString(modelPath);
+		std::string modelPathStr = WstringToString(modelPath);
+		std::string modelDirectoryPathStr = modelPathStr.substr(0, modelPathStr.find_last_of(L'/') + 1);
 
-        std::string warning{};
-        std::string error{};
+		std::string warning{};
+		std::string error{};
 
-        tinygltf::TinyGLTF context{};
+		tinygltf::TinyGLTF context{};
 
 		tinygltf::Model model{};
 
-        if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
-        {
-            if (!error.empty())
-            {
+		if (s_LoadedGLTFModels.find(modelPath.data()) != s_LoadedGLTFModels.end())
+		{
+			Model model = s_LoadedGLTFModels[modelPath.data()];
+
+			m_PositionBuffer = model.GetPositionStructuredBuffer();
+			std::wstring positionBufferName = m_ModelName + L" Position Buffer";
+			m_PositionBuffer.GetResource()->SetName(positionBufferName.c_str());
+
+			m_NormalBuffer = model.GetNormalStructuredBuffer();
+			std::wstring normalBufferName = m_ModelName + L" Normal Buffer";
+			m_NormalBuffer.GetResource()->SetName(normalBufferName.c_str());
+
+			m_TextureCoordsBuffer = model.GetTextureStructuredBuffer();
+			std::wstring textureBufferName = m_ModelName + L" Texture Buffer";
+			m_TextureCoordsBuffer.GetResource()->SetName(textureBufferName.c_str());
+
+			m_TangentBuffer = model.GetTangentStructuredBuffer();
+			std::wstring tangentBufferName = m_ModelName + L" Tangent Buffer";
+			m_TangentBuffer.GetResource()->SetName(tangentBufferName.c_str());
+
+			m_IndicesCount = static_cast<uint32_t>(model.GetIndicesCount());
+			
+			m_IndexBuffer = model.GetIndexBuffer();
+
+			m_TransformConstantBuffer.Init(device, commandList, TransformData{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity() },
+				srvCbDescriptor, m_ModelName + L" Transform CBuffer");
+
+			m_TextureIndex = textureIndex;
+
+			m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
+
+			m_TransformData =
+			{
+				.rotation = dx::XMFLOAT3(0.0f, 0.0f, 0.0f),
+				.scale = dx::XMFLOAT3(1.0f, 1.0f, 1.0f),
+				.translate = dx::XMFLOAT3(0.0f, 0.0f, 0.0f)
+			};
+
+			return;
+		}
+
+		if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
+		{
+			if (!error.empty())
+			{
 				ErrorMessage(StringToWString(error));
-            }
+			}
 
-            if (!warning.empty())
-            {
+			if (!warning.empty())
+			{
 				ErrorMessage(StringToWString(warning));
-            }
-        }
+			}
+		}
 
-        // Build meshes.
+		// Build meshes.
 
 		std::vector<dx::XMFLOAT3> modelPositions{};
 		std::vector<dx::XMFLOAT2> modelTextureCoords{};
@@ -50,28 +95,31 @@ namespace helios
 
 		std::vector<uint32_t> indices{};
 
+		std::vector<std::wstring> albedoTexturePaths{};
+		std::vector<std::wstring> normalTexturePaths{};
+
 		tinygltf::Scene& scene = model.scenes[model.defaultScene];
 
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
-			tinygltf::Node& node = model.nodes[scene.nodes[i]]; 
+			tinygltf::Node& node = model.nodes[scene.nodes[i]];
 			if (node.mesh < 0)
 			{
 				node.mesh = 0;
 			}
 
-			tinygltf::Mesh& node_mesh = model.meshes[node.mesh];
-			for (size_t i = 0; i < node_mesh.primitives.size(); ++i)
+			tinygltf::Mesh& nodeMesh = model.meshes[node.mesh];
+			for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 			{
 				// Get Accesor, buffer view and buffer for each attribute (position, textureCoord, normal).
-				tinygltf::Primitive primitive = node_mesh.primitives[i];
+				tinygltf::Primitive primitive = nodeMesh.primitives[i];
 				tinygltf::Accessor& indexAccesor = model.accessors[primitive.indices];
 
 				// Position data.
 				tinygltf::Accessor& positionAccesor = model.accessors[primitive.attributes["POSITION"]];
-				tinygltf::BufferView& positionBufferView= model.bufferViews[positionAccesor.bufferView];
+				tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccesor.bufferView];
 				tinygltf::Buffer& positionBuffer = model.buffers[positionBufferView.buffer];
-				
+
 				int positionByteStride = positionAccesor.ByteStride(positionBufferView);
 				uint8_t const* const positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
 
@@ -144,6 +192,25 @@ namespace helios
 						indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
 					}
 				}
+
+				// Load material. (NOTE : Not complete implementation, but basic framework).
+				tinygltf::Material gltfPBRMaterial = model.materials[primitive.material];
+
+				if (gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0)
+				{
+					tinygltf::Texture& albedoTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index];
+					tinygltf::Image& albedoImage = model.images[albedoTexture.source];
+
+					albedoTexturePaths.push_back(StringToWString(modelDirectoryPathStr + albedoImage.uri));
+				}
+
+				if (gltfPBRMaterial.normalTexture.index >= 0)
+				{
+					tinygltf::Texture& normalTexture = model.textures[gltfPBRMaterial.normalTexture.index];
+					tinygltf::Image& normalImage = model.images[normalTexture.source];
+
+					normalTexturePaths.push_back(StringToWString(modelDirectoryPathStr + normalImage.uri));
+				}
 			}
 		}
 
@@ -155,12 +222,21 @@ namespace helios
 		m_IndicesCount = static_cast<uint32_t>(indices.size());
 
 		m_IndexBuffer.Init(device, commandList, indices, L"Index Buffer");
-		m_TransformConstantBuffer.Init(device, commandList, Transform{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity()},
+		m_TransformConstantBuffer.Init(device, commandList, TransformData{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity()},
 			srvCbDescriptor, m_ModelName + L" Transform CBuffer");
 
 		m_TextureIndex = textureIndex;
 
 		m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
+
+		m_TransformData =
+		{
+			.rotation = dx::XMFLOAT3(0.0f, 0.0f, 0.0f),
+			.scale = dx::XMFLOAT3(1.0f, 1.0f, 1.0f),
+			.translate = dx::XMFLOAT3(0.0f, 0.0f, 0.0f)
+		};
+
+		s_LoadedGLTFModels[modelPath.data()] = *this;
 	}
 	
 	void Model::UpdateData()

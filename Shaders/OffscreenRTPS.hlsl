@@ -1,4 +1,5 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
@@ -9,11 +10,6 @@ struct VSOutput
 ConstantBuffer<RenderTargetRenderResources> renderResource : register(b0);
 
 static const float GAMMA_CORRECTION = 0.454545455f;
-
-struct RenderTargetSettings
-{
-    float exposure;
-};
 
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
