@@ -179,14 +179,13 @@ float4 PsMain(VSOutput input) : SV_Target
     uint specularTextureWidth, specularTextureHeight, levels;
     specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
 
-    float3 specularIrradiance = specularIrradianceMap.SampleLevel(pointClampSampler, LR, roughnessFactor * 5.0f ).rgb;
+    float3 specularIrradiance = specularIrradianceMap.SampleLevel(linearClampSampler, LR, roughnessFactor * 5.0f ).rgb;
     
     float2 specularBRDFLUT = specularBRDF.Sample(anisotropicSampler, float2(cosLO, roughnessFactor), 0.0f).rg;
 
     float3 specularIBL = specularIrradiance * (F0 * specularBRDFLUT.x + specularBRDFLUT.y);
     
     float3 outgoingLight = (specularIBL + diffuseIBL * kD) * ao;
-
     
     return float4(outgoingLight, 1.0f);
 }   

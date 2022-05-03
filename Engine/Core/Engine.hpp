@@ -16,6 +16,9 @@ namespace helios
 	class Engine
 	{
 	public:
+		// Number of 32 bit root constants
+		static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
+
 		Engine(Config& config);
 		virtual ~Engine() = default;
 

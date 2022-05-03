@@ -56,7 +56,7 @@ namespace helios
 
 		// Movement speed is for WASD
 		// Rotation speed is for orientation
-		float m_MovementSpeed{ 50.0f };
+		float m_MovementSpeed{ 150.0f };
 		float m_RotationSpeed{ 0.05f };
 
 		float m_Yaw{ 0.0f };

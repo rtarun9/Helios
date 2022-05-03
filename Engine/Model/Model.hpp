@@ -9,6 +9,11 @@
 #include "Graphics/Texture.hpp"
 
 #include "ConstantBuffers.hlsli"
+#include "BindlessRS.hlsli"
+
+#define TINYGLTF_USE_CPP14
+#define TINYGLTF_NO_EXTERNAL_IMAGE
+#include "tiny_gltf.h"
 
 namespace helios
 {
@@ -19,59 +24,56 @@ namespace helios
 		DirectX::XMFLOAT3 translate{0.0f, 0.0f, 0.0f};
 	};
 
+	// Note : The PBRMaterial struct does not need to hold textures at all : It can be just indices.
+	// However, since there is no 'resource mananger' abstraction yet, this is done (as the textures need to exist until command list execution is done).
+	struct PBRMaterial
+	{
+		gfx::Texture albedoTexture{};
+		gfx::Texture normalTexture{};
+		gfx::Texture metalRoughnessTexture{};
+		gfx::Texture aoTexture{};
+	};
+
+	struct Mesh
+	{
+		gfx::StructuredBuffer<DirectX::XMFLOAT3> positionBuffer{};
+		gfx::StructuredBuffer<DirectX::XMFLOAT2> textureCoordsBuffer{};
+		gfx::StructuredBuffer<DirectX::XMFLOAT3> normalBuffer{};
+		gfx::StructuredBuffer<DirectX::XMFLOAT4> tangentBuffer{};
+
+		gfx::IndexBuffer indexBuffer{};
+		uint32_t indicesCount{};
+
+		PBRMaterial pbrMaterial{};
+	};
+
 	// Model class uses tinygltf for loading GLTF models.
-	// If a non - pbr model is to be loaded, an optional 'textureIndex' can be specified, that is the texture index of the base color of the model. This will eventually be removed in the future when all materials are PBR.
 	class Model
 	{
 	public:
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::wstring_view modelPath, gfx::Descriptor& cbDescriptor, std::wstring_view modelName, uint32_t textureIndex = -1);
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::wstring_view modelPath, gfx::Descriptor& srvCbDescriptor, std::wstring_view modelName);
 
-		ID3D12Resource* const GetPositionBuffer() const { return m_PositionBuffer.GetResource(); }
-		ID3D12Resource* const GetTextureCoordsBuffer() const { return m_TextureCoordsBuffer.GetResource(); };
-		ID3D12Resource* const GetNormalBuffer() const { return m_NormalBuffer.GetResource(); };
-		ID3D12Resource* const GetTangetBuffer() const { return m_TangentBuffer.GetResource(); };
-		ID3D12Resource* const GetTransformBuffer() const { return m_TransformConstantBuffer.GetResource(); }
-
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> GetPositionStructuredBuffer() const { return m_PositionBuffer; };
-		gfx::StructuredBuffer<DirectX::XMFLOAT2> GetTextureStructuredBuffer() const { return m_TextureCoordsBuffer; };
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> GetNormalStructuredBuffer() const { return m_NormalBuffer; };
-		gfx::StructuredBuffer<DirectX::XMFLOAT4> GetTangentStructuredBuffer() const { return m_TangentBuffer; };
-		gfx::IndexBuffer GetIndexBuffer() const { return m_IndexBuffer; };
-
-		uint32_t GetPositionBufferIndex() const { return m_PositionBuffer.GetSRVIndex(); };
-		uint32_t GetTextureCoordsBufferIndex() const { return m_TextureCoordsBuffer.GetSRVIndex(); };
-		uint32_t GetNormalBufferIndex() const { return m_NormalBuffer.GetSRVIndex(); };
-		uint32_t GetTangentBufferIndex() const { return m_TangentBuffer.GetSRVIndex(); };
-
-		uint32_t GetIndicesCount() const { return m_IndicesCount; }
+		std::vector<Mesh> GetMeshes() const { return m_Meshes; }
 
 		uint32_t GetTransformCBufferIndex() const { return m_TransformCBufferIndexInDescriptorHeap; }
-
-		uint32_t GetTextureIndex() const { return m_TextureIndex; };
 
 		TransformComponent& GetTransform() { return m_TransformData; };
 
 		void UpdateData();
 		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix);
 
-		void Draw(ID3D12GraphicsCommandList* const commandList);
+		void Draw(ID3D12GraphicsCommandList* const commandList, PBRRenderResources& renderResources);
+		void Draw(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources);
+		void Draw(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources);
 
 	private:
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> m_PositionBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT2> m_TextureCoordsBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> m_NormalBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT4> m_TangentBuffer{};
-
-		gfx::IndexBuffer m_IndexBuffer{};
+		void LoadNode(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::string_view modelDirectoryPathStr, gfx::Descriptor& srvCbDescriptor, uint32_t nodeIndex, tinygltf::Model& model);
+	
+	private:
+		std::vector<Mesh> m_Meshes{};
 		gfx::ConstantBuffer<TransformData> m_TransformConstantBuffer{};
 
-		uint32_t m_IndicesCount{};
-
 		TransformComponent m_TransformData{};
-
-		// Note : Currently only used for non - PBR Models.
-		uint32_t m_TextureIndex{};
-
 		uint32_t m_TransformCBufferIndexInDescriptorHeap{};
 
 		std::wstring m_ModelName{};

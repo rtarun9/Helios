@@ -7,9 +7,6 @@
 
 class SandBox : public helios::Engine
 {
-	// Number of 32 bit root constants
-	static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
-
 public:
 	SandBox(helios::Config& config);
 
@@ -47,7 +44,7 @@ private:
 private:
 	// Number of SwapChain backbuffers.
 	static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
-	
+
 	// Dimension of various textures.
 	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 1024u;
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 128u;
@@ -91,7 +88,6 @@ private:
 	// Application Data.
 	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
-	std::map<std::wstring_view, helios::Model> m_GameObjects{};
 
 	helios::Model m_SciFiHelmet{};
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};

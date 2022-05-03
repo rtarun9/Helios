@@ -20,7 +20,6 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-
- 
+    
     return output;
 }
