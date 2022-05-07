@@ -7,7 +7,7 @@ struct VSOutput
     float2 texCoord : TEXCOORD;
     float3 normal : NORMAL;
     float4 tangent : TANGENT;
-    float3 worldSpacePosition : WORLD_SPACE_POSITION;
+    float4 worldSpacePosition : WORLD_SPACE_POSITION;
     float3x3 modelMatrix : MODEL_MATRIX;
 };
 
@@ -30,8 +30,15 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
     output.texCoord = textureCoordsBuffer[vertexID];
     output.normal = normalBuffer[vertexID];
-    output.tangent = tangetBuffer[vertexID];
-    output.worldSpacePosition = mul(positionBuffer[vertexID], (float3x3) mvpCBuffer.modelMatrix);
+    
+    output.tangent = float4(0.0f, 0.0f, 0.0f, -1.0f);
+    
+    if (renderResource.tangetBufferIndex)
+    {
+        output.tangent = tangetBuffer[vertexID];
+    }
+
+    output.worldSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), mvpCBuffer.modelMatrix);
    
     output.modelMatrix = (float3x3) (mvpCBuffer.modelMatrix);
     return output;

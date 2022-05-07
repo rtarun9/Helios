@@ -32,6 +32,7 @@ namespace helios
 		gfx::Texture normalTexture{};
 		gfx::Texture metalRoughnessTexture{};
 		gfx::Texture aoTexture{};
+		gfx::Texture emissiveTexture{};
 	};
 
 	struct Mesh

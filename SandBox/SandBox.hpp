@@ -48,7 +48,7 @@ private:
 	// Dimension of various textures.
 	static constexpr uint32_t ENV_TEXTURE_DIMENSION = 1024u;
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 128u;
-	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 256u;
+	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 512u;
 	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 256u;
 
 	// Factory for GPU enumeration, SwapChain creation etc.
@@ -89,10 +89,11 @@ private:
 	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 
-	helios::Model m_SciFiHelmet{};
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
-
+	
+	helios::Model m_SciFiHelmet{};
 	helios::Model m_Spheres{};
+	helios::Model m_DamagedHelmet{};
 
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};

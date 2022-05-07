@@ -51,6 +51,7 @@ ConstantBufferStruct MaterialData
     float roughnessFactor;
     float ao;
     float2 padding;
+    float3 emissive;
 };
 
 #endif

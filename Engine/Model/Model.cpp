@@ -107,6 +107,7 @@ namespace helios
 			std::wstring normalTexturePath{};
 			std::wstring metalRoughnessTexturePath{};
 			std::wstring aoTexturePath{};
+			std::wstring emissiveTexturePath{};
 
 			// Get Accesor, buffer view and buffer for each attribute (position, textureCoord, normal).
 			tinygltf::Primitive primitive = nodeMesh.primitives[i];
@@ -225,6 +226,14 @@ namespace helios
 				aoTexturePath = StringToWString(modelDirectoryPathStr.data() + aoImage.uri);
 			}
 
+			if (gltfPBRMaterial.emissiveTexture.index >= 0)
+			{
+				tinygltf::Texture& emissiveTexture = model.textures[gltfPBRMaterial.emissiveTexture.index];
+				tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
+
+				emissiveTexturePath = StringToWString(modelDirectoryPathStr.data() + emissiveImage.uri);
+			}
+
 			const std::wstring meshNumber = std::to_wstring(i);
 			const std::wstring meshName = m_ModelName + L" Mesh " + std::wstring(meshNumber.c_str());
 
@@ -256,6 +265,11 @@ namespace helios
 			if (!aoTexturePath.empty())
 			{
 				mesh.pbrMaterial.aoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = aoTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" AO Texture");
+			}
+
+			if (!emissiveTexturePath.empty())
+			{
+				mesh.pbrMaterial.emissiveTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = emissiveTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Emissive Texture");
 			}
 
 			m_Meshes.push_back(mesh);
@@ -316,7 +330,8 @@ namespace helios
 			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTexture.GetTextureIndex();
 			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTexture.GetTextureIndex();
 			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTexture.GetTextureIndex();
-			
+			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTexture.GetTextureIndex();
+
 			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
 
 			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);

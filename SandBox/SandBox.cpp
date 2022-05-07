@@ -23,10 +23,6 @@ void SandBox::OnUpdate()
 
 	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
 	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
-	
-	m_LightSource.GetTransform().translate.x = 2.0f;
-	m_LightSource.GetTransform().translate.y = static_cast<float>(sin(Application::GetTimer().GetTotalTime() / 2.0f));
-	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
 
 	dx::XMStoreFloat4(&m_LightData.GetBufferData().cameraPosition, m_Camera.m_CameraPosition);
 	m_LightData.GetBufferData().lightPosition = { m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f };
@@ -115,7 +111,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_Spheres.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	m_SciFiHelmet.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	m_SkyBoxModel.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
-
+	m_DamagedHelmet.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 
 	// Set the necessary states
 
@@ -168,18 +164,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	};
 
 	m_SciFiHelmet.Draw(commandList, pbrRenderResources);
-
-	pbrRenderResources = 
-	{
-		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
-		.lightCBufferIndex = m_LightData.GetBufferIndex(),
-		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
-		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
-		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
-	};
-
 	m_Spheres.Draw(commandList, pbrRenderResources);
-
+	
 	// Draw sky box
 	m_Materials[L"SkyBoxMaterial"].BindPSO(commandList);
 
@@ -309,6 +295,9 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 
 	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/glTF/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Light Source");
 	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+
+	m_DamagedHelmet.Init(m_Device.Get(), commandList, L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"Damaged Helmet");
+	m_DamagedHelmet.GetTransform().translate = dx::XMFLOAT3(0.1f, 5.1f, 0.1f);
 
 	m_Spheres.Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
 	m_Spheres.GetTransform().translate = { 10.0f, 0.0f, 0.0f };
