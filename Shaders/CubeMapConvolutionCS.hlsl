@@ -1,9 +1,7 @@
 #include "BindlessRS.hlsli"
+#include "Utils.hlsli"
 
 ConstantBuffer<CubeMapConvolutionRenderResources> renderResources : register(b0);
-
-static const float PI = 3.14159265359;
-static const float MIN_FLOAT_VALUE = 0.00001f;
 
 static const float SAMPLES = 12500.0f;
 static const float INV_SAMPLES = 1.0f / SAMPLES;
@@ -39,44 +37,17 @@ float3 SampleHemisphere(float2 u)
 }
 
 [numthreads(32, 32, 1)]
-void CsMain(uint3 threadID : SV_DispatchThreadID)
+void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
-    TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
-    .textureCubeMapIndex];
-    
+    TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources.textureCubeMapIndex];
+        
     RWTexture2DArray<float4> outputIrradianceMap= ResourceDescriptorHeap[renderResources.outputIrradianceMapIndex];
     
     float textureWidth, textureHeight, textureDepth;
     outputIrradianceMap.GetDimensions(textureWidth, textureHeight, textureDepth);
     
-    float2 uv = threadID.xy / float2(textureWidth, textureHeight);
-    uv = 2.0f * float2(uv.x, 1.0f - uv.y) - float2(1.0f, 1.0f); 
-    
-    float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
-    
-    switch (threadID.z)
-    {
-        case 0:
-            samplingVector = float3(1.0, uv.y, -uv.x);
-            break;
-        case 1:
-            samplingVector = float3(-1.0, uv.y, uv.x);
-            break;
-        case 2:
-            samplingVector = float3(uv.x, 1.0, -uv.y);
-            break;
-        case 3:
-            samplingVector = float3(uv.x, -1.0, uv.y);
-            break;
-        case 4:
-            samplingVector = float3(uv.x, uv.y, 1.0);
-            break;
-        case 5:
-            samplingVector = float3(-uv.x, uv.y, -1.0);
-            break;
-    }
-    
-    samplingVector = normalize(samplingVector);
+    float2 pixelCoords = dispatchThreadID.xy / float2(textureWidth, textureHeight);
+    float3 samplingVector = GetSamplingVector(pixelCoords, dispatchThreadID);
    
     // Calculation of basis vectors for converting a vector from Shading / Tangent space to world space.
     float3 N = samplingVector;
@@ -92,11 +63,11 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         float2 u = SampleHammersleySequence(i);
         float3 Li = TangentToWorldCoords(SampleHemisphere(u), N, S, T);
         
-        float cosTheta = max(dot(Li, N), 0.0f);
+        float cosTheta = saturate(dot(Li, N));
         irradiance += 2.0f * textureCubeMap.SampleLevel(linearWrapSampler, Li, 0).rgb * cosTheta;
     }
 
     float4 result = float4(irradiance / SAMPLES, 0.0f); 
-    outputIrradianceMap[threadID] = result;
+    outputIrradianceMap[dispatchThreadID] = result;
 
 }

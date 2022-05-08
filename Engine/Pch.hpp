@@ -41,11 +41,13 @@
 #include <array>
 #include <utility>
 #include <span>
+#include <functional>
 #include <queue>
 #include <map>
 #include <type_traits>
 #include <stdexcept>
 #include <variant>
+#include <thread>
 
 #include "Core/Helpers.hpp"
 

@@ -60,6 +60,7 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
 	helios::gfx::CommandQueue m_CommandQueue{};
+	helios::gfx::CommandQueue m_ComputeCommandQueue{};
 
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NUMBER_OF_FRAMES> m_BackBuffers{};
 
@@ -88,12 +89,10 @@ private:
 	// Application Data.
 	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
+	std::map<std::wstring_view, helios::Model> m_PBRModels{};
 
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
 	
-	helios::Model m_SciFiHelmet{};
-	helios::Model m_Spheres{};
-	helios::Model m_DamagedHelmet{};
 
 	helios::Model m_LightSource{};
 	helios::gfx::ConstantBuffer<LightingData> m_LightData{};

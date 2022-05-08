@@ -1,10 +1,8 @@
 #include "BindlessRS.hlsli"
-
+#include "Utils.hlsli"
 // References : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/spmap.hlsl.
 
 ConstantBuffer<PreFilterCubeMapRenderResources> renderResources : register(b0);
-
-static const float PI = 3.14159265359;
 
 static const float NUM_SAMPLES = 1240.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
@@ -51,7 +49,7 @@ float NDFGGX(float cosLh, float roughness)
 }
 
 [numthreads(32, 32, 1)]
-void CsMain(uint3 threadID : SV_DispatchThreadID)
+void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
      TextureCube<float4> textureCubeMap = ResourceDescriptorHeap[renderResources
     .textureCubeMapIndex];
@@ -62,7 +60,7 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     outputPreFilterCubeMap.GetDimensions(textureWidth, textureHeight, textureDepth);
     
     // Check to make sure that when calculating for higher mip levels we dont write past the output texture.
-    if (threadID.x >= textureWidth || threadID.y >= textureHeight)
+    if (dispatchThreadID.x >= textureWidth || dispatchThreadID.y >= textureHeight)
     {
         return;
     }
@@ -72,34 +70,8 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
     
     float roughness = renderResources.mipLevel / 5.0f;
     
-    float2 uv = float2(threadID.xy) / float2(textureWidth, textureHeight);
-    uv = 2.0f * float2(uv.x, 1.0f - uv.y) - float2(1.0f, 1.0f);
-    
-    float3 samplingVector = float3(0.0f, 0.0f, 0.0f);
-    
-    switch (threadID.z)
-    {
-        case 0:
-            samplingVector = float3(1.0, uv.y, -uv.x);
-            break;
-        case 1:
-            samplingVector = float3(-1.0, uv.y, uv.x);
-            break;
-        case 2:
-            samplingVector = float3(uv.x, 1.0, -uv.y);
-            break;
-        case 3:
-            samplingVector = float3(uv.x, -1.0, uv.y);
-            break;
-        case 4:
-            samplingVector = float3(uv.x, uv.y, 1.0);
-            break;
-        case 5:
-            samplingVector = float3(-uv.x, uv.y, -1.0);
-            break;
-    }
-    
-    samplingVector = normalize(samplingVector);
+    float2 uv = float2(dispatchThreadID.xy) / float2(textureWidth, textureHeight);
+    float3 samplingVector = GetSamplingVector(uv, dispatchThreadID);
    
     // Solid angle that corresponds to cube map texel at mip level zero.
     float wt = 4.0f * PI / (6.0f * inputTextureWidth * inputTextureHeight);
@@ -144,6 +116,6 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         }
     }
     
-    outputPreFilterCubeMap[threadID] = float4(preFilteredColor / max(weight, 0.001f), 1.0f);
+    outputPreFilterCubeMap[dispatchThreadID] = float4(preFilteredColor / max(weight, 0.001f), 1.0f);
 
 }

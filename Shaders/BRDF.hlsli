@@ -53,7 +53,7 @@ float3 CookTorrenceBRDF(float3 normal, float3 viewDirection, float3 lightDirecti
 {
     float3 halfWayVector = normalize(lightDirection + viewDirection);
     
-    float3 f0 = lerp(BaseReflectivity, albedo, metallic);
+    float3 f0 = lerp(BASE_REFLECTIVITY, albedo, metallic);
     float hDotV = saturate(dot(halfWayVector, viewDirection));
     float nDotL = saturate(dot(normal, lightDirection));
     float nDotV = saturate(dot(normal, viewDirection));

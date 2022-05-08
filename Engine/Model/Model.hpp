@@ -28,11 +28,11 @@ namespace helios
 	// However, since there is no 'resource mananger' abstraction yet, this is done (as the textures need to exist until command list execution is done).
 	struct PBRMaterial
 	{
-		gfx::Texture albedoTexture{};
-		gfx::Texture normalTexture{};
-		gfx::Texture metalRoughnessTexture{};
-		gfx::Texture aoTexture{};
-		gfx::Texture emissiveTexture{};
+		uint32_t albedoTextureIndex{};
+		uint32_t normalTextureIndex{};
+		uint32_t metalRoughnessTextureIndex{};
+		uint32_t aoTextureIndex{};
+		uint32_t emissiveTextureIndex{};
 	};
 
 	struct Mesh
@@ -63,9 +63,8 @@ namespace helios
 		void UpdateData();
 		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix);
 
-		void Draw(ID3D12GraphicsCommandList* const commandList, PBRRenderResources& renderResources);
-		void Draw(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources);
-		void Draw(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources);
+		template <typename T>
+		void Draw(ID3D12GraphicsCommandList* const commandList, T& renderResources);
 
 	private:
 		void LoadNode(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::string_view modelDirectoryPathStr, gfx::Descriptor& srvCbDescriptor, uint32_t nodeIndex, tinygltf::Model& model);

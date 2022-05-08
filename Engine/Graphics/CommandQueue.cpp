@@ -12,7 +12,7 @@ namespace helios::gfx
 		// Create the command queue based on list type.
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc
 		{
-			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+			.Type = commandListType,
 			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
 			.NodeMask = 0

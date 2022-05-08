@@ -41,6 +41,29 @@ static inline std::wstring StringToWString(std::string_view inputString)
 	return std::wstring(ca2w);
 }
 
+#define CREATE_LAMBDA_FUNCTION(function) ([&](){function;})
+
+// Deferred execution queue for templated functions.
+struct DeferredExecutionQueue
+{
+	std::vector<std::function<void()>> functionPointers;
+
+	void PushFunction(std::function<void()>&& function)
+	{
+		functionPointers.push_back(function);
+	}
+
+	void Execute()
+	{
+		for (auto it = functionPointers.rbegin(); it != functionPointers.rend(); it++)
+		{
+			(*it)();
+		}
+
+		functionPointers.clear();
+	}
+};
+
 template <typename T>
 static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
 {
@@ -62,3 +85,4 @@ static std::pair<uint32_t, uint32_t> GetMonitorDimensions(MONITORINFOEXW& monito
 
 	return { width, height };
 }
+

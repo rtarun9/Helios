@@ -1,6 +1,7 @@
 #include "BindlessRS.hlsli"
 #include "ConstantBuffers.hlsli"
 #include "BRDF.hlsli"
+#include "IBL.hlsli"
 
 struct VSOutput
 {
@@ -66,9 +67,6 @@ float4 PsMain(VSOutput input) : SV_Target
     float roughnessFactor = metalRoughnessTexture.Sample(pointWrapSampler, input.texCoord).g;
     float3 albedo = albedoTexture.Sample(pointWrapSampler, input.texCoord).xyz;
 
-    //albedo = materialCBuffer.albedo;
-    float3 F0 = float3(0.04f, 0.04f, 0.04f);
-    F0 = lerp(F0, albedo, metallicFactor);
     float3 Lo = float3(0.0f, 0.0f, 0.0f);
 
     float3 lightDirection = normalize(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz);
@@ -86,36 +84,10 @@ float4 PsMain(VSOutput input) : SV_Target
     }
     
     // IBL Calculation.
+    float3 diffuseIBL = DiffuseIBL(normal, albedo, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
+    float3 specularIBL = SpecularIBL(normal, albedo, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
     
-    // For diffuse IBL.
-    TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMap];
-    float3 irradiance = irradianceMap.SampleLevel(pointWrapSampler, normal.xyz, 0.0f).xyz;
-
-    float cosLO = max(dot(normal, viewDir), 0.0f);
-    float3 LR = reflect(-viewDir, normal);
-
-    float3 kS = FresnelSchlick(cosLO, F0, roughnessFactor);
-    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
-
-    float3 F = kS;
-    
-    float3 diffuseIBL = irradiance * albedo;
-    
-    // For Specular IBL.
-    TextureCube<float4> specularIrradianceMap = ResourceDescriptorHeap[renderResource.prefilterMap];
-    Texture2D<float2> specularBRDF = ResourceDescriptorHeap[renderResource.brdfConvolutionLUTMap];
-    
-    // Get number of mip levels.
-    uint specularTextureWidth, specularTextureHeight, levels;
-    specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
-
-    float3 specularIrradiance = specularIrradianceMap.SampleLevel(pointWrapSampler, LR, roughnessFactor * 5.0f).rgb;
-    
-    float2 specularBRDFLUT = specularBRDF.Sample(pointWrapSampler, float2(cosLO, roughnessFactor), 0.0f).rg;
-
-    float3 specularIBL = specularIrradiance * (F0 * specularBRDFLUT.x + specularBRDFLUT.y);
-    
-    float3 outgoingLight = (specularIBL + diffuseIBL * kD) * ao + Lo + emissive * 3.0f;
+    float3 outgoingLight = (specularIBL + diffuseIBL) * ao + Lo;
     
     return float4(outgoingLight, 1.0f);
 }   

@@ -3,6 +3,7 @@
 #include "Core/UIManager.hpp"
 
 #include "Graphics/Texture.hpp"
+#include "Core/Helpers.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -96,6 +97,10 @@ namespace helios
 		tinygltf::Mesh& nodeMesh = model.meshes[node.mesh];
 		for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 		{
+			Mesh mesh{};
+			const std::wstring meshNumber = std::to_wstring(i);
+			const std::wstring meshName = m_ModelName + L" Mesh " + std::wstring(meshNumber.c_str());
+
 			std::vector<dx::XMFLOAT3> modelPositions{};
 			std::vector<dx::XMFLOAT2> modelTextureCoords{};
 			std::vector<dx::XMFLOAT3> modelNormals{};
@@ -103,11 +108,7 @@ namespace helios
 
 			std::vector<uint32_t> indices{};
 
-			std::wstring albedoTexturePath{};
-			std::wstring normalTexturePath{};
-			std::wstring metalRoughnessTexturePath{};
-			std::wstring aoTexturePath{};
-			std::wstring emissiveTexturePath{};
+			DeferredExecutionQueue textureInitDeferredQueue{};
 
 			// Get Accesor, buffer view and buffer for each attribute (position, textureCoord, normal).
 			tinygltf::Primitive primitive = nodeMesh.primitives[i];
@@ -194,12 +195,22 @@ namespace helios
 			// Load material. (NOTE : Not complete implementation, but basic framework).
 			tinygltf::Material gltfPBRMaterial = model.materials[primitive.material];
 
+			gfx::Texture meshAlbedoTexture{};
+			gfx::Texture meshNormalTexture{};
+			gfx::Texture meshMetalRoughnessTexture{};
+			gfx::Texture meshAoTexture{};
+			gfx::Texture meshEmissiveTexture{};
+
 			if (gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{
 				tinygltf::Texture& albedoTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index];
 				tinygltf::Image& albedoImage = model.images[albedoTexture.source];
 
-				albedoTexturePath = StringToWString(modelDirectoryPathStr.data() + albedoImage.uri);
+				std::wstring albedoTexturePath = StringToWString(modelDirectoryPathStr.data() + albedoImage.uri);
+				if (!albedoTexturePath.empty())
+				{
+					textureInitDeferredQueue.PushFunction([&, albedoTexturePath]() {meshAlbedoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = albedoTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Albedo Texture"); });
+				}
 			}
 
 			if (gltfPBRMaterial.normalTexture.index >= 0)
@@ -207,7 +218,11 @@ namespace helios
 				tinygltf::Texture& normalTexture = model.textures[gltfPBRMaterial.normalTexture.index];
 				tinygltf::Image& normalImage = model.images[normalTexture.source];
 
-				normalTexturePath = StringToWString(modelDirectoryPathStr.data() + normalImage.uri);
+				std::wstring normalTexturePath = StringToWString(modelDirectoryPathStr.data() + normalImage.uri);
+				if (!normalTexturePath.empty())
+				{
+					textureInitDeferredQueue.PushFunction([&, normalTexturePath]() {meshNormalTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = normalTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Normal Texture"); });
+				}
 			}
 
 			if (gltfPBRMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
@@ -215,7 +230,11 @@ namespace helios
 				tinygltf::Texture& metalRoughnessTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index];
 				tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
 
-				metalRoughnessTexturePath = StringToWString(modelDirectoryPathStr.data() + metalRoughnessImage.uri);
+				std::wstring metalRoughnessTexturePath = StringToWString(modelDirectoryPathStr.data() + metalRoughnessImage.uri);
+				if (!metalRoughnessTexturePath.empty())
+				{
+					textureInitDeferredQueue.PushFunction([&, metalRoughnessTexturePath](){meshMetalRoughnessTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = metalRoughnessTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Metal Roughness Texture");});
+				}
 			}
 
 			if (gltfPBRMaterial.occlusionTexture.index >= 0)
@@ -223,7 +242,11 @@ namespace helios
 				tinygltf::Texture& aoTexture = model.textures[gltfPBRMaterial.occlusionTexture.index];
 				tinygltf::Image& aoImage = model.images[aoTexture.source];
 
-				aoTexturePath = StringToWString(modelDirectoryPathStr.data() + aoImage.uri);
+				std::wstring aoTexturePath = StringToWString(modelDirectoryPathStr.data() + aoImage.uri);
+				if (!aoTexturePath.empty())
+				{
+					textureInitDeferredQueue.PushFunction([&, aoTexturePath]() {meshAoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = aoTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" AO Texture"); });
+				}
 			}
 
 			if (gltfPBRMaterial.emissiveTexture.index >= 0)
@@ -231,13 +254,20 @@ namespace helios
 				tinygltf::Texture& emissiveTexture = model.textures[gltfPBRMaterial.emissiveTexture.index];
 				tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
 
-				emissiveTexturePath = StringToWString(modelDirectoryPathStr.data() + emissiveImage.uri);
+				std::wstring emissiveTexturePath = StringToWString(modelDirectoryPathStr.data() + emissiveImage.uri);
+				if (!emissiveTexturePath.empty())
+				{
+					textureInitDeferredQueue.PushFunction([&, emissiveTexturePath]() {meshEmissiveTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = emissiveTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Emissive Texture"); });
+				}
 			}
 
-			const std::wstring meshNumber = std::to_wstring(i);
-			const std::wstring meshName = m_ModelName + L" Mesh " + std::wstring(meshNumber.c_str());
+			textureInitDeferredQueue.Execute();
 
-			Mesh mesh{};
+			mesh.pbrMaterial.albedoTextureIndex = meshAlbedoTexture.GetTextureIndex();
+			mesh.pbrMaterial.normalTextureIndex = meshNormalTexture.GetTextureIndex();
+			mesh.pbrMaterial.metalRoughnessTextureIndex = meshMetalRoughnessTexture.GetTextureIndex();
+			mesh.pbrMaterial.aoTextureIndex = meshAoTexture.GetTextureIndex();
+			mesh.pbrMaterial.emissiveTextureIndex = meshEmissiveTexture.GetTextureIndex();
 
 			mesh.positionBuffer.Init(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, meshName + L" Position Buffer");
 			mesh.textureCoordsBuffer.Init(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Texture Coords Buffer");
@@ -246,31 +276,6 @@ namespace helios
 
 			mesh.indexBuffer.Init(device, commandList, indices, m_ModelName + L" Mesh " + meshNumber + L"Index Buffer");
 			mesh.indicesCount = static_cast<uint32_t>(indices.size());
-
-			if (!albedoTexturePath.empty())
-			{
-				mesh.pbrMaterial.albedoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = albedoTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Albedo Texture");
-			}
-
-			if (!normalTexturePath.empty())
-			{
-				mesh.pbrMaterial.normalTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = normalTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Normal Texture");
-			}
-
-			if (!metalRoughnessTexturePath.empty())
-			{
-				mesh.pbrMaterial.metalRoughnessTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = metalRoughnessTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Metal Roughness Texture");
-			}
-
-			if (!aoTexturePath.empty())
-			{
-				mesh.pbrMaterial.aoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = aoTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" AO Texture");
-			}
-
-			if (!emissiveTexturePath.empty())
-			{
-				mesh.pbrMaterial.emissiveTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = emissiveTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Emissive Texture");
-			}
 
 			m_Meshes.push_back(mesh);
 		}
@@ -283,16 +288,17 @@ namespace helios
 
 	void Model::UpdateData()
 	{
-		ImGui::Begin(WstringToString(m_ModelName).c_str());
+		if (ImGui::TreeNode(WstringToString(m_ModelName).c_str()))
+		{
+			ImGui::SliderFloat("Scale", &m_TransformData.scale.x, 0.1f, 10.0f);
+			m_TransformData.scale.y = m_TransformData.scale.x;
+			m_TransformData.scale.z = m_TransformData.scale.x;
 
-		ImGui::SliderFloat("Scale", &m_TransformData.scale.x, 0.1f, 10.0f);
-		m_TransformData.scale.y = m_TransformData.scale.x;
-		m_TransformData.scale.z = m_TransformData.scale.x;
+			ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
+			ImGui::SliderFloat3("Rotate", &m_TransformData.rotation.x, -90.0f, 90.0f);
 
-		ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
-		ImGui::SliderFloat3("Rotate", &m_TransformData.rotation.x, -90.0f, 90.0f);
-
-		ImGui::End();
+			ImGui::TreePop();
+		}
 	}
 
 	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix)
@@ -311,7 +317,14 @@ namespace helios
 		m_TransformConstantBuffer.Update();
 	}
 
-	void Model::Draw(ID3D12GraphicsCommandList* const commandList, PBRRenderResources& renderResources)
+	template<typename T>
+	void Model::Draw(ID3D12GraphicsCommandList* const commandList, T& renderResources)
+	{
+		throw std::exception("Invalid Templatized Draw function. Use one of the template specializations.");
+	}
+
+	template <>
+	void Model::Draw<PBRRenderResources>(ID3D12GraphicsCommandList* const commandList, PBRRenderResources& renderResources)
 	{
 		for (const Mesh& mesh : m_Meshes)
 		{
@@ -326,11 +339,11 @@ namespace helios
 			
 			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
 
-			renderResources.albedoTextureIndex = mesh.pbrMaterial.albedoTexture.GetTextureIndex();
-			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTexture.GetTextureIndex();
-			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTexture.GetTextureIndex();
-			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTexture.GetTextureIndex();
-			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTexture.GetTextureIndex();
+			renderResources.albedoTextureIndex = mesh.pbrMaterial.albedoTextureIndex;
+			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTextureIndex;
+			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTextureIndex;
+			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTextureIndex;
+			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTextureIndex;
 
 			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
 
@@ -338,7 +351,8 @@ namespace helios
 		}
 	}
 
-	void Model::Draw(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources)
+	template<>
+	void Model::Draw<LightRenderResources>(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources)
 	{
 		for (const Mesh& mesh : m_Meshes)
 		{
@@ -355,7 +369,8 @@ namespace helios
 		}
 	}
 
-	void Model::Draw(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources)
+	template<>
+	void Model::Draw<SkyBoxRenderResources>(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources)
 	{
 		for (const Mesh& mesh : m_Meshes)
 		{

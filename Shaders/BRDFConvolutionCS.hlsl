@@ -1,10 +1,10 @@
 #include "BindlessRS.hlsli"
+#include "Utils.hlsli"
 
 // References : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/spmap.hlsl.
 
 ConstantBuffer<BRDFConvolutionRenderResources> renderResources : register(b0);
 
-static const float PI = 3.14159265359;
 
 static const float NUM_SAMPLES = 1024.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
@@ -55,17 +55,17 @@ float SchlickGGX(float cosLI, float cosLO, float roughness)
     return SchlickGGX(cosLI, k) * SchlickGGX(cosLO, k);
 }
 [numthreads(32, 32, 1)]
-void CsMain(uint3 threadID : SV_DispatchThreadID)
+void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     RWTexture2D<float2> lutTexture = ResourceDescriptorHeap[renderResources.lutTextureIndex];
     
     float textureWidth, textureHeight;
     lutTexture.GetDimensions(textureWidth, textureHeight);
     
-    float cosLO = (threadID.x + 1) / textureWidth;
-    float roughness = (threadID.y + 1) / textureHeight;
+    float cosLO = (dispatchThreadID.x + 1.0f) / textureWidth;
+    float roughness = (dispatchThreadID.y + 1.0f) / textureHeight;
     
-    cosLO = max(cosLO, 0.00001f);
+    cosLO = saturate(cosLO);
     
     float3 LO = float3(sqrt(1.0f - cosLO * cosLO), 0.0f, cosLO);
     
@@ -97,5 +97,5 @@ void CsMain(uint3 threadID : SV_DispatchThreadID)
         }
     }
     
-    lutTexture[threadID.xy] = float2(DFG1, DFG2) * INV_NUM_SAMPLES;
+    lutTexture[dispatchThreadID.xy] = float2(DFG1, DFG2) * INV_NUM_SAMPLES;
 }
