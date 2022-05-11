@@ -8,7 +8,7 @@
 float3 DiffuseIBL(float3 normal, float3 albedo, float roughness, float metallic, float3 viewDirection, uint irradianceMapTextureIndex)
 {
     TextureCube<float4> irradianceMap = ResourceDescriptorHeap[irradianceMapTextureIndex];
-    float3 irradiance = irradianceMap.SampleLevel(pointWrapSampler, normal.xyz, 0.0f).xyz;
+    float3 irradiance = irradianceMap.SampleLevel(linearWrapSampler, normal.xyz, 0.0f).xyz;
 
     float cosTheta = saturate(dot(normal, viewDirection));
 
@@ -31,11 +31,10 @@ float3 SpecularIBL(float3 normal, float3 albedo, float3 viewDirection, float rou
     uint specularTextureWidth, specularTextureHeight, levels;
     specularIrradianceMap.GetDimensions(0u, specularTextureWidth, specularTextureHeight, levels);
 
-    float3 specularIrradiance = specularIrradianceMap.SampleLevel(pointWrapSampler, lr, roughness * 5.0f).rgb;
+    float3 specularIrradiance = specularIrradianceMap.SampleLevel(linearWrapSampler, lr, roughness * 6.0f).rgb;
     
     float2 specularBRDFLUT = brdfLut.Sample(pointWrapSampler, float2(cosLo, roughness), 0.0f).rg;
 
     return specularIrradiance * (f0 * specularBRDFLUT.x + specularBRDFLUT.y);
-
 }
 #endif

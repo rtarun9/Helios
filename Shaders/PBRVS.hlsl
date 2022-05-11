@@ -1,5 +1,6 @@
 #include "BindlessRS.hlsli"
 #include "ConstantBuffers.hlsli"
+#include "Utils.hlsli"
 
 struct VSOutput
 {
@@ -36,6 +37,10 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     if (renderResource.tangetBufferIndex)
     {
         output.tangent = tangetBuffer[vertexID];
+    }
+    else
+    {
+        output.tangent = GenerateTangent(output.normal);
     }
 
     output.worldSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), mvpCBuffer.modelMatrix);

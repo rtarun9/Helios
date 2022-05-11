@@ -28,12 +28,13 @@ float3 TangentToWorldCoords(float3 v, float3 n, float3 s, float3 t)
     return s * v.x + t * v.y + n * v.z;
 }
 
-// Currently not able to find a resource that explains this.
-// TODO : Find out the math behind this (source : https://github.com/Nadrin/PBR/blob/cd61a5d59baa15413c7b0aff4a7da5ed9cc57f61/data/shaders/hlsl/irmap.hlsl#L41). 
+// Source used : https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations
 float3 SampleHemisphere(float2 u)
 {
-    float u1P = sqrt(max(0.0f, 1.0f - u.x * u.x));
-    return float3(cos(2.0f * PI * u.y) * u1P, sin(2.0f * PI * u.y) * u1P, u.x);
+    float z = 1 - 2.0f * u.x;
+    float r = pow(max(0.0f, 1.0f - z * z), 0.5f);
+    float phi = 2.0f * PI * u.y;
+    return float3(r * cos(phi), r * sin(phi), z);
 }
 
 [numthreads(32, 32, 1)]
@@ -50,24 +51,29 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     float3 samplingVector = GetSamplingVector(pixelCoords, dispatchThreadID);
    
     // Calculation of basis vectors for converting a vector from Shading / Tangent space to world space.
-    float3 N = samplingVector;
-    float3 T = T = cross(N, float3(0.0, 1.0, 0.0));
-    T = normalize(lerp(cross(N, float3(1.0, 0.0, 0.0)), T, step(MIN_FLOAT_VALUE, dot(T, T))));
-    float3 S = normalize(cross(N, T));
+    float3 n = samplingVector;
+    float3 t = float3(0.0f, 0.0f, 0.0f);
+    float3 s = float3(0.0f, 0.0f, 0.0f);
+    
+    GenerateBasisFromVector(n, t, s);
     
     // Using Monte Carlo integration to find irradiance of the hemisphere.
+    // The final result should be 1 / N * summation (f(x) / PDF). PDF for sampling uniformly from hemisphere is 1 / TWO_PI. Since the integral is already consisting of division by 2.0f * PI,
+    // There is no need to do this while calculating total irradiance (kd * c * irradiance) is the diffuse IBL. 
+    // Resource used for Montecarlo integration + Uniform sampling from hemisphere : https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration
     float3 irradiance = float3(0.0f, 0.0f, 0.0f);
     
     for (uint i = 0; i < SAMPLES; i++)
     {
         float2 u = SampleHammersleySequence(i);
-        float3 Li = TangentToWorldCoords(SampleHemisphere(u), N, S, T);
+        float3 li = TangentToWorldCoords(SampleHemisphere(u), n, s,t);
         
-        float cosTheta = saturate(dot(Li, N));
-        irradiance += 2.0f * textureCubeMap.SampleLevel(linearWrapSampler, Li, 0).rgb * cosTheta;
+        float cosTheta = saturate(dot(li, n));
+        irradiance += textureCubeMap.SampleLevel(linearWrapSampler, li, 0).rgb * cosTheta;
     }
 
-    float4 result = float4(irradiance / SAMPLES, 0.0f); 
+    // As PDF is 2.0f * PI, I am multiplying by 2.0f so that this multiplication is not required while calculation final diffuse IBL.
+    float4 result = float4(irradiance * 2.0f / SAMPLES, 0.0f); 
     outputIrradianceMap[dispatchThreadID] = result;
 
 }

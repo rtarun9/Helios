@@ -1,4 +1,5 @@
 #include "BindlessRS.hlsli"
+#include "BRDF.hlsli"
 #include "Utils.hlsli"
 // References : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/spmap.hlsl.
 
@@ -26,28 +27,21 @@ float2 SampleHammersleySequence(uint i)
 
 // Get sample vector based on Importance Sampling GGX normal distribution function for a fixed value of roughness.
 // The function returns a half vector between Li and Lo.
-float3 SampleGGX(float u1, float u2, float roughness)
+// Used inorder to orient sample vector towards specular lobe of surface roughness.
+float3 SampleGGX(float2 u, float roughness)
 {
     float alpha = pow(roughness, 2);
     
-    float cosTheta = sqrt((1.0f - u2) / (1.0f +  (pow(alpha, 2) - 1.0f) * u2));
+    float cosTheta = sqrt((1.0f - u.y) / (1.0f +  (pow(alpha, 2) - 1.0f) * u.y));
     float sinTheta = sqrt(1.0f - pow(cosTheta, 2.0f));
     
-    // The Spherical coordinate should be converted to cartesian coordinates before returning.
-    float phi = PI * 2.0f * u1;
+    float phi = PI * 2.0f * u.x;
     
+    // The Spherical coordinate should be converted to cartesian coordinates before returning.
     return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
-float NDFGGX(float cosLh, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alphaSq = alpha * alpha;
-
-    float denom = (cosLh * cosLh) * (alphaSq - 1.0) + 1.0;
-    return alphaSq / (PI * denom * denom);
-}
-
+// Calculates the integral Li(p, wi)dwi. For increasing levels of roughness (which is the mip - level), the environment is convoluted with much higher and roughly scattered sample vectors.
 [numthreads(32, 32, 1)]
 void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
@@ -77,45 +71,46 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     float wt = 4.0f * PI / (6.0f * inputTextureWidth * inputTextureHeight);
     
     float3 normal = samplingVector;
-    float3 L0 = normalize(normal);
+    float3 lo = normalize(normal);
 
     // Calculate orthonormal basis for conversion from tangent space -> world space.
-    float3 T = cross(normal, float3(0.0f, 1.0f, 0.0f));
-    T = lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), T, step(0.00001f, dot(T, T)));
-    
-    T = normalize(T);   
-    float3 S = normalize(cross(normal, T));
+    float3 t = float3(0.0f, 0.0f, 0.0f);
+    float3 s = float3(0.0f, 0.0f, 0.0f);
 
+    GenerateBasisFromVector(normal, t, s);
+    
     float weight = 0.0f;
     float3 preFilteredColor = float3(0.0f, 0.0f, 0.0f);
     
     for (uint i = 0u; i < NUM_SAMPLES; ++i)
     {
+        // Generate sample vectors biased towards the reflection orientation of half way vector.
         float2 u = SampleHammersleySequence(i);
         
-        // Convert point from tanget to world space.
-        float3 samplePoint = SampleGGX(u.x, u.y, roughness);
-        float3 Lh = S * samplePoint.x + T * samplePoint.y + normal * samplePoint.z;
+        // Convert point from spherical coordinates to cartesian coordinates.
+        float3 samplePoint = SampleGGX(u, roughness);
+        float3 lh = TangentSpaceToWorldSpace(samplePoint, normal, t, s);
         
         // Get incident direction by reflecting view dir around half way vector.
-        float3 Li = (2.0f * dot(L0, Lh) * Lh - L0);
+        float3 li = (2.0f * dot(lo, lh) * lh - lo);
         
-        float cosTheta = dot(L0, Li);
+        float cosTheta = dot(lo, li);
         if (cosTheta > 0.0f)
         {
-            float cosLH = max(dot(normal, Lh), 0.0f);
-            
-            float pdf = NDFGGX(cosLH, roughness) * 0.25f;
+            //  Calculate which miplevel of environment texture cube to sample from.
+            float pdf = GGXNormalDistribution(normal, lh, roughness) * 0.25f;
             
             float ws = 1.0f / (NUM_SAMPLES * pdf);
             
             float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
                        
-            preFilteredColor += textureCubeMap.SampleLevel(anisotropicSampler, Li, 0.0f).rgb * cosTheta;
+            // The logic for sampling from a mip map is present, but currently mip map generation is not done. When it is done, the below code can be uncommented.
+            // preFilteredColor += textureCubeMap.SampleLevel(linearWrapSampler, li, mipLevel).rgb * cosTheta;
+            preFilteredColor += textureCubeMap.SampleLevel(linearWrapSampler, li, 0.0f).rgb * cosTheta;
             weight += cosTheta;
         }
     }
     
-    outputPreFilterCubeMap[dispatchThreadID] = float4(preFilteredColor / max(weight, 0.001f), 1.0f);
+    outputPreFilterCubeMap[dispatchThreadID] = float4(preFilteredColor / max(weight, MIN_FLOAT_VALUE), 1.0f);
 
 }

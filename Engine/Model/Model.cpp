@@ -162,10 +162,13 @@ namespace helios
 				normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
 
 				dx::XMFLOAT4 tangent{};
-				tangent.x = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0];
-				tangent.y = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1];
-				tangent.z = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2];
-				tangent.w = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3];
+				if (tangentAccesor.bufferView)
+				{
+					tangent.x = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0];
+					tangent.y = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1];
+					tangent.z = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2];
+					tangent.w = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3];
+				}
 
 				modelPositions.emplace_back(position);
 				modelTextureCoords.emplace_back(textureCoord);
@@ -272,7 +275,11 @@ namespace helios
 			mesh.positionBuffer.Init(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, meshName + L" Position Buffer");
 			mesh.textureCoordsBuffer.Init(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Texture Coords Buffer");
 			mesh.normalBuffer.Init(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Normal Buffer");
-			mesh.tangentBuffer.Init(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Tanget Buffer");
+			
+			if (tangentAccesor.bufferView)
+			{
+				mesh.tangentBuffer.Init(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Tanget Buffer");
+			}
 
 			mesh.indexBuffer.Init(device, commandList, indices, m_ModelName + L" Mesh " + meshNumber + L"Index Buffer");
 			mesh.indicesCount = static_cast<uint32_t>(indices.size());

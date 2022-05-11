@@ -5,8 +5,7 @@
 
 ConstantBuffer<BRDFConvolutionRenderResources> renderResources : register(b0);
 
-
-static const float NUM_SAMPLES = 1024.0f;
+static const float NUM_SAMPLES = 2048.0f;
 static const float INV_NUM_SAMPLES = 1.0f / NUM_SAMPLES;
 
 // Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepensy sample i over total number of samples (NUM_SAMPLES).
@@ -28,20 +27,22 @@ float2 SampleHammersleySequence(uint i)
 
 // Get sample vector based on Importance Sampling GGX normal distribution function for a fixed value of roughness.
 // The function returns a half vector between Li and Lo.
-float3 SampleGGX(float u1, float u2, float roughness)
+// Used inorder to orient sample vector towards specular lobe of surface roughness.
+float3 SampleGGX(float2 u, float roughness)
 {
     float alpha = pow(roughness, 2);
     
-    float cosTheta = sqrt((1.0f - u2) / (1.0f + (pow(alpha, 2) - 1.0f) * u2));
+    float cosTheta = sqrt((1.0f - u.y) / (1.0f + (pow(alpha, 2) - 1.0f) * u.y));
     float sinTheta = sqrt(1.0f - pow(cosTheta, 2.0f));
     
-    // The Spherical coordinate should be converted to cartesian coordinates before returning.
-    float phi = PI * 2.0f * u1;
+    float phi = PI * 2.0f * u.x;
     
+    // The Spherical coordinate should be converted to cartesian coordinates before returning.
     return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
-float SchlickGGX(float cosTheta, float k)
+
+float SchlickGGXGs(float cosTheta, float k)
 {
     return cosTheta / (cosTheta * (1.0f - k) + k);
 }
@@ -52,8 +53,12 @@ float SchlickGGX(float cosLI, float cosLO, float roughness)
     float r = roughness;
     float k = (r * r) / 2.0f;
     
-    return SchlickGGX(cosLI, k) * SchlickGGX(cosLO, k);
+    return SchlickGGXGs(cosLI, k) * SchlickGGXGs(cosLO, k);
 }
+
+// Calculates the integral fr(p, wi, wo)n.w dwi.
+// The horizontal (x axis) stores n.wi, and y axis stores the input roughness value.
+// We make assumption that incoming irradiance is 'white' for all directions.
 [numthreads(32, 32, 1)]
 void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
@@ -67,35 +72,35 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     cosLO = saturate(cosLO);
     
-    float3 LO = float3(sqrt(1.0f - cosLO * cosLO), 0.0f, cosLO);
+    float3 lo = float3(sqrt(1.0f - cosLO * cosLO), 0.0f, cosLO);
     
-    float DFG1 = 0.0f;
-    float DFG2 = 0.0f;
+    float dfg1 = 0.0f;
+    float dfg2 = 0.0f;
 
     for (uint i = 0u; i < NUM_SAMPLES; ++i)
     {
         float2 u = SampleHammersleySequence(i);
 
 		// Sample directly in tangent/shading space since we don't care about reference frame as long as it's consistent.
-        float3 Lh = SampleGGX(u.x, u.y, roughness);
+        float3 lh = SampleGGX(u, roughness);
 
 		// Compute incident direction (Li) by reflecting viewing direction (Lo) around half-vector (Lh).
-        float3 Li = 2.0 * dot(LO, Lh) * Lh - LO;
+        float3 Li = 2.0 * dot(lo, lh) * lh - lo;
 
         float cosLi = max(Li.z, 0.0f);
-        float cosLh = max(Lh.z, 0.0f);
-        float cosLoLh = max(dot(LO, Lh), 0.0);
+        float cosLh = max(lh.z, 0.0f);
+        float cosLoLh = saturate(dot(lo, lh));
 
         if (cosLi > 0.0)
         {
-            float G = SchlickGGX(cosLi, cosLO, roughness);
-            float Gv = G * cosLoLh / (cosLh * cosLO);
-            float Fc = pow(1.0 - cosLoLh, 5);
+            float g = SchlickGGX(cosLi, cosLO, roughness);
+            float gv = g * cosLoLh / (cosLh * cosLO);
+            float fc = pow(1.0 - cosLoLh, 5);
 
-            DFG1 += (1 - Fc) * Gv;
-            DFG2 += Fc * Gv;
+            dfg1 += (1 - fc) * gv;
+            dfg2 += fc * gv;
         }
     }
     
-    lutTexture[dispatchThreadID.xy] = float2(DFG1, DFG2) * INV_NUM_SAMPLES;
+    lutTexture[dispatchThreadID.xy] = float2(dfg1, dfg2) * INV_NUM_SAMPLES;
 }

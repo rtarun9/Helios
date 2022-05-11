@@ -35,37 +35,34 @@ float4 PsMain(VSOutput input) : SV_Target
         Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalTextureIndex];
         
         input.normal = normalize(input.normal);
-        normal = normalize(2.0f * normalTexture.Sample(pointWrapSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+        normal = normalize(2.0f * normalTexture.Sample(linearWrapSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
 
-        if (input.tangent.w != -1.0f)
-        {
-            input.tangent.xyz = normalize(input.tangent.xyz);
+        input.tangent.xyz = normalize(input.tangent.xyz);
         
-            float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
-            float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
+        float3 bitangent = normalize(cross(input.normal, input.tangent.xyz)) * input.tangent.w;
+        float3x3 tbn = float3x3(input.tangent.xyz, bitangent, input.normal);
     
-            normal = mul(normal, tbn);
-            normal = normalize(mul(normal, input.modelMatrix));
-        }
+        normal = mul(normal, tbn);
+        normal = normalize(mul(normal, input.modelMatrix));
     }
     
     if (renderResource.aoTextureIndex)
     {
         Texture2D<float4> aoTexture = ResourceDescriptorHeap[renderResource.aoTextureIndex];
-        ao = aoTexture.Sample(pointWrapSampler, input.texCoord).xyz;
+        ao = aoTexture.Sample(linearWrapSampler, input.texCoord).xyz;
     }
     
     if (renderResource.emissiveTextureIndex)
     {
         Texture2D<float4> emissiveTexture = ResourceDescriptorHeap[renderResource.emissiveTextureIndex];
-        emissive = emissiveTexture.Sample(pointWrapSampler, input.texCoord).xyz;
+        emissive = emissiveTexture.Sample(linearWrapSampler, input.texCoord).xyz;
     }
     
     float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
     
-    float metallicFactor = metalRoughnessTexture.Sample(pointWrapSampler, input.texCoord).b;
-    float roughnessFactor = metalRoughnessTexture.Sample(pointWrapSampler, input.texCoord).g;
-    float3 albedo = albedoTexture.Sample(pointWrapSampler, input.texCoord).xyz;
+    float metallicFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).b;
+    float roughnessFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).g;
+    float3 albedo = albedoTexture.Sample(anisotropicSampler, input.texCoord).xyz;
 
     float3 Lo = float3(0.0f, 0.0f, 0.0f);
 
@@ -87,7 +84,7 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 diffuseIBL = DiffuseIBL(normal, albedo, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
     float3 specularIBL = SpecularIBL(normal, albedo, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
     
-    float3 outgoingLight = (specularIBL + diffuseIBL) * ao + Lo;
+    float3 outgoingLight = (specularIBL + diffuseIBL) * ao + Lo + emissive;
     
     return float4(outgoingLight, 1.0f);
 }   
