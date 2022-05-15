@@ -11,9 +11,6 @@ dxc -T ps_6_6 -E PsMain OffscreenRTPS.hlsl -Fo OffscreenRTPS.cso
 dxc -T vs_6_6 -E VsMain PBRVS.hlsl -Fo PBRVS.cso
 dxc -T ps_6_6 -E PsMain PBRPS.hlsl -Fo PBRPS.cso
 
-dxc -T vs_6_6 -E VsMain TestVS.hlsl -Fo TestVS.cso
-dxc -T ps_6_6 -E PsMain TestPS.hlsl -Fo TestPS.cso
-
 dxc -T vs_6_6 -E VsMain SkyBoxVS.hlsl -Fo SkyBoxVS.cso
 dxc -T ps_6_6 -E PsMain SkyBoxPS.hlsl -Fo SkyBoxPS.cso
 

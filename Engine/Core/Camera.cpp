@@ -7,6 +7,11 @@ using namespace DirectX;
 
 namespace helios
 {
+	void Camera::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& cbDescriptor)
+	{
+		m_CameraDataCBuffer.Init(device, commandList, {}, cbDescriptor, L"Camera CBuffer");
+	}
+
 	void Camera::HandleInput(uint8_t keycode, bool isKeyDown)
 	{
 		if (size_t keycodeValue = EnumClassValue(INPUT_MAP[keycode]); INPUT_MAP.find(keycode) != end(INPUT_MAP))
@@ -67,6 +72,9 @@ namespace helios
 		m_CameraTarget = m_CameraPosition + m_CameraTarget;
 
 		m_ViewMatrix = dx::XMMatrixLookAtLH(m_CameraPosition, m_CameraTarget, m_CameraUp);
+
+		dx::XMStoreFloat3(&m_CameraDataCBuffer.GetBufferData().cameraPosition, m_CameraPosition);
+		m_CameraDataCBuffer.Update();
 	}
 
 	dx::XMMATRIX Camera::GetViewMatrix() const

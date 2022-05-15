@@ -54,13 +54,18 @@ struct PBRRenderResources
     uint mvpCBufferIndex;
     
     uint materialCBufferIndex;
-    uint lightCBufferIndex;
+    
+    uint cameraCBufferIndex;
+    uint pointLightCBufferIndex;
     
     uint albedoTextureIndex;
     uint metalRoughnessTextureIndex;
     uint emissiveTextureIndex;
     uint normalTextureIndex;
     uint aoTextureIndex;
+    
+    // For debugging purposes.
+    uint enableIBL;
     
     uint irradianceMap;
     uint prefilterMap;
@@ -79,6 +84,8 @@ struct LightRenderResources
 {
     uint positionBufferIndex;
     uint mvpCBufferIndex;
+    uint pointLightCBufferIndex;
+    uint pointLightIndex;
 };
 
 struct SkyBoxRenderResources

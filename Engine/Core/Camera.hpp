@@ -2,6 +2,11 @@
 
 #include "Pch.hpp"
 
+#include "ConstantBuffers.hlsli"
+
+#include "Graphics/API/ConstantBuffer.hpp"
+#include "Graphics/API/Descriptor.hpp"
+
 namespace helios
 {
 	enum class Keys : uint8_t
@@ -32,11 +37,15 @@ namespace helios
 	class Camera
 	{
 	public:
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& cbDescriptor);
+
 		void HandleInput(uint8_t keycode, bool isKeyDown);
 
 		void Update(float deltaTime);
 
 		dx::XMMATRIX GetViewMatrix() const;
+
+		uint32_t GetCameraDataCBufferIndex() const { return m_CameraDataCBuffer.GetBufferIndex(); }
 
 	public:
 		dx::XMVECTOR m_WorldFront{ dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f) };
@@ -63,5 +72,7 @@ namespace helios
 		float m_Pitch{ 0.0f };
 
 		std::array<bool, EnumClassValue(Keys::TotalKeyCount)> m_KeyStates{false};
+
+		gfx::ConstantBuffer<CameraData> m_CameraDataCBuffer{};
 	};
 }

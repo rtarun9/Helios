@@ -90,12 +90,9 @@ private:
 	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 	std::map<std::wstring_view, helios::Model> m_PBRModels{};
+	std::vector<helios::gfx::PointLight> m_PointLights{};
 
 	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
-	
-
-	helios::Model m_LightSource{};
-	helios::gfx::ConstantBuffer<LightingData> m_LightData{};
 
 	// Data for IBL / Skybox.
 	helios::gfx::Texture m_EnvironmentTexture{};

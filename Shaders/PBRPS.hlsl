@@ -15,14 +15,13 @@ struct VSOutput
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 
-static const uint LIGHT_COUNT = 1u;
-
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
     ConstantBuffer<MaterialData> materialCBuffer = ResourceDescriptorHeap[renderResource.materialCBufferIndex];
-    ConstantBuffer<LightingData> lightCBuffer = ResourceDescriptorHeap[renderResource.lightCBufferIndex];
-   
+    ConstantBuffer<CameraData> cameraCBuffer = ResourceDescriptorHeap[renderResource.cameraCBufferIndex];
+    ConstantBuffer<PointLightData> pointLightCBuffer = ResourceDescriptorHeap[renderResource.pointLightCBufferIndex];
+    
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoTextureIndex];
     Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[renderResource.metalRoughnessTextureIndex];
 
@@ -58,33 +57,38 @@ float4 PsMain(VSOutput input) : SV_Target
         emissive = emissiveTexture.Sample(linearWrapSampler, input.texCoord).xyz;
     }
     
-    float3 viewDir = normalize(lightCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
+    float3 viewDir = normalize(cameraCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
     
     float metallicFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).b;
     float roughnessFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).g;
     float3 albedo = albedoTexture.Sample(anisotropicSampler, input.texCoord).xyz;
 
     float3 Lo = float3(0.0f, 0.0f, 0.0f);
-
-    float3 lightDirection = normalize(lightCBuffer.lightPosition.xyz - input.worldSpacePosition.xyz);
-    float nDotL = saturate(dot(normal, lightDirection));
-    float3 li = float3(1.0f, 1.0f, 1.0f);
-    
-    float distance = length(lightDirection);
-    float attenuation = 1.0 / max((pow(distance, 2)), MIN_FLOAT_VALUE);
-    float3 radiance = li * attenuation;
     
     // Calculate irradiance due to each light source.
-    for (uint i = 0; i < LIGHT_COUNT; ++i)
+    for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
     {
+        float3 lightDirection = normalize(pointLightCBuffer.lightPosition[i].xyz - input.worldSpacePosition.xyz);
+        float nDotL = saturate(dot(normal, lightDirection));
+        float3 li = pointLightCBuffer.lightColor[i].xyz;
+    
+        float distance = length(pointLightCBuffer.lightPosition[i].xyz - input.worldSpacePosition.xyz);
+        float attenuation = PointLightAttenuation(distance, pointLightCBuffer.radius[i]);
+        float3 radiance = li * attenuation;
+        
         Lo += CookTorrenceBRDF(normal, viewDir, lightDirection, albedo, metallicFactor, roughnessFactor) * radiance * nDotL;
     }
     
-    // IBL Calculation.
-    float3 diffuseIBL = DiffuseIBL(normal, albedo, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
-    float3 specularIBL = SpecularIBL(normal, albedo, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
+    float3 outgoingLight =  + Lo + emissive;
     
-    float3 outgoingLight = (specularIBL + diffuseIBL) * ao + Lo + emissive;
+    if (renderResource.enableIBL)
+    {
+        // IBL Calculation.
+        float3 diffuseIBL = DiffuseIBL(normal, albedo, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
+        float3 specularIBL = SpecularIBL(normal, albedo, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
+        outgoingLight += (diffuseIBL + specularIBL) * ao;
+    }
+
     
     return float4(outgoingLight, 1.0f);
 }   

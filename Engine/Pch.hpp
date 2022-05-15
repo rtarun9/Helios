@@ -21,7 +21,7 @@
 #include <DirectXMath.h>
 
 // D3D12 extension library.
-#include "Graphics/d3dx12.hpp"
+#include "Graphics/API/d3dx12.hpp"
 
 // For the ComPtr<> template class.
 #include <wrl/client.h>

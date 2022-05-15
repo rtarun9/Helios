@@ -1,14 +1,17 @@
 #include "BindlessRS.hlsli"
+#include "ConstantBuffers.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
 };
 
+ConstantBuffer<LightRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
-    float3 lightColor = float3(1.0f, 1.0f, 1.0f);
-    return float4(lightColor, 1.0f);
+    ConstantBuffer<PointLightData> pointLightCBuffer = ResourceDescriptorHeap[renderResource.pointLightCBufferIndex];
+    
+    return float4(pointLightCBuffer.lightColor[renderResource.pointLightIndex].xyz, 1.0f);
 }

@@ -2,7 +2,7 @@
 
 #include "Core/UIManager.hpp"
 
-#include "Graphics/Texture.hpp"
+#include "Graphics/API/Texture.hpp"
 #include "Core/Helpers.hpp"
 
 #define TINYGLTF_IMPLEMENTATION

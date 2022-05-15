@@ -7,6 +7,8 @@
 #define float3 DirectX::XMFLOAT3
 #define float2 DirectX::XMFLOAT2
 
+#define uint uint32_t
+
 // Note : using the typedef of matrix (float4x4) and struct (ConstantBufferStruct) to prevent name collision on the cpp code side. 
 #define float4x4 DirectX::XMMATRIX
 
@@ -17,6 +19,9 @@
 #define ConstantBufferStruct struct 
 
 #endif
+
+// Constants that are also shared between hlsl and C++
+static const uint TOTAL_POINT_LIGHTS = 1;
 
 // Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl)
 
@@ -33,15 +38,21 @@ ConstantBufferStruct TransformData
     float4x4 projectionMatrix;
 };
 
+ConstantBufferStruct PointLightData
+{
+    float4 lightPosition[TOTAL_POINT_LIGHTS];
+    float4 lightColor[TOTAL_POINT_LIGHTS];
+    float radius[TOTAL_POINT_LIGHTS];
+};
+
 ConstantBufferStruct RenderTargetSettings
 {
     float exposure;
 };
 
-ConstantBufferStruct LightingData
+ConstantBufferStruct CameraData
 {
-    float4 lightPosition;
-    float4 cameraPosition;
+    float3 cameraPosition;
 };
 
 ConstantBufferStruct MaterialData

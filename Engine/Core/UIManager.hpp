@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Graphics/Descriptor.hpp"
+#include "Graphics/API/Descriptor.hpp"
 
 #include "imgui.h"
 

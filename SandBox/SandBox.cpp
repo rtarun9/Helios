@@ -24,10 +24,6 @@ void SandBox::OnUpdate()
 	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
 	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
 
-	dx::XMStoreFloat4(&m_LightData.GetBufferData().cameraPosition, m_Camera.m_CameraPosition);
-	m_LightData.GetBufferData().lightPosition = { m_LightSource.GetTransform().translate.x, m_LightSource.GetTransform().translate.y, m_LightSource.GetTransform().translate.z, 1.0f };
-	m_LightData.Update();
-
 	m_PBRMaterial.Update();
 
 	m_RenderTargetSettingsData.Update();
@@ -119,12 +115,24 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		ImGui::TreePop();
 	}
 
+	// Test code.
+	static bool enableIBL{ true };
+	if (ImGui::TreeNode("Enable IBL"))
+	{
+		ImGui::Checkbox("Enable IBL", &enableIBL);
+		ImGui::TreePop(); 
+	}
+
 	for (auto& model : m_PBRModels)
 	{
 		model.second.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	}
 
-	m_LightSource.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+	for (auto& pointLight : m_PointLights)
+	{
+		pointLight.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+	}
+
 	m_SkyBoxModel.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
@@ -160,9 +168,16 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	LightRenderResources lightRenderResources{};
 
-	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &lightRenderResources, 0u);
+	for (auto& pointLight : m_PointLights)
+	{
+		lightRenderResources =
+		{
+			.pointLightCBufferIndex = gfx::PointLight::GetLightDataCBufferIndex(),
+			.pointLightIndex = pointLight.GetPointLightIndex()
+		};
 
-	m_LightSource.Draw(commandList, lightRenderResources);
+		pointLight.Draw(commandList, lightRenderResources);
+	}
 
 	// Draw PBR materials.
 	m_Materials[L"PBRMaterial"].BindPSO(commandList);
@@ -170,7 +185,9 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	PBRRenderResources pbrRenderResources
 	{
 		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
-		.lightCBufferIndex = m_LightData.GetBufferIndex(),
+		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
+		.pointLightCBufferIndex = gfx::PointLight::GetLightDataCBufferIndex(),
+		.enableIBL = enableIBL,
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
 		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
@@ -262,6 +279,9 @@ void SandBox::LoadContent()
 	gfx::Material::CreateBindlessRootSignature(m_Device.Get(), L"Shaders/BindlessRS.cso");
 	
 	auto commandList = m_CommandQueue.GetCommandList();
+	
+	m_Camera.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+
 	LoadMaterials();
 	LoadTextures(commandList.Get());
 
@@ -285,7 +305,6 @@ void SandBox::LoadContent()
 
 void SandBox::LoadMaterials()
 {
-	m_Materials[L"DefaultMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/TestVS.cso", L"Shaders/TestPS.cso", L"Default Material");
 	m_Materials[L"LightMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/LightVS.cso", L"Shaders/LightPS.cso", L"Light Material");
 	m_Materials[L"PBRMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
 	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -315,8 +334,13 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 {
 	m_SkyBoxModel.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/glTF/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Sky Box Model");
 
-	m_LightSource.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/glTF/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Light Source");
-	m_LightSource.GetTransform().scale = dx::XMFLOAT3(0.1f, 0.1f, 0.1f);
+	m_PointLights.resize(TOTAL_POINT_LIGHTS);
+	gfx::PointLight::InitLightDataCBuffer(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
+
+	for (uint32_t i = 0; i < TOTAL_POINT_LIGHTS; ++i)
+	{
+		m_PointLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, i);
+	}
 
 	m_PBRModels[L"Spheres"].Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
 	m_PBRModels[L"Spheres"].GetTransform().translate = { 10.0f, 0.0f, 0.0f };
@@ -329,7 +353,6 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 	//m_PBRModels[L"Sponza"].GetTransform().scale = { 0.1f, 0.1f, 0.1f };
 
 	m_PBRMaterial.Init(m_Device.Get(), commandList, MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
-	m_LightData.Init(m_Device.Get(), commandList, LightingData{ .lightPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f), .cameraPosition = dx::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f) }, m_SRV_CBV_UAV_Descriptor, L"Light Data CBuffer");
 }
 
 void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)

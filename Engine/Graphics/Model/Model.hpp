@@ -2,11 +2,11 @@
 
 #include "Pch.hpp"
 
-#include "Graphics/StructuredBuffer.hpp"
-#include "Graphics/IndexBuffer.hpp"
-#include "Graphics/ConstantBuffer.hpp"
-#include "Graphics/Descriptor.hpp"
-#include "Graphics/Texture.hpp"
+#include "Graphics/API/StructuredBuffer.hpp"
+#include "Graphics/API/IndexBuffer.hpp"
+#include "Graphics/API/ConstantBuffer.hpp"
+#include "Graphics/API/Descriptor.hpp"
+#include "Graphics/API/Texture.hpp"
 
 #include "ConstantBuffers.hlsli"
 #include "BindlessRS.hlsli"
@@ -69,7 +69,7 @@ namespace helios
 	private:
 		void LoadNode(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::string_view modelDirectoryPathStr, gfx::Descriptor& srvCbDescriptor, uint32_t nodeIndex, tinygltf::Model& model);
 	
-	private:
+	protected:
 		std::vector<Mesh> m_Meshes{};
 		gfx::ConstantBuffer<TransformData> m_TransformConstantBuffer{};
 

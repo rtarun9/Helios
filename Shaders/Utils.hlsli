@@ -66,4 +66,10 @@ void GenerateBasisFromVector(float3 n, inout float3 t, inout float3 s)
     s = normalize(cross(n, t));
 }
 
+// Point light attenuation based on Cem Yuskel's "Point Light Attenuation without Singularity Siggraph 202 Talk".
+float PointLightAttenuation(float distance, float radius)
+{
+    return 2.0f / (distance * distance + radius * radius + distance * pow(distance * distance + radius * radius, 0.5f));
+}
+
 #endif
