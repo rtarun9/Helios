@@ -20,8 +20,10 @@
 
 #endif
 
-// Constants that are also shared between hlsl and C++
-static const uint TOTAL_POINT_LIGHTS = 1;
+// Constants that are also shared between hlsl and C++.
+static const uint TOTAL_POINT_LIGHTS = 5;
+static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
+static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
 
 // Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl)
 
@@ -43,6 +45,12 @@ ConstantBufferStruct PointLightData
     float4 lightPosition[TOTAL_POINT_LIGHTS];
     float4 lightColor[TOTAL_POINT_LIGHTS];
     float radius[TOTAL_POINT_LIGHTS];
+};
+
+ConstantBufferStruct DirectionalLightData
+{
+    float4 lightDirection[TOTAL_DIRECTIONAL_LIGHTS];
+    float4 lightColor[TOTAL_DIRECTIONAL_LIGHTS];
 };
 
 ConstantBufferStruct RenderTargetSettings

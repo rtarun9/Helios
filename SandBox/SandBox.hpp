@@ -71,6 +71,7 @@ private:
 	D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 
 	helios::gfx::DepthStencilBuffer m_DepthBuffer{};
+	helios::gfx::DepthStencilBuffer m_ShadowDepthBuffer{};
 
 	// Descriptor heaps.
 	helios::gfx::Descriptor m_RTVDescriptor{};
@@ -91,8 +92,7 @@ private:
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 	std::map<std::wstring_view, helios::Model> m_PBRModels{};
 	std::vector<helios::gfx::PointLight> m_PointLights{};
-
-	helios::gfx::ConstantBuffer<MaterialData> m_PBRMaterial{};
+	std::vector<helios::gfx::DirectionalLight> m_DirectionalLights{};
 
 	// Data for IBL / Skybox.
 	helios::gfx::Texture m_EnvironmentTexture{};

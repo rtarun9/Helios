@@ -66,10 +66,17 @@ void GenerateBasisFromVector(float3 n, inout float3 t, inout float3 s)
     s = normalize(cross(n, t));
 }
 
-// Point light attenuation based on Cem Yuskel's "Point Light Attenuation without Singularity Siggraph 202 Talk".
-float PointLightAttenuation(float distance, float radius)
+// Point light attenuation based on Cem Yuskel's "Point Light Attenuation without Singularity Siggraph 2022 Talk".
+float PointLightAttenuationWithoutSingularity(float distance, float radius)
 {
-    return 2.0f / (distance * distance + radius * radius + distance * pow(distance * distance + radius * radius, 0.5f));
+    return 2.0f / (distance * distance + radius * radius + distance * sqrt(distance * distance + radius * radius));
+}
+
+// Punctual lights attenuation based on: https://google.github.io/filament/Filament.html#lighting/directlighting/punctuallights.
+float PunctualLightAttenuation(float distance, float radius)
+{
+    float fallOffFactor = saturate(pow(1.0f - (pow(distance, 4) / pow(radius, 4)), 2));
+    return fallOffFactor / max(distance * distance, 0.01f * 0.01f);
 }
 
 #endif

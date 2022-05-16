@@ -18,13 +18,13 @@ ConstantBuffer<PBRRenderResources> renderResource : register(b0);
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
-    ConstantBuffer<MaterialData> materialCBuffer = ResourceDescriptorHeap[renderResource.materialCBufferIndex];
     ConstantBuffer<CameraData> cameraCBuffer = ResourceDescriptorHeap[renderResource.cameraCBufferIndex];
     ConstantBuffer<PointLightData> pointLightCBuffer = ResourceDescriptorHeap[renderResource.pointLightCBufferIndex];
+    ConstantBuffer<DirectionalLightData> directionalLightCBuffer = ResourceDescriptorHeap[renderResource.directionalLightCBufferIndex];
     
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoTextureIndex];
     Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[renderResource.metalRoughnessTextureIndex];
-
+    
     float3 normal = normalize(input.normal);
     float3 ao = float3(1.0f, 1.0f, 1.0f);
     float3 emissive = float3(0.0f, 0.0f, 0.0f);
@@ -34,7 +34,7 @@ float4 PsMain(VSOutput input) : SV_Target
         Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalTextureIndex];
         
         input.normal = normalize(input.normal);
-        normal = normalize(2.0f * normalTexture.Sample(linearWrapSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+        normal = normalize(2.0f * normalTexture.Sample(anisotropicSampler, input.texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
 
         input.tangent.xyz = normalize(input.tangent.xyz);
         
@@ -59,13 +59,16 @@ float4 PsMain(VSOutput input) : SV_Target
     
     float3 viewDir = normalize(cameraCBuffer.cameraPosition.xyz - input.worldSpacePosition.xyz);
     
-    float metallicFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).b;
-    float roughnessFactor = metalRoughnessTexture.Sample(linearWrapSampler, input.texCoord).g;
-    float3 albedo = albedoTexture.Sample(anisotropicSampler, input.texCoord).xyz;
-
-    float3 Lo = float3(0.0f, 0.0f, 0.0f);
+    float metallicFactor = metalRoughnessTexture.Sample(anisotropicSampler, input.texCoord).b;
+    float roughnessFactor = metalRoughnessTexture.Sample(anisotropicSampler, input.texCoord).g;
+    float4 albedoColor = albedoTexture.Sample(anisotropicSampler, input.texCoord);
     
-    // Calculate irradiance due to each light source.
+    clip(albedoColor.a < 0.1f ? -1.0f : 1.0f);
+    float3 albedo = albedoColor.xyz;
+    
+    float3 lo = float3(0.0f, 0.0f, 0.0f);
+    
+    // Calculate radiance due to each punctual light source.
     for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
     {
         float3 lightDirection = normalize(pointLightCBuffer.lightPosition[i].xyz - input.worldSpacePosition.xyz);
@@ -73,13 +76,24 @@ float4 PsMain(VSOutput input) : SV_Target
         float3 li = pointLightCBuffer.lightColor[i].xyz;
     
         float distance = length(pointLightCBuffer.lightPosition[i].xyz - input.worldSpacePosition.xyz);
-        float attenuation = PointLightAttenuation(distance, pointLightCBuffer.radius[i]);
+        float attenuation = PunctualLightAttenuation(distance, pointLightCBuffer.radius[i]);
         float3 radiance = li * attenuation;
         
-        Lo += CookTorrenceBRDF(normal, viewDir, lightDirection, albedo, metallicFactor, roughnessFactor) * radiance * nDotL;
+        lo += CookTorrenceBRDF(normal, viewDir, lightDirection, albedo, metallicFactor, roughnessFactor) * radiance * nDotL;
     }
     
-    float3 outgoingLight =  + Lo + emissive;
+    // Calculate irradiance due to each directional light source.
+    for (uint k = 0; k < TOTAL_DIRECTIONAL_LIGHTS; ++k)
+    {
+        float3 lightDirection = normalize(-directionalLightCBuffer.lightDirection[k].xyz);
+        float nDotL = saturate(dot(normal, lightDirection));
+    
+        float3 radiance = directionalLightCBuffer.lightColor[k].xyz;
+        
+        lo += CookTorrenceBRDF(normal, viewDir, lightDirection, albedo, metallicFactor, roughnessFactor) * radiance * nDotL;
+    }
+    
+    float3 outgoingLight = lo + emissive;   
     
     if (renderResource.enableIBL)
     {

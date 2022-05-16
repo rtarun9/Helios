@@ -24,8 +24,6 @@ void SandBox::OnUpdate()
 	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
 	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
 
-	m_PBRMaterial.Update();
-
 	m_RenderTargetSettingsData.Update();
 }
 
@@ -94,14 +92,6 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	m_UIManager.FrameStart();
 	
 	m_UIManager.Begin(L"Scene Control");
-
-	if (ImGui::TreeNode("Material Data"))
-	{
-		ImGui::SliderFloat3("Albedo", &m_PBRMaterial.GetBufferData().albedo.x, 0.0f, 1.0f);
-		ImGui::SliderFloat("Metallic Factor", &m_PBRMaterial.GetBufferData().metallicFactor, 0.0f, 1.0f);
-		ImGui::SliderFloat("Roughness Factor", &m_PBRMaterial.GetBufferData().roughnessFactor, 0.0f, 1.0f);
-		ImGui::TreePop();
-	}
 	
 	if (ImGui::TreeNode("Render Target Settings"))
 	{
@@ -116,7 +106,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	}
 
 	// Test code.
-	static bool enableIBL{ true };
+	static bool enableIBL{ false };
 	if (ImGui::TreeNode("Enable IBL"))
 	{
 		ImGui::Checkbox("Enable IBL", &enableIBL);
@@ -179,14 +169,19 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		pointLight.Draw(commandList, lightRenderResources);
 	}
 
+	for (auto& directionalLight : m_DirectionalLights)
+	{
+		directionalLight.UpdateData();
+	}
+	
 	// Draw PBR materials.
 	m_Materials[L"PBRMaterial"].BindPSO(commandList);
 
 	PBRRenderResources pbrRenderResources
 	{
-		.materialCBufferIndex = m_PBRMaterial.GetBufferIndex(),
 		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
 		.pointLightCBufferIndex = gfx::PointLight::GetLightDataCBufferIndex(),
+		.directionalLightCBufferIndex = gfx::DirectionalLight::GetLightDataCBufferIndex(),
 		.enableIBL = enableIBL,
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
@@ -339,20 +334,25 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 
 	for (uint32_t i = 0; i < TOTAL_POINT_LIGHTS; ++i)
 	{
-		m_PointLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, i);
+		m_PointLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, 0.05f, DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), DirectX::XMFLOAT4(10.0f * i, 10.0f, 1.0f, 1.0f), i);
 	}
 
-	m_PBRModels[L"Spheres"].Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
-	m_PBRModels[L"Spheres"].GetTransform().translate = { 10.0f, 0.0f, 0.0f };
+	m_DirectionalLights.resize(TOTAL_DIRECTIONAL_LIGHTS);
+	gfx::DirectionalLight::InitLightDataCBuffer(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
+	for (uint32_t i = 0; i < TOTAL_DIRECTIONAL_LIGHTS; ++i)
+	{
+		m_DirectionalLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, -58.0f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), i);
+	}
 
-	m_PBRModels[L"SciFi Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
+	//m_PBRModels[L"Spheres"].Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
+	//m_PBRModels[L"Spheres"].GetTransform().translate = { 10.0f, 0.0f, 0.0f };
 
-	m_PBRModels[L"Damaged Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"Damaged Helmet");
+	//m_PBRModels[L"SciFi Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
 
-	//m_PBRModels[L"Sponza"].Init(m_Device.Get(), commandList, L"Assets/Models/Sponza/glTF/Sponza.gltf", m_SRV_CBV_UAV_Descriptor, L"Sponza");
-	//m_PBRModels[L"Sponza"].GetTransform().scale = { 0.1f, 0.1f, 0.1f };
+	//m_PBRModels[L"Damaged Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"Damaged Helmet");
 
-	m_PBRMaterial.Init(m_Device.Get(), commandList, MaterialData{ .albedo = dx::XMFLOAT3(1.0f, 0.0f, 0.0f), .roughnessFactor = 0.1f }, m_SRV_CBV_UAV_Descriptor, L"Material PBR CBuffer");
+	m_PBRModels[L"Sponza"].Init(m_Device.Get(), commandList, L"Assets/Models/Sponza/glTF/Sponza.gltf", m_SRV_CBV_UAV_Descriptor, L"Sponza");
+	m_PBRModels[L"Sponza"].GetTransform().scale = { 0.1f, 0.1f, 0.1f };
 }
 
 void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)

@@ -42,7 +42,7 @@ float3 SampleGGX(float2 u, float roughness)
 }
 
 
-float SchlickGGXGs(float cosTheta, float k)
+float SchlickGS(float cosTheta, float k)
 {
     return cosTheta / (cosTheta * (1.0f - k) + k);
 }
@@ -53,12 +53,14 @@ float SchlickGGX(float cosLI, float cosLO, float roughness)
     float r = roughness;
     float k = (r * r) / 2.0f;
     
-    return SchlickGGXGs(cosLI, k) * SchlickGGXGs(cosLO, k);
+    return SchlickGS(cosLI, k) * SchlickGS(cosLO, k);
 }
 
 // Calculates the integral fr(p, wi, wo)n.w dwi.
 // The horizontal (x axis) stores n.wi, and y axis stores the input roughness value.
 // We make assumption that incoming irradiance is 'white' for all directions.
+// Integral that is being computed : F0 * integral(fr(p, wi, wo)(1 - (1 - wo.h)^5)n.wdidwi + integral(fr(p, wi, wo) * (1 - wo.h)^5 n.widwi.
+// This is done to remove the F0 term from the integral (derivation : https://learnopengl.com/PBR/IBL/Specular-IBL).
 [numthreads(32, 32, 1)]
 void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
@@ -72,6 +74,8 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     cosLO = saturate(cosLO);
     
+    // Calculation of view vector using nDotV (as the LUT is parameterized in terms of nDotV).
+    // Assuming that n = (0, 0, 1), and viewDirection is in the XZ plane, viewDirection = (sinLo, 0, cosLo).
     float3 lo = float3(sqrt(1.0f - cosLO * cosLO), 0.0f, cosLO);
     
     float dfg1 = 0.0f;
@@ -84,15 +88,17 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 		// Sample directly in tangent/shading space since we don't care about reference frame as long as it's consistent.
         float3 lh = SampleGGX(u, roughness);
 
-		// Compute incident direction (Li) by reflecting viewing direction (Lo) around half-vector (Lh).
-        float3 Li = 2.0 * dot(lo, lh) * lh - lo;
+		// Compute incident direction (li) by reflecting viewing direction (lo) around half-vector (lh).
+        float3 li = 2.0 * dot(lo, lh) * lh - lo;
 
-        float cosLi = max(Li.z, 0.0f);
+        // Using the fact that n = (0, 0, 1) and x.n = x.z.
+        float cosLi = max(li.z, 0.0f);
         float cosLh = max(lh.z, 0.0f);
         float cosLoLh = saturate(dot(lo, lh));
 
         if (cosLi > 0.0)
         {
+            // The microfacet BRDF formulation.
             float g = SchlickGGX(cosLi, cosLO, roughness);
             float gv = g * cosLoLh / (cosLh * cosLO);
             float fc = pow(1.0 - cosLoLh, 5);

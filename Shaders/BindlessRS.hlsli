@@ -53,10 +53,10 @@ struct PBRRenderResources
     
     uint mvpCBufferIndex;
     
-    uint materialCBufferIndex;
-    
     uint cameraCBufferIndex;
+    
     uint pointLightCBufferIndex;
+    uint directionalLightCBufferIndex;
     
     uint albedoTextureIndex;
     uint metalRoughnessTextureIndex;

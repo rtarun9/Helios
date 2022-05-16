@@ -8,10 +8,10 @@ namespace helios::gfx
 {
 	void PointLight::InitLightDataCBuffer(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor)
 	{
-		s_PointLightData.Init(device, commandList, PointLightData{ .radius = 0.1f }, srvCbDescriptor, L"Point Light CBuffer");
+		s_PointLightData.Init(device, commandList, PointLightData{}, srvCbDescriptor, L"Point Light CBuffer");
 	}
 
-	void PointLight::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor, uint32_t lightNumber)
+	void PointLight::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor, float radius, DirectX::XMFLOAT3 color, DirectX::XMFLOAT4 position, uint32_t lightNumber)
 	{
 		m_LightNumber = lightNumber;
 		std::wstring modelName = L"Point Light " + std::to_wstring(m_LightNumber);
@@ -19,8 +19,12 @@ namespace helios::gfx
 
 		Model::Init(device, commandList, L"Assets/Models/Sphere/scene.gltf", srvCbDescriptor, modelName);
 
-		s_PointLightData.GetBufferData().radius[m_LightNumber] = 0.1f;
-		s_PointLightData.GetBufferData().lightColor[m_LightNumber] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		s_PointLightData.GetBufferData().radius[m_LightNumber] = radius;
+		s_PointLightData.GetBufferData().lightColor[m_LightNumber] = DirectX::XMFLOAT4{color.x, color.y, color.z, 1.0f};
+		s_PointLightData.GetBufferData().lightPosition[m_LightNumber] = position;
+
+		m_TransformData.translate = { position.x, position.y, position.z };
+		m_TransformData.scale = { radius, radius, radius };
 	}
 
 	void PointLight::UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix)
@@ -29,8 +33,7 @@ namespace helios::gfx
 
 		s_PointLightData.Update();
 
-		dx::XMFLOAT3 radiusScalingVector = { s_PointLightData.GetBufferData().radius[m_LightNumber], s_PointLightData.GetBufferData().radius[m_LightNumber] , s_PointLightData.GetBufferData().radius[m_LightNumber] };
-		dx::XMVECTOR scalingVector = dx::XMLoadFloat3(&radiusScalingVector);
+		dx::XMVECTOR scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);
 		dx::XMVECTOR rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
 		dx::XMVECTOR translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
 
@@ -46,13 +49,14 @@ namespace helios::gfx
 	{
 		if (ImGui::TreeNode(WstringToString(m_ModelName).c_str()))
 		{
-			ImGui::SliderFloat("Radius", &s_PointLightData.GetBufferData().radius[m_LightNumber], 0.0f, 10.0f);
-
-			m_TransformData.scale = { s_PointLightData.GetBufferData().radius[m_LightNumber], s_PointLightData.GetBufferData().radius[m_LightNumber] , s_PointLightData.GetBufferData().radius[m_LightNumber] };
+			ImGui::SliderFloat("Radius", &m_TransformData.scale.x, 0.0f, 10.0f);
+			m_TransformData.scale.y = m_TransformData.scale.x;
+			m_TransformData.scale.z = m_TransformData.scale.x;
+			s_PointLightData.GetBufferData().radius[m_LightNumber] = m_TransformData.scale.x;
 
 			ImGui::ColorPicker3("Color", &s_PointLightData.GetBufferData().lightColor[m_LightNumber].x);
 
-			ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
+			ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -50.0f, 50.0f);
 			
 			s_PointLightData.GetBufferData().lightPosition[m_LightNumber] = { m_TransformData.translate.x, m_TransformData.translate.y, m_TransformData.translate.z, 0.0f };
 

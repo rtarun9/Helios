@@ -12,7 +12,7 @@ namespace helios::gfx
 	{
 	public:
 		static void InitLightDataCBuffer(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor);
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor, uint32_t lightNumber);
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor, float radius, DirectX::XMFLOAT3 color, DirectX::XMFLOAT4 position, uint32_t lightNumber);
 
 		void UpdateData();
 		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix);
