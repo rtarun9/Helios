@@ -1,6 +1,8 @@
 #ifndef __UTILS_HLSLI__
 #define __UTILS_HLSLI__
 
+#include "BindlessRS.hlsli"
+
 static const float MIN_FLOAT_VALUE = 0.00001f;
 
 static const float PI = 3.14159265359;
@@ -77,6 +79,74 @@ float PunctualLightAttenuation(float distance, float radius)
 {
     float fallOffFactor = saturate(pow(1.0f - (pow(distance, 4) / pow(radius, 4)), 2));
     return fallOffFactor / max(distance * distance, 0.01f * 0.01f);
+}
+
+// Helpers for getting material values (albedo, metal roughness, etc).
+float3 GetNormal(float3 inputNormal, float2 texCoord, float4 tangent, float3x3 modelMatrix, uint normalTextureIndex)
+{
+    if (normalTextureIndex)
+    {
+        Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
+        
+        inputNormal = normalize(inputNormal);
+        float3 normal = normalize(2.0f * normalTexture.Sample(anisotropicSampler, texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+
+        tangent.xyz = normalize(tangent.xyz);
+        
+        float3 bitangent = normalize(cross(inputNormal, tangent.xyz)) * tangent.w;
+        float3x3 tbn = float3x3(tangent.xyz, bitangent, inputNormal);
+    
+        normal = mul(normal, tbn);
+        normal = normalize(mul(normal, modelMatrix));
+        
+        return normal;
+    }
+    else
+    {
+        return normalize(inputNormal);
+    }
+}
+
+float3 GetAO(float2 texCoord, uint aoTextureIndex)
+{
+    if (aoTextureIndex)
+    {
+        Texture2D<float4> aoTexture = ResourceDescriptorHeap[aoTextureIndex];
+        return aoTexture.Sample(linearWrapSampler, texCoord).xyz;
+    }
+    
+    return float3(1.0f, 1.0f, 1.0f);
+}
+
+float3 GetEmissive(float2 texCoord, uint emissiveTextureIndex)
+{
+    if (emissiveTextureIndex)
+    {
+        Texture2D<float4> emissiveTexture = ResourceDescriptorHeap[emissiveTextureIndex];
+        return emissiveTexture.Sample(anisotropicSampler, texCoord).xyz;
+    }
+    
+    return float3(0.0f, 0.0f, 0.0f);
+}
+
+float2 GetMetallicRoughnessFactor(float2 texCoord, uint metalRoughnessTextureIndex)
+{
+    if (metalRoughnessTextureIndex)
+    {
+        Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[metalRoughnessTextureIndex];
+        float metallicFactor = metalRoughnessTexture.Sample(anisotropicSampler, texCoord).b;
+        float roughnessFactor = metalRoughnessTexture.Sample(anisotropicSampler, texCoord).g;
+        
+        return float2(metallicFactor, roughnessFactor);
+    }
+    
+    return float2(0.5f, 0.5f);
+}
+
+float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex)
+{
+    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
+    return albedoTexture.Sample(anisotropicSampler, texCoord);
 }
 
 #endif

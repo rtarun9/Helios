@@ -118,9 +118,9 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		model.second.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	}
 
-	for (auto& pointLight : m_PointLights)
+	for (auto& light : m_Lights)
 	{
-		pointLight.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
+		light.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	}
 
 	m_SkyBoxModel.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
@@ -158,20 +158,18 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	LightRenderResources lightRenderResources{};
 
-	for (auto& pointLight : m_PointLights)
+	for (auto& pointLight : m_Lights)
 	{
-		lightRenderResources =
+		if (pointLight.GetLightType() == EnumClassValue(gfx::LightTypes::PointLightData))
 		{
-			.pointLightCBufferIndex = gfx::PointLight::GetLightDataCBufferIndex(),
-			.pointLightIndex = pointLight.GetPointLightIndex()
-		};
+			lightRenderResources =
+			{
+				.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
+				.lightIndex = pointLight.GetLightIndex(),
+			};
 
-		pointLight.Draw(commandList, lightRenderResources);
-	}
-
-	for (auto& directionalLight : m_DirectionalLights)
-	{
-		directionalLight.UpdateData();
+			pointLight.Draw(commandList, lightRenderResources);
+		}
 	}
 	
 	// Draw PBR materials.
@@ -180,8 +178,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	PBRRenderResources pbrRenderResources
 	{
 		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
-		.pointLightCBufferIndex = gfx::PointLight::GetLightDataCBufferIndex(),
-		.directionalLightCBufferIndex = gfx::DirectionalLight::GetLightDataCBufferIndex(),
+		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
 		.enableIBL = enableIBL,
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
@@ -289,6 +286,7 @@ void SandBox::LoadContent()
 	commandList = m_CommandQueue.GetCommandList();
 
 	LoadModels(commandList.Get());
+	LoadLights(commandList.Get());
 	LoadRenderTargets(commandList.Get());
 
 	// Close command list and execute it (for the initial setup).
@@ -329,27 +327,15 @@ void SandBox::LoadModels(ID3D12GraphicsCommandList* commandList)
 {
 	m_SkyBoxModel.Init(m_Device.Get(), commandList, L"Assets/Models/Cube/glTF/Cube.gltf", m_SRV_CBV_UAV_Descriptor, L"Sky Box Model");
 
-	m_PointLights.resize(TOTAL_POINT_LIGHTS);
-	gfx::PointLight::InitLightDataCBuffer(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
+#if 1
+	m_PBRModels[L"Spheres"].Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
+	m_PBRModels[L"Spheres"].GetTransform().translate = { 10.0f, 0.0f, 0.0f };
 
-	for (uint32_t i = 0; i < TOTAL_POINT_LIGHTS; ++i)
-	{
-		m_PointLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, 0.05f, DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), DirectX::XMFLOAT4(10.0f * i, 10.0f, 1.0f, 1.0f), i);
-	}
+	m_PBRModels[L"SciFi Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
 
-	m_DirectionalLights.resize(TOTAL_DIRECTIONAL_LIGHTS);
-	gfx::DirectionalLight::InitLightDataCBuffer(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
-	for (uint32_t i = 0; i < TOTAL_DIRECTIONAL_LIGHTS; ++i)
-	{
-		m_DirectionalLights[i].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, -58.0f, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), i);
-	}
+	m_PBRModels[L"Damaged Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"Damaged Helmet");
 
-	//m_PBRModels[L"Spheres"].Init(m_Device.Get(), commandList, L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", m_SRV_CBV_UAV_Descriptor, L"Spheres");
-	//m_PBRModels[L"Spheres"].GetTransform().translate = { 10.0f, 0.0f, 0.0f };
-
-	//m_PBRModels[L"SciFi Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"SciFi Helmet");
-
-	//m_PBRModels[L"Damaged Helmet"].Init(m_Device.Get(), commandList, L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf", m_SRV_CBV_UAV_Descriptor, L"Damaged Helmet");
+#endif
 
 	m_PBRModels[L"Sponza"].Init(m_Device.Get(), commandList, L"Assets/Models/Sponza/glTF/Sponza.gltf", m_SRV_CBV_UAV_Descriptor, L"Sponza");
 	m_PBRModels[L"Sponza"].GetTransform().scale = { 0.1f, 0.1f, 0.1f };
@@ -363,6 +349,23 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	m_OffscreenRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
 
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList, RenderTargetSettings{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
+}
+
+void SandBox::LoadLights(ID3D12GraphicsCommandList* commandList)
+{
+	m_Lights.resize(TOTAL_LIGHTS);
+	gfx::Light::InitLightDataCBuffer(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
+
+	uint32_t lightIndex{};
+
+	// Load directional lights.
+	m_Lights[lightIndex].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::DirectionalLightData{ .sunAngle = -153.0f, .lightColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, lightIndex++);
+
+	// Load point lights.
+	for (; lightIndex < TOTAL_POINT_LIGHTS + 1; ++lightIndex)
+	{
+		m_Lights[lightIndex].Init(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor, gfx::PointLightData{ .radius =  0.05f, .lightPosition = DirectX::XMFLOAT4(10.0f * lightIndex, 10.0f, 1.0f, 1.0f), .lightColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, lightIndex);
+	}
 }
 
 void SandBox::LoadCubeMaps()

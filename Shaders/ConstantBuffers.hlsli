@@ -23,6 +23,8 @@
 // Constants that are also shared between hlsl and C++.
 static const uint TOTAL_POINT_LIGHTS = 5;
 static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
+
+// The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.
 static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
 
 // Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl)
@@ -40,17 +42,12 @@ ConstantBufferStruct TransformData
     float4x4 projectionMatrix;
 };
 
-ConstantBufferStruct PointLightData
+ConstantBufferStruct LightData
 {
-    float4 lightPosition[TOTAL_POINT_LIGHTS];
-    float4 lightColor[TOTAL_POINT_LIGHTS];
-    float radius[TOTAL_POINT_LIGHTS];
-};
-
-ConstantBufferStruct DirectionalLightData
-{
-    float4 lightDirection[TOTAL_DIRECTIONAL_LIGHTS];
-    float4 lightColor[TOTAL_DIRECTIONAL_LIGHTS];
+    // Note : lightPosition essentially stores the light direction if the type is directional light.
+    float4 lightPosition[TOTAL_LIGHTS];
+    float4 lightColor[TOTAL_LIGHTS];
+    float radius[TOTAL_LIGHTS];
 };
 
 ConstantBufferStruct RenderTargetSettings

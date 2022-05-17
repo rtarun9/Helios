@@ -23,5 +23,5 @@
 
 #include "Graphics/Model/Model.hpp"
 
-#include "Graphics/Lights/PointLight.hpp"
-#include "Graphics/Lights/DirectionalLight.hpp"
+#include "Graphics/Lights/Light.hpp"
+#include "Graphics/Lights/Light.hpp"

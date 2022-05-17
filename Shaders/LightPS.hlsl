@@ -11,7 +11,7 @@ ConstantBuffer<LightRenderResources> renderResource : register(b0);
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
-    ConstantBuffer<PointLightData> pointLightCBuffer = ResourceDescriptorHeap[renderResource.pointLightCBufferIndex];
+    ConstantBuffer<LightData> pointLightCBuffer = ResourceDescriptorHeap[renderResource.lightDataCBufferIndex];
     
-    return float4(pointLightCBuffer.lightColor[renderResource.pointLightIndex].xyz, 1.0f);
+    return float4(pointLightCBuffer.lightColor[renderResource.lightIndex].xyz, 1.0f);
 }

@@ -28,6 +28,7 @@ private:
 	void LoadMaterials();
 	void LoadTextures(ID3D12GraphicsCommandList* commandList);
 	void LoadModels(ID3D12GraphicsCommandList* commandList);
+	void LoadLights(ID3D12GraphicsCommandList* commandList);
 	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
 	void LoadCubeMaps();
 
@@ -91,8 +92,8 @@ private:
 	std::map<std::wstring_view, helios::gfx::Material> m_Materials{};
 	std::map<std::wstring_view, helios::gfx::Texture> m_Textures{};
 	std::map<std::wstring_view, helios::Model> m_PBRModels{};
-	std::vector<helios::gfx::PointLight> m_PointLights{};
-	std::vector<helios::gfx::DirectionalLight> m_DirectionalLights{};
+
+	std::vector<helios::gfx::Light> m_Lights{};
 
 	// Data for IBL / Skybox.
 	helios::gfx::Texture m_EnvironmentTexture{};
