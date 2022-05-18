@@ -21,5 +21,7 @@ namespace helios
 		void End() const;
 
 		void SetClearColor(std::span<float> clearColor) const;
+
+		void SetCustomDarkTheme() const;
 	};
 }

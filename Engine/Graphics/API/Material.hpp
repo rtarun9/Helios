@@ -23,11 +23,11 @@ namespace helios::gfx
 
 		void BindPSO(ID3D12GraphicsCommandList* const commandList) const;
 
-		static D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true, bool cubeMap = false);
+		static D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, uint32_t rtvCount = 1u, DXGI_FORMAT rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT, bool depthEnable = true, bool cubeMap = false);
 		static D3D12_COMPUTE_PIPELINE_STATE_DESC CreateComputePSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const computeShaderBlob);
 
 		// Creates graphics pipeline state object and returns a Material.
-		static Material CreateMaterial(ID3D12Device* const device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT, bool isCubeMap = false);
+		static Material CreateMaterial(ID3D12Device* const device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, uint32_t rtvCount = 1u, DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT, bool isCubeMap = false);
 
 		// Creates compute pipeline state object and returns a Material.
 		static Material CreateMaterial(ID3D12Device* const device, std::wstring_view csShaderPath, std::wstring_view materialName);

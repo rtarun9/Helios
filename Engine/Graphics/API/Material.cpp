@@ -46,8 +46,20 @@ namespace helios::gfx
 		commandList->SetPipelineState(pipelineState.Get());
 	}
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC Material::CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, DXGI_FORMAT rtvFormat, bool depthEnable, bool isCubeMap)
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC Material::CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, uint32_t rtvCount, DXGI_FORMAT rtvFormat, bool depthEnable, bool isCubeMap)
 	{
+		std::array<DXGI_FORMAT, 8u> rtvFormats{};
+
+		for (uint32_t i = 0; i < rtvCount; ++i)
+		{
+			rtvFormats[i] = rtvFormat;
+		}
+
+		for (uint32_t i = rtvCount; i < 8u; ++i)
+		{
+			rtvFormats[i] = DXGI_FORMAT_UNKNOWN;
+		}
+
 		if (isCubeMap)
 		{
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = 
@@ -59,8 +71,8 @@ namespace helios::gfx
 				.SampleMask = UINT_MAX,
 				.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 				.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-				.NumRenderTargets = 1u,
-				.RTVFormats = rtvFormat,
+				.NumRenderTargets = rtvCount,
+				.RTVFormats = rtvFormats[0],
 				.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
 				.SampleDesc
 				{
@@ -83,7 +95,7 @@ namespace helios::gfx
 			return psoDesc;
 		}
 
-		return D3D12_GRAPHICS_PIPELINE_STATE_DESC
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
 		{
 			.pRootSignature = rootSignatureBlob,
 			.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob),
@@ -93,8 +105,7 @@ namespace helios::gfx
 			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT),
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-			.NumRenderTargets = 1u,
-			.RTVFormats = rtvFormat,
+			.NumRenderTargets = rtvCount,
 			.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
 			.SampleDesc
 			{
@@ -103,6 +114,13 @@ namespace helios::gfx
 			},
 			.NodeMask = 0u,
 		};
+
+		for (uint32_t i = 0; i < 8u; ++i)
+		{
+			psoDesc.RTVFormats[i] = rtvFormats[i];
+		}
+
+		return psoDesc;
 	}
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC Material::CreateComputePSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const computeShaderBlob)
@@ -116,7 +134,7 @@ namespace helios::gfx
 		};
 	}
 
-	Material Material::CreateMaterial(ID3D12Device* const device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, DXGI_FORMAT format, bool isCubeMap)
+	Material Material::CreateMaterial(ID3D12Device* const device, std::wstring_view vsShaderPath, std::wstring_view psShaderPath, std::wstring_view materialName, uint32_t rtvCount, DXGI_FORMAT format, bool isCubeMap)
 	{
 		wrl::ComPtr<ID3DBlob> vertexBlob;
 		::D3DReadFileToBlob(vsShaderPath.data(), &vertexBlob);
@@ -131,7 +149,7 @@ namespace helios::gfx
 
 		wrl::ComPtr<ID3D12PipelineState> pso;
 
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = CreateGraphicsPSODesc(Material::rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), format, true, isCubeMap);
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = CreateGraphicsPSODesc(Material::rootSignature.Get(), vertexBlob.Get(), pixelBlob.Get(), rtvCount, format, true, isCubeMap);
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
 		auto psoName = materialName.data() + std::wstring(L" PSO");
 		pso->SetName(psoName.c_str());

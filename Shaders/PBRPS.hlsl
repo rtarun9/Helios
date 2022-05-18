@@ -64,14 +64,14 @@ float4 PsMain(VSOutput input) : SV_Target
         }
     }
         
-    float3 outgoingLight =  float3(0.0f, 0.0f, 0.0f);   
+    float3 outgoingLight = lo + emissive;
     
     if (renderResource.enableIBL)
     {
         // IBL Calculation.
         float3 diffuseIBL = DiffuseIBL(normal, albedo.xyz, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
         float3 specularIBL = SpecularIBL(normal, albedo.xyz, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
-        outgoingLight += (diffuseIBL + specularIBL) * ao + emissive + lo;
+        outgoingLight += (diffuseIBL + specularIBL) * ao;
     }
     
     return float4(outgoingLight, 1.0f);

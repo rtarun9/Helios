@@ -32,6 +32,12 @@ private:
 	void LoadRenderTargets(ID3D12GraphicsCommandList* commandList);
 	void LoadCubeMaps();
 
+	void RenderLightSources(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
+	void RenderGameObjects(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL);
+	void RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& dsvHandle);
+	void RenderSkyBox(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
+	void RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
+
 	void CreateFactory();
 	void EnableDebugLayer();
 	void SelectAdapter();
@@ -51,6 +57,8 @@ private:
 	static constexpr uint32_t CONVOLUTED_TEXTURE_DIMENSION = 128u;
 	static constexpr uint32_t PREFILTER_TEXTURE_DIMENSION = 512u;
 	static constexpr uint32_t BRDF_CONVOLUTION_TEXTURE_DIMENSION = 256u;
+
+	static constexpr uint32_t SHADOW_DEPTH_MAP_DIMENSION = 1024u;
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
@@ -115,5 +123,7 @@ private:
 
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
+	helios::gfx::RenderTarget m_GBuffer{};
+
 	helios::gfx::ConstantBuffer<RenderTargetSettings> m_RenderTargetSettingsData{};
 };

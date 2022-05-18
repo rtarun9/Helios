@@ -153,52 +153,18 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::SetDescriptorHeaps(commandList, m_SRV_CBV_UAV_Descriptor);
 	gfx::Material::BindRootSignature(commandList);
 
-	// Draw the light source
-	m_Materials[L"LightMaterial"].BindPSO(commandList);
+	RenderGBufferPass(commandList, m_Materials[L"GPassMaterial"], dsvHandle);
 
-	LightRenderResources lightRenderResources{};
+	gfx::utils::ClearDepthBuffer(commandList, dsvHandle);
 
-	for (auto& pointLight : m_Lights)
-	{
-		if (pointLight.GetLightType() == EnumClassValue(gfx::LightTypes::PointLightData))
-		{
-			lightRenderResources =
-			{
-				.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
-				.lightIndex = pointLight.GetLightIndex(),
-			};
+	rtvHandle = m_RTVDescriptor.GetDescriptorHandleFromIndex(m_OffscreenRT.GetRTVIndex());
+	dsvHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_DepthBuffer.GetBufferIndex());
 
-			pointLight.Draw(commandList, lightRenderResources);
-		}
-	}
-	
-	// Draw PBR materials.
-	m_Materials[L"PBRMaterial"].BindPSO(commandList);
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 
-	PBRRenderResources pbrRenderResources
-	{
-		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
-		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
-		.enableIBL = enableIBL,
-		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
-		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
-		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
-	};
-
-	for (auto& pbrModel : m_PBRModels)
-	{
-		pbrModel.second.Draw(commandList, pbrRenderResources);
-	}
-
-	// Draw sky box
-	m_Materials[L"SkyBoxMaterial"].BindPSO(commandList);
-
-	SkyBoxRenderResources skyBoxRenderResources
-	{
-		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
-	};
-
-	m_SkyBoxModel.Draw(commandList, skyBoxRenderResources);
+	RenderLightSources(commandList, m_Materials[L"LightMaterial"]);
+	RenderGameObjects(commandList, m_Materials[L"PBRMaterial"], enableIBL);
+	RenderSkyBox(commandList, m_Materials[L"SkyBoxMaterial"]);
 
 	m_UIManager.End();
 
@@ -207,23 +173,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	rtvHandle = m_RTVDescriptor.GetDescriptorHandleForStart();
 	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
-
+	
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
-	gfx::RenderTarget::Bind(commandList);
 
-	m_Materials[L"OffscreenRTMaterial"].BindPSO(commandList);
-
-	RenderTargetRenderResources bindlessRenderResource
-	{
-		.positionBufferIndex = gfx::RenderTarget::GetPositionBufferIndex(),
-		.textureBufferIndex = gfx::RenderTarget::GetTextureCoordsBufferIndex(),
-		.textureIndex = m_OffscreenRT.GetSRVIndex(),
-		.renderTargetSettingsCBufferIndex = m_RenderTargetSettingsData.GetBufferIndex()
-	};
-
-	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &bindlessRenderResource, 0u);
-
-	commandList->DrawIndexedInstanced(gfx::RenderTarget::RT_INDICES_COUNT, 1u, 0u, 0u, 0u);
+	RenderToBackBuffer(commandList, m_Materials[L"OffscreenRTMaterial"], rtvHandle, dsvHandle);
 
 	m_UIManager.FrameEnd(commandList);
 
@@ -300,9 +253,11 @@ void SandBox::LoadMaterials()
 {
 	m_Materials[L"LightMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/LightVS.cso", L"Shaders/LightPS.cso", L"Light Material");
 	m_Materials[L"PBRMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/PBRVS.cso", L"Shaders/PBRPS.cso", L"PBR Material");
-	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/OffscreenRTVS.cso", L"Shaders/OffscreenRTPS.cso", L"Offscreen RT", 1u, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/SkyBoxVS.cso", L"Shaders/SkyBoxPS.cso", L"Sky Box Material", DXGI_FORMAT_R16G16B16A16_FLOAT, true);
+	m_Materials[L"GPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/GPassVS.cso", L"Shaders/GPassPS.cso", L"GPass Material", 4u);
+
+	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/SkyBoxVS.cso", L"Shaders/SkyBoxPS.cso", L"Sky Box Material", 1u, DXGI_FORMAT_R16G16B16A16_FLOAT, true);
 	
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeFromEquirectTextureCS.cso", L"Cube From Equirect Material");
 	m_Materials[L"CubeMapConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), L"Shaders/CubeMapConvolutionCS.cso", L"Cube Map Convolution Material");
@@ -346,7 +301,8 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	// Create render targets and thier Root signature and PSO.
 	gfx::RenderTarget::InitBuffers(m_Device.Get(), commandList, m_SRV_CBV_UAV_Descriptor);
 
-	m_OffscreenRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, L"Offscreen RT");
+	m_OffscreenRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, 1u, L"Offscreen RT");
+	m_GBuffer.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, 4u, L"G Buffer");
 
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList, RenderTargetSettings{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
 }
@@ -494,6 +450,126 @@ void SandBox::LoadCubeMaps()
 		
 		m_ComputeCommandQueue.ExecuteAndFlush(commandList.Get());
 	}
+}
+
+void SandBox::RenderLightSources(ID3D12GraphicsCommandList* commandList, gfx::Material& material)
+{
+	// Draw the light source
+	material.BindPSO(commandList);
+
+	LightRenderResources lightRenderResources{};
+
+	for (auto& pointLight : m_Lights)
+	{
+		if (pointLight.GetLightType() == EnumClassValue(gfx::LightTypes::PointLightData))
+		{
+			lightRenderResources =
+			{
+				.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
+				.lightIndex = pointLight.GetLightIndex(),
+			};
+
+			pointLight.Draw(commandList, lightRenderResources);
+		}
+	}
+}
+
+void SandBox::RenderGameObjects(ID3D12GraphicsCommandList* commandList, gfx::Material& material, bool enableIBL)
+{
+	material.BindPSO(commandList);
+
+	PBRRenderResources pbrRenderResources
+	{
+		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
+		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
+		.enableIBL = enableIBL,
+		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
+		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
+		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
+	};
+
+	for (auto& pbrModel : m_PBRModels)
+	{
+		pbrModel.second.Draw(commandList, pbrRenderResources);
+	}
+}
+
+void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, gfx::DescriptorHandle& dsvHandle)
+{
+	// For reference : 
+	// gfx::DescriptorHandle albedoRTV =	m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(0u));
+	// gfx::DescriptorHandle positionRTV =	m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(1u));
+	// gfx::DescriptorHandle normalRTV =	m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(2u));
+	// gfx::DescriptorHandle aoMetalRoughnessRTV = m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(3u));
+
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE , 4u> gPassRTVs
+	{
+		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(0u)).cpuDescriptorHandle,
+		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(1u)).cpuDescriptorHandle,
+		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(2u)).cpuDescriptorHandle,
+		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(3u)).cpuDescriptorHandle,
+	};
+
+	for (uint32_t i = 0; i < gPassRTVs.size(); ++i)
+	{
+		gfx::utils::TransitionResource(commandList, m_GBuffer.GetResource(i), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	}
+
+	commandList->OMSetRenderTargets(static_cast<UINT>(gPassRTVs.size()), gPassRTVs.data(), TRUE, &dsvHandle.cpuDescriptorHandle);
+
+	material.BindPSO(commandList);
+
+	PBRRenderResources pbrRenderResources
+	{
+		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
+		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
+		.enableIBL = false,
+		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
+		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
+		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
+	};
+
+	for (auto& pbrModel : m_PBRModels)
+	{
+		pbrModel.second.Draw(commandList, pbrRenderResources);
+	}
+
+	for (uint32_t i = 0; i < gPassRTVs.size(); ++i)
+	{
+		gfx::utils::TransitionResource(commandList, m_GBuffer.GetResource(i), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+}
+
+void SandBox::RenderSkyBox(ID3D12GraphicsCommandList* commandList, gfx::Material& material)
+{
+	material.BindPSO(commandList);
+
+	SkyBoxRenderResources skyBoxRenderResources
+	{
+		.textureIndex = m_EnvironmentTexture.GetTextureIndex()
+	};
+
+	m_SkyBoxModel.Draw(commandList, skyBoxRenderResources);
+}
+
+void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+{
+	material.BindPSO(commandList);
+
+	gfx::RenderTarget::Bind(commandList);
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
+
+	RenderTargetRenderResources bindlessRenderResource
+	{
+		.positionBufferIndex = gfx::RenderTarget::GetPositionBufferIndex(),
+		.textureBufferIndex = gfx::RenderTarget::GetTextureCoordsBufferIndex(),
+		.textureIndex = m_OffscreenRT.GetSRVIndex(),
+		.renderTargetSettingsCBufferIndex = m_RenderTargetSettingsData.GetBufferIndex()
+	};
+
+	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &bindlessRenderResource, 0u);
+
+	commandList->DrawIndexedInstanced(gfx::RenderTarget::RT_INDICES_COUNT, 1u, 0u, 0u, 0u);
 }
 
 void SandBox::CreateFactory()

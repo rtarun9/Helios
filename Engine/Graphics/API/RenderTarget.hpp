@@ -40,12 +40,12 @@ namespace helios::gfx
 	public:
 		static constexpr uint32_t RT_INDICES_COUNT = 6u;
 
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, std::wstring_view rtvName);
+		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, uint32_t renderTargetCount, std::wstring_view rtvName);
 
-		ID3D12Resource* const GetResource() const { return m_Resource.Get(); }
+		ID3D12Resource* const GetResource(uint32_t index = 0u) const { return m_Resources.at(index).Get(); }
 
-		uint32_t GetSRVIndex() const { return m_SRVIndexInDescriptorHeap; }
-		uint32_t GetRTVIndex() const { return m_RTVIndexInDescriptorHeap; };
+		uint32_t GetSRVIndex(uint32_t srvIndex = 0u) const { return m_SRVIndexInDescriptorHeap.at(srvIndex); }
+		uint32_t GetRTVIndex(uint32_t rtvIndex = 0u) const { return m_RTVIndexInDescriptorHeap.at(rtvIndex); };
 
 		static uint32_t GetPositionBufferIndex() { return s_PositionBuffer.GetSRVIndex(); };
 		static uint32_t GetTextureCoordsBufferIndex() { return s_TextureCoordsBuffer.GetSRVIndex(); };
@@ -54,10 +54,10 @@ namespace helios::gfx
 		static void Bind(ID3D12GraphicsCommandList* const commandList);
 
 	private:
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
+		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_Resources;
 
-		uint32_t m_SRVIndexInDescriptorHeap{};
-		uint32_t m_RTVIndexInDescriptorHeap{};
+		std::vector<uint32_t> m_SRVIndexInDescriptorHeap{};
+		std::vector<uint32_t> m_RTVIndexInDescriptorHeap{};
 
 		uint32_t m_Width{};
 		uint32_t m_Height{};
