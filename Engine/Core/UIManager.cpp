@@ -62,11 +62,7 @@ namespace helios
 
 	void UIManager::SetClearColor(std::span<float> clearColor) const
 	{
-		if (ImGui::TreeNode("Clear Color"))
-		{
-			ImGui::ColorEdit3("Clear Color", clearColor.data());
-			ImGui::TreePop();
-		}
+		ImGui::ColorEdit3("Clear Color", clearColor.data());
 	}
 
 	void UIManager::SetCustomDarkTheme() const

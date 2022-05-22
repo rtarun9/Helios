@@ -6,10 +6,15 @@ A work in progress, C++20 & DX12 renderer made for learning purposes.
 * Bindless Rendering (Using SM 6.6's Resource Descriptor Heap).
 * Normal Mapping.
 * Diffuse and Specular IBL.
+* Deferred Shading.
 
 # Gallery
+> PBR and IBL
 ![](Assets/Screenshots/IBL1.png)
 ![](Assets/Screenshots/IBL2.png)
+
+> Deferred Shading
+![](Assets/Screenshots/Deferred1.png)
 
 # Building
 + This project uses VCPKG for package managment and premake as a build system.

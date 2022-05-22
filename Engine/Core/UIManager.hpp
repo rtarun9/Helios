@@ -8,6 +8,7 @@
 
 namespace helios
 {
+	// Thin abstraction over ImGui.
 	class UIManager
 	{
 	public:

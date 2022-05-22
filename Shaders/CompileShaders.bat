@@ -17,6 +17,9 @@ dxc -T ps_6_6 -E PsMain SkyBoxPS.hlsl -Fo SkyBoxPS.cso
 dxc -T vs_6_6 -E VsMain GPassVS.hlsl -Fo GPassVS.cso
 dxc -T ps_6_6 -E PsMain GPassPS.hlsl -Fo GPassPS.cso
 
+dxc -T ps_6_6 -E PsMain PBRDeferredPS.hlsl -Fo PBRDeferredPS.cso
+dxc -T vs_6_6 -E VsMain PBRDeferredVS.hlsl -Fo PBRDeferredVS.cso
+
 dxc -T cs_6_6 -E CsMain CubeFromEquirectTextureCS.hlsl -Fo CubeFromEquirectTextureCS.cso
 
 dxc -T cs_6_6 -E CsMain CubeMapConvolutionCS.hlsl -Fo CubeMapConvolutionCS.cso

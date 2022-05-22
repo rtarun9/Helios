@@ -19,6 +19,7 @@ struct PSOutput
     float4 position : SV_Target1;
     float4 normal : SV_Target2;
     float4 aoMetalRoughness : SV_Target3;
+    float4 emissive : SV_Target4;
 };
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);
@@ -39,8 +40,9 @@ PSOutput PsMain(VSOutput input)
     PSOutput output;
     output.albedo = GetAlbedo(input.texCoord, renderResource.albedoTextureIndex);
     output.position = input.worldSpacePosition;
-    output.normal = float4(0.5f * GetNormal(input.normal, input.texCoord, input.tangent, input.modelMatrix, renderResource.normalTextureIndex) + float3(), 1.0f);
+    output.normal = float4(GetNormal(input.normal, input.texCoord, input.tangent, input.modelMatrix, renderResource.normalTextureIndex), 1.0f);
     output.aoMetalRoughness = float4(ao.x, metallicFactor, roughnessFactor, 1.0f); 
+    output.emissive = float4(GetEmissive(input.texCoord, renderResource.emissiveTextureIndex), 1.0f);
     
     return output;
 }

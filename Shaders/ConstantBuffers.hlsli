@@ -21,7 +21,7 @@
 #endif
 
 // Constants that are also shared between hlsl and C++.
-static const uint TOTAL_POINT_LIGHTS = 5;
+static const uint TOTAL_POINT_LIGHTS = 70;
 static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
 
 // The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.

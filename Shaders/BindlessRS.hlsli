@@ -71,11 +71,37 @@ struct PBRRenderResources
     uint brdfConvolutionLUTMap;
 };
 
+struct DeferredPassRenderResources
+{
+    uint albedoGPassSRVIndex;
+    uint positionGPassSRVIndex;
+    uint normalGPassSRVIndex;
+    uint aoMetalRoughnessGPassSRVIndex;
+    uint emissiveGPassSRVIndex;
+        
+    uint cameraCBufferIndex;
+    
+    uint lightDataCBufferIndex;
+
+    
+    // For debugging purposes.
+    uint enableIBL;
+    
+    uint irradianceMap;
+    uint prefilterMap;
+    uint brdfConvolutionLUTMap;
+    
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+};
+
+
 struct RenderTargetRenderResources
 {
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint textureIndex;
+    uint deferredPassTextureIndex;
     uint renderTargetSettingsCBufferIndex;
 };
 
