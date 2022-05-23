@@ -20,6 +20,9 @@ dxc -T ps_6_6 -E PsMain GPassPS.hlsl -Fo GPassPS.cso
 dxc -T ps_6_6 -E PsMain PBRDeferredPS.hlsl -Fo PBRDeferredPS.cso
 dxc -T vs_6_6 -E VsMain PBRDeferredVS.hlsl -Fo PBRDeferredVS.cso
 
+dxc -T ps_6_6 -E PsMain ShadowPS.hlsl -Fo ShadowPS.cso
+dxc -T vs_6_6 -E VsMain ShadowVS.hlsl -Fo ShadowVS.cso
+
 dxc -T cs_6_6 -E CsMain CubeFromEquirectTextureCS.hlsl -Fo CubeFromEquirectTextureCS.cso
 
 dxc -T cs_6_6 -E CsMain CubeMapConvolutionCS.hlsl -Fo CubeMapConvolutionCS.cso

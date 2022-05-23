@@ -22,14 +22,11 @@ struct PSOutput
     float4 emissive : SV_Target4;
 };
 
-ConstantBuffer<PBRRenderResources> renderResource : register(b0);
+ConstantBuffer<GPassRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 PSOutput PsMain(VSOutput input) 
 {
-    ConstantBuffer<CameraData> cameraCBuffer = ResourceDescriptorHeap[renderResource.cameraCBufferIndex];
-    ConstantBuffer<LightData> lightDataCBuffer = ResourceDescriptorHeap[renderResource.lightDataCBufferIndex];
-    
     float3 ao = GetAO(input.texCoord, renderResource.aoTextureIndex);
     
     float2 metalRoughnessFactor = GetMetallicRoughnessFactor(input.texCoord, renderResource.metalRoughnessTextureIndex);

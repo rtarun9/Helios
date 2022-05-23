@@ -12,7 +12,7 @@ struct VSOutput
     float3x3 modelMatrix : MODEL_MATRIX;
 };
 
-ConstantBuffer<PBRRenderResources> renderResource : register(b0);
+ConstantBuffer<GPassRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)

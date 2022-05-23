@@ -21,6 +21,8 @@ namespace helios
 		void Begin(std::wstring_view uiComponentName) const;
 		void End() const;
 
+		void Image(gfx::DescriptorHandle& descriptorHandle) const;
+
 		void SetClearColor(std::span<float> clearColor) const;
 
 		void SetCustomDarkTheme() const;

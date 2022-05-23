@@ -60,6 +60,11 @@ namespace helios
 		ImGui::End();
 	}
 
+	void UIManager::Image(gfx::DescriptorHandle& descriptorHandle) const
+	{
+		ImGui::Image(ImTextureID(descriptorHandle.gpuDescriptorHandle.ptr), ImVec2(1024, 1024));
+	}
+
 	void UIManager::SetClearColor(std::span<float> clearColor) const
 	{
 		ImGui::ColorEdit3("Clear Color", clearColor.data());

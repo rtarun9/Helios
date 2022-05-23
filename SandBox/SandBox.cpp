@@ -24,6 +24,16 @@ void SandBox::OnUpdate()
 	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
 	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
 
+	// Assuming that the directional light is at index 0 (i.e the light index is 0u).
+	auto directionalLightPosition = gfx::Light::GetLightData().lightPosition[0u];
+	auto directionalLightPositionVector = dx::XMLoadFloat4(&directionalLightPosition);
+
+	m_LightViewMatrix = dx::XMMatrixTranspose(dx::XMMatrixLookAtLH(directionalLightPositionVector, DirectX::XMVectorZero(), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+	m_LightProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixOrthographicOffCenterLH(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f));
+
+	m_ShadowMappingData.GetBufferData() = { .lightViewMatrix = m_LightViewMatrix, .lightProjectionMatrix = m_LightProjectionMatrix};
+
+	m_ShadowMappingData.Update();
 	m_RenderTargetSettingsData.Update();
 }
 
@@ -149,6 +159,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	RenderGBufferPass(commandList, m_Materials[L"GPassMaterial"], dsvHandle);
 	RenderDeferredPass(commandList, m_Materials[L"PBRDeferredMaterial"], enableIBL, rtvHandle,  dsvHandle);
+	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], m_LightViewMatrix, m_LightProjectionMatrix, rtvHandle, dsvHandle);
 	RenderLightSources(commandList, m_Materials[L"LightMaterial"]);
 	RenderSkyBox(commandList, m_Materials[L"SkyBoxMaterial"]);
 
@@ -184,7 +195,7 @@ void SandBox::InitRendererCore()
 
 	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 5u, L"DSV Descriptor");
 
-	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1000u, L"SRV_CBV_UAV Descriptor");
+	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
 
 	CreateBackBufferRenderTargetViews();
 
@@ -242,6 +253,8 @@ void SandBox::LoadMaterials()
 	m_Materials[L"GPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/GPassVS.cso", .psShaderPath = L"Shaders/GPassPS.cso", .rtvCount = DEFERRED_PASS_RENDER_TARGETS, .format = DXGI_FORMAT_R16G16B16A16_FLOAT }, L"G Pass Material");
 	m_Materials[L"PBRDeferredMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRDeferredVS.cso", .psShaderPath = L"Shaders/PBRDeferredPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT }, L"PBR Deferred Material");
 
+	m_Materials[L"ShadowPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/ShadowVS.cso", .psShaderPath = L"Shaders/ShadowPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_D32_FLOAT }, L"Shadow Pass Material");
+
 	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/SkyBoxVS.cso", .psShaderPath = L"Shaders/SkyBoxPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL }, L"Sky Box Material");
 	
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/CubeFromEquirectTextureCS.cso" }, L"Cube From Equirect Material");
@@ -294,6 +307,10 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	m_GBuffer.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, DEFERRED_PASS_RENDER_TARGETS, L"G Buffer");
 
 	m_DeferredDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_Width, m_Height, L"Deferred Depth Buffer");
+	m_ShadowDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, SHADOW_DEPTH_MAP_DIMENSION, SHADOW_DEPTH_MAP_DIMENSION, L"Shadow Depth Buffer");
+	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	m_ShadowMappingData.Init(m_Device.Get(), commandList, ShadowMappingData{}, m_SRV_CBV_UAV_Descriptor, L"Shadow Mapping Data CBuffer");
 
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList, RenderTargetSettings{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
 }
@@ -519,19 +536,11 @@ void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::
 
 	material.BindPSO(commandList);
 
-	PBRRenderResources pbrRenderResources
-	{
-		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
-		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
-		.enableIBL = false,
-		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
-		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
-		.brdfConvolutionLUTMap = m_BRDFConvolutionTexture.GetTextureIndex()
-	};
+	GPassRenderResources gPassRenderResources{};
 
 	for (auto& pbrModel : m_PBRModels)
 	{
-		pbrModel.second.Draw(commandList, pbrRenderResources);
+		pbrModel.second.Draw(commandList, gPassRenderResources);
 	}
 
 	// Now that all the RTV's are with the desired geometry data, the scene can be rendered once again (to fill the depth buffer with appropirate values).
@@ -582,6 +591,34 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 
 	gfx::utils::TransitionResource(commandList, m_DeferredRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
+	// Set the RTV and DSV to the rtv / dsv handle passed into the function.
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
+}
+
+void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, DirectX::XMMATRIX& lightViewMatrix, DirectX::XMMATRIX& lightProjectionMatrix, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+{
+	material.BindPSO(commandList);
+
+	auto shadowDepthHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetBufferIndex());
+	
+	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	
+	gfx::utils::ClearDepthBuffer(commandList, shadowDepthHandle);
+
+	commandList->OMSetRenderTargets(0u, nullptr, TRUE, &shadowDepthHandle.cpuDescriptorHandle);
+
+	ShadowPassRenderResources shadowPassRenderResources
+	{
+		.shadowMappingCBufferIndex = m_ShadowMappingData.GetBufferIndex()
+	};
+	
+	for (auto& [modelName, model] : m_PBRModels)
+	{
+		model.Draw(commandList, shadowPassRenderResources);
+	}
+
+	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	
 	// Set the RTV and DSV to the rtv / dsv handle passed into the function.
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 }

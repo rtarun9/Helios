@@ -358,6 +358,35 @@ namespace helios
 		}
 	}
 
+	template <>
+	void Model::Draw<GPassRenderResources>(ID3D12GraphicsCommandList* const commandList, GPassRenderResources& renderResources)
+	{
+		for (const Mesh& mesh : m_Meshes)
+		{
+			auto indexBufferView = mesh.indexBuffer.GetBufferView();
+
+			commandList->IASetIndexBuffer(&indexBufferView);
+
+			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
+			renderResources.normalBufferIndex = mesh.normalBuffer.GetSRVIndex();
+			renderResources.textureBufferIndex = mesh.textureCoordsBuffer.GetSRVIndex();
+			renderResources.tangetBufferIndex = mesh.tangentBuffer.GetSRVIndex();
+
+			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
+
+			renderResources.albedoTextureIndex = mesh.pbrMaterial.albedoTextureIndex;
+			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTextureIndex;
+			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTextureIndex;
+			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTextureIndex;
+			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTextureIndex;
+
+			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
+
+			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
+		}
+
+	}
+
 	template<>
 	void Model::Draw<LightRenderResources>(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources)
 	{
@@ -376,6 +405,24 @@ namespace helios
 		}
 	}
 
+	template<>
+	void Model::Draw<ShadowPassRenderResources>(ID3D12GraphicsCommandList* const commandList, ShadowPassRenderResources& renderResources)
+	{
+		for (const Mesh& mesh : m_Meshes)
+		{
+			auto indexBufferView = mesh.indexBuffer.GetBufferView();
+
+			commandList->IASetIndexBuffer(&indexBufferView);
+
+			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
+			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
+
+			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
+
+			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
+		}
+
+	}
 	template<>
 	void Model::Draw<SkyBoxRenderResources>(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources)
 	{

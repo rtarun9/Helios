@@ -71,6 +71,30 @@ struct PBRRenderResources
     uint brdfConvolutionLUTMap;
 };
 
+struct GPassRenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint normalBufferIndex;
+    uint tangetBufferIndex;
+    
+    uint mvpCBufferIndex;
+
+    uint albedoTextureIndex;
+    uint metalRoughnessTextureIndex;
+    uint emissiveTextureIndex;
+    uint normalTextureIndex;
+    uint aoTextureIndex;
+};
+
+struct ShadowPassRenderResources
+{
+    uint positionBufferIndex;
+    
+    uint mvpCBufferIndex;
+    uint shadowMappingCBufferIndex;
+};
+
 struct DeferredPassRenderResources
 {
     uint albedoGPassSRVIndex;

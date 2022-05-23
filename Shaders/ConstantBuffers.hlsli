@@ -42,6 +42,12 @@ ConstantBufferStruct TransformData
     float4x4 projectionMatrix;
 };
 
+ConstantBufferStruct ShadowMappingData
+{
+    float4x4 lightViewMatrix;
+    float4x4 lightProjectionMatrix;
+};
+
 ConstantBufferStruct LightData
 {
     // Note : lightPosition essentially stores the light direction if the type is directional light.

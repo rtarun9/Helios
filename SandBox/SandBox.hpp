@@ -36,9 +36,15 @@ private:
 
 	// Function will set the RTV and DSV to the rtv handle / dsv handle passed into the func.
 	void RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle & dsvHandle);
+	
+	// Resets the RTV and DSV to the handles passed into func.
+	void RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, DirectX::XMMATRIX& lightViewMatrix, DirectX::XMMATRIX& lightProjectionMatrix, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
+
 	void RenderLightSources(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
 	void RenderGameObjects(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL);
+	
 	void RenderSkyBox(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
+	
 	void RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
 
 	void CreateFactory();
@@ -65,6 +71,7 @@ private:
 
 	static constexpr uint32_t DEFERRED_PASS_RENDER_TARGETS = 5u;
 
+
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
 
@@ -85,6 +92,8 @@ private:
 	D3D12_RECT m_ScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 
 	helios::gfx::DepthStencilBuffer m_DepthBuffer{};
+	
+	helios::gfx::DepthStencilBuffer m_ShadowDepthBuffer{};
 	
 	// This is used here to prevent modifying the depth buffer value when deferred lighting pass occurs.
 	// The optimal solution will be to copy the depth buffer value into the buffer.
@@ -129,10 +138,14 @@ private:
 	DirectX::XMMATRIX m_ViewMatrix{};
 	DirectX::XMMATRIX m_ProjectionMatrix{};
 
+	DirectX::XMMATRIX m_LightViewMatrix{};
+	DirectX::XMMATRIX m_LightProjectionMatrix{};
+
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
 	helios::gfx::RenderTarget m_GBuffer{};
 	helios::gfx::RenderTarget m_DeferredRT{};
 
+	helios::gfx::ConstantBuffer<ShadowMappingData> m_ShadowMappingData{};
 	helios::gfx::ConstantBuffer<RenderTargetSettings> m_RenderTargetSettingsData{};
 };

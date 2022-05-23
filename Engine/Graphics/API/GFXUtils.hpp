@@ -8,9 +8,9 @@
 namespace helios::gfx::utils
 {
 	inline void TransitionResource(ID3D12GraphicsCommandList* const commandList, ID3D12Resource* const resource,
-		D3D12_RESOURCE_STATES previouState, D3D12_RESOURCE_STATES newState)
+		D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState)
 	{
-		CD3DX12_RESOURCE_BARRIER transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, previouState, newState);
+		CD3DX12_RESOURCE_BARRIER transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, previousState, newState);
 		commandList->ResourceBarrier(1u, &transitionBarrier);
 	}
 
