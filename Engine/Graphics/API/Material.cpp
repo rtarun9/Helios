@@ -59,7 +59,7 @@ namespace helios::gfx
 			.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT),
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = graphicsMaterialData.rtvCount,
-			.DSVFormat = {DXGI_FORMAT_D32_FLOAT},
+			.DSVFormat = {graphicsMaterialData.depthFormat},
 			.SampleDesc
 			{
 				.Count = 1u,

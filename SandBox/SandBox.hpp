@@ -141,6 +141,11 @@ private:
 	DirectX::XMMATRIX m_LightViewMatrix{};
 	DirectX::XMMATRIX m_LightProjectionMatrix{};
 
+	// Used till CSM is implemented.
+	float m_BackOffDistance{10.0f};
+	float m_Extents{ 30.0f };
+	D3D12_VIEWPORT m_ShadowViewport{};
+
 	// Render target Data.
 	helios::gfx::RenderTarget m_OffscreenRT{};
 	helios::gfx::RenderTarget m_GBuffer{};

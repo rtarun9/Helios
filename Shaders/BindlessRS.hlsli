@@ -107,6 +107,9 @@ struct DeferredPassRenderResources
     
     uint lightDataCBufferIndex;
 
+    // for shadow mapping.
+    uint shadowMappingCBufferIndex;
+    uint shadowDepthBufferIndex;
     
     // For debugging purposes.
     uint enableIBL;

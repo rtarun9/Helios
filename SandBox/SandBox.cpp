@@ -4,6 +4,7 @@
 #include "BindlessRS.hlsli" 
 
 using namespace helios;
+using namespace DirectX;
 
 SandBox::SandBox(Config& config)
 	: Engine(config)
@@ -28,8 +29,10 @@ void SandBox::OnUpdate()
 	auto directionalLightPosition = gfx::Light::GetLightData().lightPosition[0u];
 	auto directionalLightPositionVector = dx::XMLoadFloat4(&directionalLightPosition);
 
-	m_LightViewMatrix = dx::XMMatrixTranspose(dx::XMMatrixLookAtLH(directionalLightPositionVector, DirectX::XMVectorZero(), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-	m_LightProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixOrthographicOffCenterLH(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f));
+	dx::XMVECTOR lightPosition = DirectX::XMVectorZero() - m_BackOffDistance * dx::XMVector4Normalize(directionalLightPositionVector);
+
+	m_LightViewMatrix = dx::XMMatrixTranspose(dx::XMMatrixLookAtLH(lightPosition, DirectX::XMVectorZero(), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+	m_LightProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixOrthographicOffCenterLH(-m_Extents, m_Extents, -m_Extents, m_Extents, 0.1f, 100.0f));
 
 	m_ShadowMappingData.GetBufferData() = { .lightViewMatrix = m_LightViewMatrix, .lightProjectionMatrix = m_LightProjectionMatrix};
 
@@ -93,7 +96,7 @@ void SandBox::OnResize()
 
 		CreateBackBufferRenderTargetViews();
 
-		m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_Width, m_Height, L"Depth Buffer");
+		m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_D24_UNORM_S8_UINT, m_Width, m_Height, L"Depth Buffer");
 	}
 }
 
@@ -109,7 +112,10 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		ImGui::TreePop();
 	}
 
-	ImGui::SliderFloat("Camera Speed", &m_Camera.m_MovementSpeed, 0.0f, 1250.0f);
+	ImGui::SliderFloat("Camera Speed", &m_Camera.m_MovementSpeed, 1.0f, 1250.0f);
+
+	ImGui::SliderFloat("Back off distance", &m_BackOffDistance,-5.0f, 250.0f);
+	ImGui::SliderFloat("Extents", &m_Extents, 1.0f, 100.0f);
 
 	// Test code.
 	static bool enableIBL{ false };
@@ -120,13 +126,19 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 		model.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	}
 
-	for (auto& light : m_Lights)
+	auto shadowDepthBufferSRV = m_SRV_CBV_UAV_Descriptor.GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetSRVIndex());
+	m_UIManager.Image(shadowDepthBufferSRV);
+
+ 	for (auto& light : m_Lights)
 	{
 		light.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	}
 
+
 	m_SkyBoxModel.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
 	
+
+
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
 
@@ -157,9 +169,9 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::SetDescriptorHeaps(commandList, m_SRV_CBV_UAV_Descriptor);
 	gfx::Material::BindRootSignature(commandList);
 
+	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], m_LightViewMatrix, m_LightProjectionMatrix, rtvHandle, dsvHandle);
 	RenderGBufferPass(commandList, m_Materials[L"GPassMaterial"], dsvHandle);
 	RenderDeferredPass(commandList, m_Materials[L"PBRDeferredMaterial"], enableIBL, rtvHandle,  dsvHandle);
-	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], m_LightViewMatrix, m_LightProjectionMatrix, rtvHandle, dsvHandle);
 	RenderLightSources(commandList, m_Materials[L"LightMaterial"]);
 	RenderSkyBox(commandList, m_Materials[L"SkyBoxMaterial"]);
 
@@ -199,7 +211,7 @@ void SandBox::InitRendererCore()
 
 	CreateBackBufferRenderTargetViews();
 
-	m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_Width, m_Height, L"Depth Stencil Buffer");
+	m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_R32_TYPELESS, m_Width, m_Height, L"Depth Stencil Buffer");
 
 	m_Viewport =
 	{
@@ -246,16 +258,16 @@ void SandBox::LoadContent()
 
 void SandBox::LoadMaterials()
 {
-	m_Materials[L"LightMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{.vsShaderPath = L"Shaders/LightVS.cso", .psShaderPath = L"Shaders/LightPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT}, L"Light Material");
-	m_Materials[L"PBRMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRVS.cso", .psShaderPath = L"Shaders/PBRPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT }, L"PBR Material");
-	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/OffscreenRTVS.cso", .psShaderPath = L"Shaders/OffscreenRTPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R8G8B8A8_UNORM }, L"Offscreen RT Material");
+	m_Materials[L"LightMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{.vsShaderPath = L"Shaders/LightVS.cso", .psShaderPath = L"Shaders/LightPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT}, L"Light Material");
+	m_Materials[L"PBRMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRVS.cso", .psShaderPath = L"Shaders/PBRPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT,  .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR Material");
+	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/OffscreenRTVS.cso", .psShaderPath = L"Shaders/OffscreenRTPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R8G8B8A8_UNORM ,.depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Offscreen RT Material");
 
-	m_Materials[L"GPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/GPassVS.cso", .psShaderPath = L"Shaders/GPassPS.cso", .rtvCount = DEFERRED_PASS_RENDER_TARGETS, .format = DXGI_FORMAT_R16G16B16A16_FLOAT }, L"G Pass Material");
-	m_Materials[L"PBRDeferredMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRDeferredVS.cso", .psShaderPath = L"Shaders/PBRDeferredPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT }, L"PBR Deferred Material");
+	m_Materials[L"GPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/GPassVS.cso", .psShaderPath = L"Shaders/GPassPS.cso", .rtvCount = DEFERRED_PASS_RENDER_TARGETS, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"G Pass Material");
+	m_Materials[L"PBRDeferredMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRDeferredVS.cso", .psShaderPath = L"Shaders/PBRDeferredPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR Deferred Material");
 
-	m_Materials[L"ShadowPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/ShadowVS.cso", .psShaderPath = L"Shaders/ShadowPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_D32_FLOAT }, L"Shadow Pass Material");
+	m_Materials[L"ShadowPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/ShadowVS.cso", .psShaderPath = L"Shaders/ShadowPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_D32_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Shadow Pass Material");
 
-	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/SkyBoxVS.cso", .psShaderPath = L"Shaders/SkyBoxPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL }, L"Sky Box Material");
+	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/SkyBoxVS.cso", .psShaderPath = L"Shaders/SkyBoxPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT, .depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL }, L"Sky Box Material");
 	
 	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/CubeFromEquirectTextureCS.cso" }, L"Cube From Equirect Material");
 	m_Materials[L"CubeMapConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/CubeMapConvolutionCS.cso" }, L"Cube Map Convolution Material");
@@ -306,11 +318,21 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	m_DeferredRT.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, 1u, L"Deferred RT");
 	m_GBuffer.Init(m_Device.Get(), commandList, DXGI_FORMAT_R16G16B16A16_FLOAT, m_RTVDescriptor, m_SRV_CBV_UAV_Descriptor, m_Width, m_Height, DEFERRED_PASS_RENDER_TARGETS, L"G Buffer");
 
-	m_DeferredDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_Width, m_Height, L"Deferred Depth Buffer");
-	m_ShadowDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, SHADOW_DEPTH_MAP_DIMENSION, SHADOW_DEPTH_MAP_DIMENSION, L"Shadow Depth Buffer");
+	m_DeferredDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_R32_TYPELESS, m_Width, m_Height, L"Deferred Depth Buffer");
+	m_ShadowDepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_R32_TYPELESS, SHADOW_DEPTH_MAP_DIMENSION, SHADOW_DEPTH_MAP_DIMENSION, L"Shadow Depth Buffer");
 	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	m_ShadowMappingData.Init(m_Device.Get(), commandList, ShadowMappingData{}, m_SRV_CBV_UAV_Descriptor, L"Shadow Mapping Data CBuffer");
+
+	m_ShadowViewport =
+	{
+		.TopLeftX = 0.0f,
+		.TopLeftY = 0.0f,
+		.Width = static_cast<float>(SHADOW_DEPTH_MAP_DIMENSION),
+		.Height = static_cast<float>(SHADOW_DEPTH_MAP_DIMENSION),
+		.MinDepth = 0.0f,
+		.MaxDepth = 1.0f
+	};
 
 	m_RenderTargetSettingsData.Init(m_Device.Get(), commandList, RenderTargetSettings{ .exposure = 1.0f }, m_SRV_CBV_UAV_Descriptor, L"Render Target Settings Data");
 }
@@ -564,6 +586,8 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 		.emissiveGPassSRVIndex = m_GBuffer.GetSRVIndex(4u),
 		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
 		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
+		.shadowMappingCBufferIndex = m_ShadowMappingData.GetBufferIndex(),
+		.shadowDepthBufferIndex = m_ShadowDepthBuffer.GetSRVIndex(),
 		.enableIBL = enableIBL,
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
@@ -599,6 +623,7 @@ void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::g
 {
 	material.BindPSO(commandList);
 
+	commandList->RSSetViewports(1u, &m_ShadowViewport);
 	auto shadowDepthHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetBufferIndex());
 	
 	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
@@ -621,6 +646,8 @@ void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::g
 	
 	// Set the RTV and DSV to the rtv / dsv handle passed into the function.
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
+
+	commandList->RSSetViewports(1u, &m_Viewport);
 }
 
 void SandBox::RenderSkyBox(ID3D12GraphicsCommandList* commandList, gfx::Material& material)

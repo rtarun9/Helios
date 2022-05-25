@@ -9,6 +9,23 @@ struct VSOutput
     float2 textureCoord : TEXTURE_COORD;
 };
 
+float CalculateShadow(float4 lightSpaceWorldPosition, uint shadowDepthBufferIndex)
+{
+    float3 shadowPosition = lightSpaceWorldPosition.xyz / lightSpaceWorldPosition.z;
+    shadowPosition.x = shadowPosition.x * 0.5f + 0.5f;
+    shadowPosition.y = shadowPosition.y * -0.5f + 0.5f;
+
+    if (shadowPosition.z > 1.0f)
+    {
+        return 0.0f;
+    }
+
+    Texture2D<float4> shadowDepthBuffer = ResourceDescriptorHeap[shadowDepthBufferIndex];
+    float closestDepth = shadowDepthBuffer.Sample(linearClampSampler, shadowPosition.xy).x;
+
+    return shadowPosition.z > closestDepth ? 1.0f : 0.0f;
+}
+
 ConstantBuffer<DeferredPassRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
@@ -16,7 +33,8 @@ float4 PsMain(VSOutput input) : SV_Target
 {
     ConstantBuffer<CameraData> cameraCBuffer = ResourceDescriptorHeap[renderResource.cameraCBufferIndex];
     ConstantBuffer<LightData> lightDataCBuffer = ResourceDescriptorHeap[renderResource.lightDataCBufferIndex];
-    
+    ConstantBuffer<ShadowMappingData> shadowMappingData = ResourceDescriptorHeap[renderResource.shadowMappingCBufferIndex];
+
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGPassSRVIndex];
     float4 albedo = albedoTexture.Sample(linearWrapSampler, input.textureCoord);
     
@@ -45,6 +63,12 @@ float4 PsMain(VSOutput input) : SV_Target
 
     float3 viewDir = normalize(cameraCBuffer.cameraPosition.xyz - worldSpacePosition.xyz);
     
+    // Shadow rendering logic.
+    matrix lightSpaceTransformationMatrix = mul(shadowMappingData.lightViewMatrix, shadowMappingData.lightProjectionMatrix);
+    float4 lightSpaceWorldPosition = mul(worldSpacePosition, lightSpaceTransformationMatrix);
+
+    float shadows = CalculateShadow(lightSpaceWorldPosition, renderResource.shadowDepthBufferIndex);
+
     float3 lo = float3(0.0f, 0.0f, 0.0f);
     // Calculate radiance due to each light source
     for (uint i = 0; i < TOTAL_LIGHTS; ++i)
@@ -74,15 +98,15 @@ float4 PsMain(VSOutput input) : SV_Target
         }
     }
         
-    float3 outgoingLight = lo + emissive;
+    float3 outgoingLight = (lo + emissive);
     
     if (renderResource.enableIBL)
     {
         // IBL Calculation.
         float3 diffuseIBL = DiffuseIBL(normal, albedo.xyz, roughnessFactor, metallicFactor, viewDir, renderResource.irradianceMap);
         float3 specularIBL = SpecularIBL(normal, albedo.xyz, viewDir, roughnessFactor, metallicFactor, renderResource.prefilterMap, renderResource.brdfConvolutionLUTMap);
-        outgoingLight += (diffuseIBL + specularIBL) * ao;
+        outgoingLight += (diffuseIBL + specularIBL) * ao * (1.0f - shadows);
     }
-    
+
     return float4(outgoingLight, 1.0f);
 }

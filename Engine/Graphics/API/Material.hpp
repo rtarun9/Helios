@@ -10,6 +10,7 @@ namespace helios::gfx
 		std::wstring_view psShaderPath{};
 		uint32_t rtvCount{1};
 		DXGI_FORMAT format{ DXGI_FORMAT_R16G16B16A16_FLOAT };
+		DXGI_FORMAT depthFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT };
 		D3D12_COMPARISON_FUNC depthComparisonFunc{D3D12_COMPARISON_FUNC_LESS};
 	};
 
