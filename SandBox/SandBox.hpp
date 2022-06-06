@@ -38,14 +38,20 @@ private:
 	void RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle & dsvHandle);
 	
 	// Resets the RTV and DSV to the handles passed into func.
-	void RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, DirectX::XMMATRIX& lightViewMatrix, DirectX::XMMATRIX& lightProjectionMatrix, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
-
+	void RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
+	void RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
+	
 	void RenderLightSources(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
 	void RenderGameObjects(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL);
 	
 	void RenderSkyBox(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material);
 	
 	void RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
+
+	// CSM helper function.
+	std::array<DirectX::XMVECTOR, 8> GetFrustumCorners(DirectX::XMMATRIX& projectionMatrix);
+	std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX> GetLightSpaceMatrix(float nearPlane, float farPlane);
+	void CalculateCSMMatrices();
 
 	void CreateFactory();
 	void EnableDebugLayer();
@@ -71,6 +77,12 @@ private:
 
 	static constexpr uint32_t DEFERRED_PASS_RENDER_TARGETS = 5u;
 
+	static constexpr uint32_t CSM_DEPTH_MAPS = 5u;
+
+	static constexpr float NEAR_PLANE = 1.1f;
+	static constexpr float FAR_PLANE = 500.0f;
+	
+	static constexpr std::array<float, CSM_DEPTH_MAPS - 1> CSM_CASCADES{ FAR_PLANE / 50.0f, FAR_PLANE / 25.0f, FAR_PLANE / 10.0f, FAR_PLANE / 2.0f };
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
@@ -98,6 +110,8 @@ private:
 	// This is used here to prevent modifying the depth buffer value when deferred lighting pass occurs.
 	// The optimal solution will be to copy the depth buffer value into the buffer.
 	helios::gfx::DepthStencilBuffer m_DeferredDepthBuffer{};
+
+	std::array<helios::gfx::DepthStencilBuffer, CSM_DEPTH_MAPS> m_CSMDepthMaps{};
 
 	// Descriptor heaps.
 	helios::gfx::Descriptor m_RTVDescriptor{};
@@ -140,6 +154,10 @@ private:
 
 	DirectX::XMMATRIX m_LightViewMatrix{};
 	DirectX::XMMATRIX m_LightProjectionMatrix{};
+	DirectX::XMMATRIX m_CSMLightViewMatrix{};
+	DirectX::XMMATRIX m_CSMLightProjectionMatrix{};
+	
+	std::array<std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX>, CSM_DEPTH_MAPS> m_CSMLightMatrices{};
 
 	// Used till CSM is implemented.
 	float m_BackOffDistance{10.0f};
@@ -152,5 +170,8 @@ private:
 	helios::gfx::RenderTarget m_DeferredRT{};
 
 	helios::gfx::ConstantBuffer<ShadowMappingData> m_ShadowMappingData{};
+	std::array<helios::gfx::ConstantBuffer<ShadowMappingData>, CSM_DEPTH_MAPS> m_CSMShadowMappingData{};
+
+
 	helios::gfx::ConstantBuffer<RenderTargetSettings> m_RenderTargetSettingsData{};
 };

@@ -2,12 +2,36 @@
 
 #include "Pch.hpp"
 
+// Reference : https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloWindow/DXSampleHelper.h.
 static inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
 	{
 		throw std::exception("Failed HRESULT.");
 	}
+}
+
+static inline std::string WstringToString(std::wstring_view inputWString)
+{
+	std::string result{};
+	std::wstring wideStringData = inputWString.data();
+	CW2A cw2a(wideStringData.c_str());
+	return std::string(cw2a);
+}
+
+static inline std::wstring StringToWString(std::string_view inputString)
+{
+	std::wstring result{};
+	std::string stringData = inputString.data();
+	CA2W ca2w(stringData.c_str());
+	return std::wstring(ca2w);
+}
+
+static inline std::wstring HresultToString(HRESULT hr)
+{
+	char str[128]{};
+	sprintf_s(str, "HRESULT : 0x%08X", static_cast<UINT>(hr));
+	return StringToWString(str);
 }
 
 static inline void ErrorMessage(std::wstring_view message)
@@ -25,20 +49,24 @@ static inline void GetBlobMessage(ID3DBlob* blob)
 	}
 }
 
-static inline std::string WstringToString(std::wstring_view inputWString) 
+// Currently unused.
+static inline std::wstring GetAssetsPath()
 {
-	std::string result{};
-	std::wstring wideStringData = inputWString.data();
-	CW2A cw2a(wideStringData.c_str());
-	return std::string(cw2a);
-}
+	WCHAR assetsPath[MAX_PATH]{};
+	DWORD size = GetModuleFileName(nullptr, assetsPath, sizeof(assetsPath));
 
-static inline std::wstring StringToWString(std::string_view inputString)
-{
-	std::wstring result{};
-	std::string stringData = inputString.data();
-	CA2W ca2w(stringData.c_str());
-	return std::wstring(ca2w);
+	if (size == 0)
+	{
+		throw std::exception("Invalid size = 0 in GetAssetsPath helper function.");
+	}
+
+	WCHAR* lastSlash = wcsrchr(assetsPath, L'\\');
+	if (lastSlash)
+	{
+		*(lastSlash + 1) = L'\0';
+	}
+
+	return std::wstring(assetsPath);
 }
 
 #define CREATE_LAMBDA_FUNCTION(function) ([&](){function;})

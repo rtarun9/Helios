@@ -36,8 +36,15 @@ void SandBox::OnUpdate()
 
 	m_ShadowMappingData.GetBufferData() = { .lightViewMatrix = m_LightViewMatrix, .lightProjectionMatrix = m_LightProjectionMatrix};
 
+	for (auto& csmShadowMappingData : m_CSMShadowMappingData)
+	{
+		csmShadowMappingData.Update();
+	}
+
 	m_ShadowMappingData.Update();
 	m_RenderTargetSettingsData.Update();
+
+	CalculateCSMMatrices();
 }
 
 void SandBox::OnRender()
@@ -129,6 +136,12 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	auto shadowDepthBufferSRV = m_SRV_CBV_UAV_Descriptor.GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetSRVIndex());
 	m_UIManager.Image(shadowDepthBufferSRV);
 
+	for (auto& csmShadowDepthBuffer : m_CSMDepthMaps)
+	{
+		auto shadowDepthBufferSRV = m_SRV_CBV_UAV_Descriptor.GetDescriptorHandleFromIndex(csmShadowDepthBuffer.GetSRVIndex());
+		m_UIManager.Image(shadowDepthBufferSRV);
+	}
+
  	for (auto& light : m_Lights)
 	{
 		light.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
@@ -169,7 +182,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	gfx::utils::SetDescriptorHeaps(commandList, m_SRV_CBV_UAV_Descriptor);
 	gfx::Material::BindRootSignature(commandList);
 
-	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], m_LightViewMatrix, m_LightProjectionMatrix, rtvHandle, dsvHandle);
+	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], rtvHandle, dsvHandle);
+	RenderShadowCSMPass(commandList, m_Materials[L"ShadowPassMaterial"], rtvHandle, dsvHandle);
 	RenderGBufferPass(commandList, m_Materials[L"GPassMaterial"], dsvHandle);
 	RenderDeferredPass(commandList, m_Materials[L"PBRDeferredMaterial"], enableIBL, rtvHandle,  dsvHandle);
 	RenderLightSources(commandList, m_Materials[L"LightMaterial"]);
@@ -205,7 +219,7 @@ void SandBox::InitRendererCore()
 
 	m_RTVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
 
-	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 5u, L"DSV Descriptor");
+	m_DSVDescriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
 
 	m_SRV_CBV_UAV_Descriptor.Init(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
 
@@ -323,6 +337,13 @@ void SandBox::LoadRenderTargets(ID3D12GraphicsCommandList* commandList)
 	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	m_ShadowMappingData.Init(m_Device.Get(), commandList, ShadowMappingData{}, m_SRV_CBV_UAV_Descriptor, L"Shadow Mapping Data CBuffer");
+
+	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
+	{
+		m_CSMDepthMaps[i].Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_R32_TYPELESS, SHADOW_DEPTH_MAP_DIMENSION, SHADOW_DEPTH_MAP_DIMENSION, L"CSM SHadow Depth Buffer" + std::to_wstring(i));
+		gfx::utils::TransitionResource(commandList, m_CSMDepthMaps[i].GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_CSMShadowMappingData[i].Init(m_Device.Get(), commandList, ShadowMappingData{}, m_SRV_CBV_UAV_Descriptor, L"CSM Shadow Mapping Data CBuffer " + std::to_wstring(i));
+	}
 
 	m_ShadowViewport =
 	{
@@ -619,7 +640,7 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 }
 
-void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, DirectX::XMMATRIX& lightViewMatrix, DirectX::XMMATRIX& lightProjectionMatrix, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
 {
 	material.BindPSO(commandList);
 
@@ -644,6 +665,40 @@ void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::g
 
 	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	
+	// Set the RTV and DSV to the rtv / dsv handle passed into the function.
+	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
+
+	commandList->RSSetViewports(1u, &m_Viewport);
+}
+
+void SandBox::RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+{
+	material.BindPSO(commandList);
+
+	commandList->RSSetViewports(1u, &m_ShadowViewport);
+	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
+	{
+		auto shadowDepthHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_CSMDepthMaps[i].GetBufferIndex());
+
+		gfx::utils::TransitionResource(commandList, m_CSMDepthMaps[i].GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+		gfx::utils::ClearDepthBuffer(commandList, shadowDepthHandle);
+
+		commandList->OMSetRenderTargets(0u, nullptr, TRUE, &shadowDepthHandle.cpuDescriptorHandle);
+
+		ShadowPassRenderResources shadowPassRenderResources
+		{
+			.shadowMappingCBufferIndex = m_CSMShadowMappingData[i].GetBufferIndex()
+		};
+
+		for (auto& [modelName, model] : m_PBRModels)
+		{
+			model.Draw(commandList, shadowPassRenderResources);
+		}
+
+		gfx::utils::TransitionResource(commandList, m_CSMDepthMaps[i].GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+
 	// Set the RTV and DSV to the rtv / dsv handle passed into the function.
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 
@@ -681,6 +736,94 @@ void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios:
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &bindlessRenderResource, 0u);
 
 	commandList->DrawIndexedInstanced(gfx::RenderTarget::RT_INDICES_COUNT, 1u, 0u, 0u, 0u);
+}
+
+std::array<DirectX::XMVECTOR, 8> SandBox::GetFrustumCorners(DirectX::XMMATRIX& projectionMatrix)
+{
+	dx::XMMATRIX inverseViewProjection = dx::XMMatrixInverse(nullptr, m_ViewMatrix * projectionMatrix);
+
+	std::array<dx::XMVECTOR, 8> frustrumCorners{};
+	uint32_t cornerIndex{};
+	for (int x = 0; x < 2; ++x)
+	{
+		for (int y = 0; y < 2; ++y)
+		{
+			for (int z = 0; z < 2; ++z)
+			{
+				dx::XMVECTOR point = dx::XMVector4Transform(dx::XMVectorSet(2.0f * x - 1.0f, 2.0f * y - 1.0f, (float)z, 1.0f), inverseViewProjection);
+				point = dx::XMVectorSet(dx::XMVectorGetX(point) / dx::XMVectorGetW(point), dx::XMVectorGetY(point) / dx::XMVectorGetW(point), dx::XMVectorGetZ(point) / dx::XMVectorGetW(point), 1.0f);
+				frustrumCorners[cornerIndex++] = point;
+			}
+		}
+	}
+
+	return frustrumCorners;
+}
+
+std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX> SandBox::GetLightSpaceMatrix(float nearPlane, float farPlane)
+{
+	dx::XMMATRIX projectionMatrix = dx::XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, nearPlane, farPlane);
+	const auto frustrumCorners = GetFrustumCorners(projectionMatrix);
+
+
+	// Get the center of the frustrum.
+	dx::XMVECTOR frustrumCenter{ dx::XMVectorZero() };
+	for (const auto& corner : frustrumCorners)
+	{
+		frustrumCenter = dx::XMVectorSet(dx::XMVectorGetX(frustrumCenter) + dx::XMVectorGetX(corner), dx::XMVectorGetY(frustrumCenter) + dx::XMVectorGetY(corner), dx::XMVectorGetZ(frustrumCenter) + dx::XMVectorGetZ(corner), 1.0f);
+	}
+
+	frustrumCenter = dx::XMVectorSet(dx::XMVectorGetX(frustrumCenter) / 8.0f, dx::XMVectorGetY(frustrumCenter) / 8.0f, dx::XMVectorGetZ(frustrumCenter) / 8.0f, 1.0f);
+
+	dx::XMVECTOR upVector = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	dx::XMVECTOR lightDirection = dx::XMLoadFloat4(&gfx::Light::GetLightData().lightPosition[0]);
+	m_CSMLightViewMatrix = dx::XMMatrixLookAtLH(frustrumCenter + lightDirection, frustrumCenter, upVector);
+
+	// Finding AABB of the orthographics projection so that it fits tightly about the frustrum (in light view space).
+	// Main resource https://learnopengl.com/Guest-Articles/2021/CSM	
+	float minX = std::numeric_limits<float>::max();
+	float maxX = std::numeric_limits<float>::min();
+	float minY = std::numeric_limits<float>::max();
+	float maxY = std::numeric_limits<float>::min();
+	float minZ = std::numeric_limits<float>::max();
+	float maxZ = std::numeric_limits<float>::min();
+
+	for (const auto& corner : frustrumCorners)
+	{
+		dx::XMVECTOR lightViewSpaceCorner = dx::XMVector4Transform(corner, m_CSMLightViewMatrix);
+		minX = std::min(minX, dx::XMVectorGetX(lightViewSpaceCorner));
+		maxX = std::max(maxX, dx::XMVectorGetX(lightViewSpaceCorner));
+		minY = std::min(minY, dx::XMVectorGetY(lightViewSpaceCorner));
+		maxY = std::max(maxY, dx::XMVectorGetY(lightViewSpaceCorner));
+		minZ = std::min(minZ, dx::XMVectorGetZ(lightViewSpaceCorner));
+		maxZ = std::max(maxZ, dx::XMVectorGetZ(lightViewSpaceCorner));
+	}
+
+	constexpr float zMultiplier = 10.0f;
+	minZ = minZ < 0.0f ? minZ *= zMultiplier : minZ /= zMultiplier;
+	maxZ = maxZ < 0.0f ? maxZ /= zMultiplier : maxX *= zMultiplier;
+
+	m_CSMLightProjectionMatrix = dx::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
+	return { m_CSMLightViewMatrix, m_CSMLightProjectionMatrix };
+}
+
+void SandBox::CalculateCSMMatrices()
+{
+	for (size_t i = 0; i < CSM_DEPTH_MAPS; ++i)
+	{
+		if (i == 0)
+		{
+			m_CSMLightMatrices[i] = GetLightSpaceMatrix(NEAR_PLANE, CSM_CASCADES[i]);
+		}
+		else if (i < CSM_CASCADES.size())
+		{
+			m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i - 1], CSM_CASCADES[i]);
+		}
+		else if (i == static_cast<size_t>(CSM_DEPTH_MAPS) - 1)
+		{
+			m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i - 1], FAR_PLANE);
+		}
+	}
 }
 
 void SandBox::CreateFactory()

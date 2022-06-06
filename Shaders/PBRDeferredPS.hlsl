@@ -2,29 +2,13 @@
 #include "ConstantBuffers.hlsli"
 #include "BRDF.hlsli"
 #include "IBL.hlsli"
+#include "Shadows.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
 };
-
-float CalculateShadow(float4 lightSpaceWorldPosition, uint shadowDepthBufferIndex)
-{
-    float3 shadowPosition = lightSpaceWorldPosition.xyz / lightSpaceWorldPosition.z;
-    shadowPosition.x = shadowPosition.x * 0.5f + 0.5f;
-    shadowPosition.y = shadowPosition.y * -0.5f + 0.5f;
-
-    if (shadowPosition.z > 1.0f)
-    {
-        return 0.0f;
-    }
-
-    Texture2D<float4> shadowDepthBuffer = ResourceDescriptorHeap[shadowDepthBufferIndex];
-    float closestDepth = shadowDepthBuffer.Sample(linearClampSampler, shadowPosition.xy).x;
-
-    return shadowPosition.z > closestDepth ? 1.0f : 0.0f;
-}
 
 ConstantBuffer<DeferredPassRenderResources> renderResource : register(b0);
 
@@ -67,7 +51,7 @@ float4 PsMain(VSOutput input) : SV_Target
     matrix lightSpaceTransformationMatrix = mul(shadowMappingData.lightViewMatrix, shadowMappingData.lightProjectionMatrix);
     float4 lightSpaceWorldPosition = mul(worldSpacePosition, lightSpaceTransformationMatrix);
 
-    float shadows = CalculateShadow(lightSpaceWorldPosition, renderResource.shadowDepthBufferIndex);
+    float shadows = CalculateSimpleShadow(lightSpaceWorldPosition, renderResource.shadowDepthBufferIndex);
 
     float3 lo = float3(0.0f, 0.0f, 0.0f);
     // Calculate radiance due to each light source
