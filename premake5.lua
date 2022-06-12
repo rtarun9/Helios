@@ -49,7 +49,8 @@ project "Helios"
     {
         "Engine",
         "SandBox",
-        "Shaders"
+        "Shaders",
+        "ThirdParty"
     }
 
     files

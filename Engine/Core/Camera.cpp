@@ -2,6 +2,7 @@
 
 #include "Camera.hpp"
 
+#include "SimpleMath/SimpleMath.h"
 // Some of the operator overloads are in this namespace, hence needed to include the namespace here.
 using namespace DirectX;
 
@@ -74,6 +75,7 @@ namespace helios
 		m_ViewMatrix = dx::XMMatrixLookAtLH(m_CameraPosition, m_CameraTarget, m_CameraUp);
 
 		dx::XMStoreFloat3(&m_CameraDataCBuffer.GetBufferData().cameraPosition, m_CameraPosition);
+		m_CameraDataCBuffer.GetBufferData().viewMatrix = dx::XMMatrixTranspose(m_ViewMatrix);
 		m_CameraDataCBuffer.Update();
 	}
 

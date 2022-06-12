@@ -15,13 +15,13 @@ namespace helios
 	public:
 		static int Run(Engine* engine, HINSTANCE instance);
 		
-		static inline HWND GetWindowHandle() { return s_WindowHandle; };
-		static inline uint32_t GetClientWidth() { return s_ClientWidth; }
-		static inline uint32_t GetClientHeight() { return s_ClientHeight; }
+		static inline HWND GetWindowHandle() { return sWindowHandle; };
+		static inline uint32_t GetClientWidth() { return sClientWidth; }
+		static inline uint32_t GetClientHeight() { return sClientHeight; }
 
-		static inline RECT& GetWindowRect() { return s_WindowRect; };
+		static inline RECT& GetWindowRect() { return sWindowRect; };
 
-		static inline Timer& GetTimer() { return s_Timer; };
+		static inline Timer& GetTimer() { return sTimer; };
 
 	private:
 		// The Application class is only accesible via its static member functions.
@@ -29,20 +29,23 @@ namespace helios
 
 		static void ToggleFullScreenMode();
 
+		// Returns a pair (window x coord, window y coord) of coords to place the window's left corner at to center the window.
+		static std::pair<uint32_t, uint32_t> CenterWindow();
+
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
 		static constexpr inline const wchar_t* WINDOW_CLASS_NAME{L"Base Window Class"};
 		
-		static inline HWND s_WindowHandle{};
+		static inline HWND sWindowHandle{};
 
-		static inline uint32_t s_ClientWidth{};
-		static inline uint32_t s_ClientHeight{};
+		static inline uint32_t sClientWidth{};
+		static inline uint32_t sClientHeight{};
 
-		static inline RECT s_WindowRect{};
-		static inline bool s_IsFullScreen{ false };
+		static inline RECT sWindowRect{};
+		static inline bool sIsFullScreen{ false };
 
-		static inline Timer s_Timer{};
+		static inline Timer sTimer{};
 	};
 
 

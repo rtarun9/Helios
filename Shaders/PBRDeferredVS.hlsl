@@ -4,6 +4,7 @@ struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
+    matrix viewMatrix : VIEW_MATRIX;
 };
 
 ConstantBuffer<DeferredPassRenderResources> renderResource : register(b0);

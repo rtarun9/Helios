@@ -36,15 +36,19 @@ void SandBox::OnUpdate()
 
 	m_ShadowMappingData.GetBufferData() = { .lightViewMatrix = m_LightViewMatrix, .lightProjectionMatrix = m_LightProjectionMatrix};
 
+	CalculateCSMMatrices();
+
+	uint32_t csmIndex{};
 	for (auto& csmShadowMappingData : m_CSMShadowMappingData)
 	{
+		csmShadowMappingData.GetBufferData() = { .lightViewMatrix = m_CSMLightMatrices[csmIndex].first, .lightProjectionMatrix = m_CSMLightMatrices[csmIndex].second };
 		csmShadowMappingData.Update();
+		csmIndex++;
 	}
 
 	m_ShadowMappingData.Update();
 	m_RenderTargetSettingsData.Update();
 
-	CalculateCSMMatrices();
 }
 
 void SandBox::OnRender()
@@ -128,6 +132,8 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	static bool enableIBL{ false };
 	ImGui::Checkbox("Enable IBL", &enableIBL);
 
+	ImGui::SliderFloat("Z multiplier", &m_ZMultiplier, 0.1f, 25.0f);
+
 	for (auto& [modelName, model] : m_PBRModels)
 	{
 		model.UpdateTransformData(commandList, m_ProjectionMatrix, m_ViewMatrix);
@@ -154,6 +160,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	m_UIManager.SetClearColor(clearColor);
+
 
 	m_UIManager.End();
 
@@ -209,7 +216,9 @@ void SandBox::InitRendererCore()
 	CreateFactory();
 	EnableDebugLayer();
 	SelectAdapter();
-	CreateDevice();
+
+	mDevice = std::make_unique<gfx::Device>(m_Adapter.Get());
+	m_Device = mDevice->GetDevice();
 
 	m_CommandQueue.Init(m_Device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Main Command Queue");
 	m_ComputeCommandQueue.Init(m_Device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
@@ -607,8 +616,8 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 		.emissiveGPassSRVIndex = m_GBuffer.GetSRVIndex(4u),
 		.cameraCBufferIndex = m_Camera.GetCameraDataCBufferIndex(),
 		.lightDataCBufferIndex = gfx::Light::GetLightDataCBufferIndex(),
-		.shadowMappingCBufferIndex = m_ShadowMappingData.GetBufferIndex(),
-		.shadowDepthBufferIndex = m_ShadowDepthBuffer.GetSRVIndex(),
+		.shadowMappingCBufferStartingIndex = m_CSMShadowMappingData[0].GetBufferIndex(),
+		.shadowDepthBufferStartingIndex = m_CSMDepthMaps[0].GetSRVIndex(),
 		.enableIBL = enableIBL,
 		.irradianceMap = m_IrradianceMapTexture.GetTextureIndex(),
 		.prefilterMap = m_PreFilterMapTexture.GetTextureIndex(),
@@ -740,7 +749,7 @@ void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios:
 
 std::array<DirectX::XMVECTOR, 8> SandBox::GetFrustumCorners(DirectX::XMMATRIX& projectionMatrix)
 {
-	dx::XMMATRIX inverseViewProjection = dx::XMMatrixInverse(nullptr, m_ViewMatrix * projectionMatrix);
+	dx::XMMATRIX inverseViewProjection = (dx::XMMatrixInverse(nullptr, m_Camera.GetViewMatrix() * (projectionMatrix)));
 
 	std::array<dx::XMVECTOR, 8> frustrumCorners{};
 	uint32_t cornerIndex{};
@@ -764,7 +773,6 @@ std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX> SandBox::GetLightSpaceMatrix(flo
 {
 	dx::XMMATRIX projectionMatrix = dx::XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, nearPlane, farPlane);
 	const auto frustrumCorners = GetFrustumCorners(projectionMatrix);
-
 
 	// Get the center of the frustrum.
 	dx::XMVECTOR frustrumCenter{ dx::XMVectorZero() };
@@ -799,30 +807,18 @@ std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX> SandBox::GetLightSpaceMatrix(flo
 		maxZ = std::max(maxZ, dx::XMVectorGetZ(lightViewSpaceCorner));
 	}
 
-	constexpr float zMultiplier = 10.0f;
-	minZ = minZ < 0.0f ? minZ *= zMultiplier : minZ /= zMultiplier;
-	maxZ = maxZ < 0.0f ? maxZ /= zMultiplier : maxX *= zMultiplier;
+	minZ = minZ < 0.0f ? minZ *= m_ZMultiplier : minZ /= m_ZMultiplier;
+	maxZ = maxZ < 0.0f ? maxZ /= m_ZMultiplier : maxX *= m_ZMultiplier;
 
 	m_CSMLightProjectionMatrix = dx::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
-	return { m_CSMLightViewMatrix, m_CSMLightProjectionMatrix };
+	return { dx::XMMatrixTranspose(m_CSMLightViewMatrix), dx::XMMatrixTranspose(m_CSMLightProjectionMatrix)};
 }
 
 void SandBox::CalculateCSMMatrices()
 {
-	for (size_t i = 0; i < CSM_DEPTH_MAPS; ++i)
+	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
 	{
-		if (i == 0)
-		{
-			m_CSMLightMatrices[i] = GetLightSpaceMatrix(NEAR_PLANE, CSM_CASCADES[i]);
-		}
-		else if (i < CSM_CASCADES.size())
-		{
-			m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i - 1], CSM_CASCADES[i]);
-		}
-		else if (i == static_cast<size_t>(CSM_DEPTH_MAPS) - 1)
-		{
-			m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i - 1], FAR_PLANE);
-		}
+		m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i], CSM_CASCADES[i + 1]);
 	}
 }
 

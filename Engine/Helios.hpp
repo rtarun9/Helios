@@ -8,6 +8,7 @@
 #include "Core/Timer.hpp"
 #include "Core/UIManager.hpp"
 
+#include "Graphics/API/Device.hpp"
 #include "Graphics/API/GFXUtils.hpp"
 #include "Graphics/API/Descriptor.hpp"
 #include "Graphics/API/IndexBuffer.hpp"

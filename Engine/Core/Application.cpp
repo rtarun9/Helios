@@ -36,7 +36,7 @@ namespace helios
 			ErrorMessage(L"Failed to register window class");
 		}
 
-		s_WindowRect = 
+		sWindowRect = 
 		{
 			.left = 0,
 			.top = 0,
@@ -46,35 +46,26 @@ namespace helios
 
 		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-		std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect, WS_OVERLAPPEDWINDOW);
+		std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect, WS_OVERLAPPEDWINDOW);
 
-		// Get Screen width and height so as to center the window.
-		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
-
-		// Clamp value of client region so that it does not exceed the screen width / height.
-		s_ClientWidth = std::clamp<uint32_t>(s_ClientWidth, 0, screenWidth);
-		s_ClientHeight = std::clamp<uint32_t>(s_ClientHeight, 0, screenHeight);
-
-		int windowXPos = std::max<int>(0, (screenWidth - s_ClientWidth) / 2);
-		int windowYPos = std::max<int>(0, (screenHeight - s_ClientHeight) / 2);
+		std::pair<uint32_t, uint32_t> windowPosition = CenterWindow();
 
 		// Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc function by reinterpreting the lParam as a LPCREATESTRUCT.
-		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
-			s_ClientWidth, s_ClientHeight, 0, 0, instance, engine);
+		sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.first, windowPosition.second,
+			sClientWidth, sClientHeight, 0, 0, instance, engine);
 
-		::GetWindowRect(s_WindowHandle, &s_WindowRect);
+		::GetWindowRect(sWindowHandle, &sWindowRect);
 
-		if (!s_WindowHandle)
+		if (!sWindowHandle)
 		{
 			ErrorMessage(L"Failed to create window");
 		}
 
 		engine->OnInit();
 
-		if (s_WindowHandle)
+		if (sWindowHandle)
 		{
-			::ShowWindow(s_WindowHandle, SW_SHOW);
+			::ShowWindow(sWindowHandle, SW_SHOW);
 		}
 
 		// Application initially starts in FullScreen mode by default.
@@ -84,7 +75,7 @@ namespace helios
 		MSG message{};
 		while (message.message != WM_QUIT)
 		{
-			s_Timer.Tick();
+			sTimer.Tick();
 
 			if (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
 			{
@@ -105,42 +96,58 @@ namespace helios
 
 	void Application::ToggleFullScreenMode()
 	{
-		if (!s_IsFullScreen)
+		if (!sIsFullScreen)
 		{
-			::GetWindowRect(s_WindowHandle, &s_WindowRect);
+			::GetWindowRect(sWindowHandle, &sWindowRect);
 
 			// Set window style to borderless so entire screen is filled by the client region. The full screen window style is basically 0ed out by these flag's, done here explicitly.
 			UINT fullScreenWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-			::SetWindowLongW(s_WindowHandle, GWL_STYLE, fullScreenWindowStyle);
+			::SetWindowLongW(sWindowHandle, GWL_STYLE, fullScreenWindowStyle);
 
 			// Get info of the nearest display in case of multi monior setup or primary display in single monitor setup.
-			HMONITOR monitor = ::MonitorFromWindow(s_WindowHandle, MONITOR_DEFAULTTONEAREST);
+			HMONITOR monitor = ::MonitorFromWindow(sWindowHandle, MONITOR_DEFAULTTONEAREST);
 			MONITORINFOEXW monitorInfo{};
 			monitorInfo.cbSize = sizeof(MONITORINFOEXW);
 			::GetMonitorInfoW(monitor, &monitorInfo);
 
 			auto [width, height] = GetMonitorDimensions(monitorInfo);
 
-			::SetWindowPos(s_WindowHandle, HWND_TOP,
+			::SetWindowPos(sWindowHandle, HWND_TOP,
 				monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
 				width, height, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-			::ShowWindow(s_WindowHandle, SW_MAXIMIZE);
+			::ShowWindow(sWindowHandle, SW_MAXIMIZE);
 		}
 		else
 		{
-			::SetWindowLong(s_WindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+			::SetWindowLong(sWindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-			std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
+			std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect);
 
-			::SetWindowPos(s_WindowHandle, HWND_NOTOPMOST,
-				s_WindowRect.left, s_WindowRect.top,
-				s_ClientWidth, s_ClientWidth, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+			::SetWindowPos(sWindowHandle, HWND_NOTOPMOST,
+				sWindowRect.left, sWindowRect.top,
+				sClientWidth, sClientWidth, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 			
-			::ShowWindow(s_WindowHandle, SW_NORMAL);
+			::ShowWindow(sWindowHandle, SW_NORMAL);
 		}
 
-		s_IsFullScreen = !s_IsFullScreen;
+		sIsFullScreen = !sIsFullScreen;
+	}
+
+	std::pair<uint32_t, uint32_t> Application::CenterWindow()
+	{
+		// Get Screen width and height so as to center the window.
+		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
+		int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
+
+		// Clamp value of client region so that it does not exceed the screen width / height.
+		sClientWidth = std::clamp<uint32_t>(sClientWidth, 0, screenWidth);
+		sClientHeight = std::clamp<uint32_t>(sClientHeight, 0, screenHeight);
+
+		uint32_t windowXPos = std::max<uint32_t>(0, (screenWidth - sClientWidth) / 2);
+		uint32_t windowYPos = std::max<uint32_t>(0, (screenHeight - sClientHeight) / 2);
+
+		return { windowXPos, windowYPos };
 	}
 
 	LRESULT CALLBACK Application::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
@@ -170,7 +177,7 @@ namespace helios
 
 				if (wParam == VK_ESCAPE)
 				{
-					::DestroyWindow(s_WindowHandle);
+					::DestroyWindow(sWindowHandle);
 				}
 
 				if (wParam == VK_F11)
@@ -196,11 +203,11 @@ namespace helios
 			case WM_SIZE:
 			{
 				// Dont save current window dimensions while switching from FullScreen -> Normal mode.
-				if (s_IsFullScreen)
+				if (sIsFullScreen)
 				{
-					::GetClientRect(s_WindowHandle, &s_WindowRect);
+					::GetClientRect(sWindowHandle, &sWindowRect);
 
-					std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
+					std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect);
 				}
 
 				break;

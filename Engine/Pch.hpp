@@ -23,6 +23,9 @@
 // D3D12 extension library.
 #include "Graphics/API/d3dx12.hpp"
 
+// Math wrapper for DirectXMath : Provided by DirectXTK12.
+#include "SimpleMath/SimpleMath.h"
+
 // For the ComPtr<> template class.
 #include <wrl/client.h>
 

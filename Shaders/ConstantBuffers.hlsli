@@ -64,6 +64,7 @@ ConstantBufferStruct RenderTargetSettings
 ConstantBufferStruct CameraData
 {
     float3 cameraPosition;
+    float4x4 viewMatrix;
 };
 
 ConstantBufferStruct MaterialData

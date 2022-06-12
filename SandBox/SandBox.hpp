@@ -79,10 +79,10 @@ private:
 
 	static constexpr uint32_t CSM_DEPTH_MAPS = 5u;
 
-	static constexpr float NEAR_PLANE = 1.1f;
-	static constexpr float FAR_PLANE = 500.0f;
+	static constexpr float NEAR_PLANE = 0.5f;
+	static constexpr float FAR_PLANE = 1000.0f;
 	
-	static constexpr std::array<float, CSM_DEPTH_MAPS - 1> CSM_CASCADES{ FAR_PLANE / 50.0f, FAR_PLANE / 25.0f, FAR_PLANE / 10.0f, FAR_PLANE / 2.0f };
+	static constexpr std::array<float, CSM_DEPTH_MAPS + 1> CSM_CASCADES{ NEAR_PLANE, FAR_PLANE / 50.0f, FAR_PLANE / 25.0f, FAR_PLANE / 10.0f, FAR_PLANE / 2.0f,  FAR_PLANE };
 
 	// Factory for GPU enumeration, SwapChain creation etc.
 	Microsoft::WRL::ComPtr<IDXGIFactory7> m_Factory;
@@ -172,6 +172,7 @@ private:
 	helios::gfx::ConstantBuffer<ShadowMappingData> m_ShadowMappingData{};
 	std::array<helios::gfx::ConstantBuffer<ShadowMappingData>, CSM_DEPTH_MAPS> m_CSMShadowMappingData{};
 
+	float m_ZMultiplier{ 10.0f };
 
 	helios::gfx::ConstantBuffer<RenderTargetSettings> m_RenderTargetSettingsData{};
 };

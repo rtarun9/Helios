@@ -8,6 +8,7 @@ struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
+    matrix viewMatrix : VIEW_MATRIX;
 };
 
 ConstantBuffer<DeferredPassRenderResources> renderResource : register(b0);
@@ -17,7 +18,7 @@ float4 PsMain(VSOutput input) : SV_Target
 {
     ConstantBuffer<CameraData> cameraCBuffer = ResourceDescriptorHeap[renderResource.cameraCBufferIndex];
     ConstantBuffer<LightData> lightDataCBuffer = ResourceDescriptorHeap[renderResource.lightDataCBufferIndex];
-    ConstantBuffer<ShadowMappingData> shadowMappingData = ResourceDescriptorHeap[renderResource.shadowMappingCBufferIndex];
+    ConstantBuffer<ShadowMappingData> shadowMappingData = ResourceDescriptorHeap[renderResource.shadowMappingCBufferStartingIndex];
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGPassSRVIndex];
     float4 albedo = albedoTexture.Sample(linearWrapSampler, input.textureCoord);
@@ -51,7 +52,7 @@ float4 PsMain(VSOutput input) : SV_Target
     matrix lightSpaceTransformationMatrix = mul(shadowMappingData.lightViewMatrix, shadowMappingData.lightProjectionMatrix);
     float4 lightSpaceWorldPosition = mul(worldSpacePosition, lightSpaceTransformationMatrix);
 
-    float shadows = CalculateSimpleShadow(lightSpaceWorldPosition, renderResource.shadowDepthBufferIndex);
+    float shadows = CalculateCSMShadow(worldSpacePosition, cameraCBuffer.viewMatrix, renderResource.shadowDepthBufferStartingIndex, renderResource.shadowMappingCBufferStartingIndex);
 
     float3 lo = float3(0.0f, 0.0f, 0.0f);
     // Calculate radiance due to each light source

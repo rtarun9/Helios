@@ -2,6 +2,8 @@
 
 #include "Pch.hpp"
 
+#include "Graphics/API/Device.hpp"
+
 namespace helios
 {
 	struct Config
@@ -42,5 +44,7 @@ namespace helios
 		float m_AspectRatio{};
 
 		uint64_t m_FrameIndex{};
+
+		std::unique_ptr<gfx::Device> mDevice;
 	};
 }
