@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	void Descriptor::Init(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName)
+	Descriptor::Descriptor(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc
 		{
@@ -14,26 +14,26 @@ namespace helios::gfx
 			.NodeMask = 0u
 		};
 
-		ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_DescriptorHeap)));
-		m_DescriptorHeap->SetName(descriptorName.data());
+		ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&mDescriptorHeap)));
+		mDescriptorHeap->SetName(descriptorName.data());
 
-		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
+		mDescriptorSize = device->GetDescriptorHandleIncrementSize(descriptorHeapType);
 
-		m_DescriptorHandleFromStart.cpuDescriptorHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		mDescriptorHandleFromStart.cpuDescriptorHandle = mDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 		if (heapFlags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
 		{
-			m_DescriptorHandleFromStart.gpuDescriptorHandle = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+			mDescriptorHandleFromStart.gpuDescriptorHandle = mDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 		}
 
-		m_DescriptorHandleFromStart.descriptorSize = m_DescriptorSize;
+		mDescriptorHandleFromStart.descriptorSize = mDescriptorSize;
 
-		m_CurrentDescriptorHandle = m_DescriptorHandleFromStart;
+		mCurrentDescriptorHandle = mDescriptorHandleFromStart;
 	}
 
 	DescriptorHandle Descriptor::GetDescriptorHandleFromIndex(uint32_t index) const
 	{
-		DescriptorHandle handle= GetDescriptorHandleForStart();
+		DescriptorHandle handle = GetDescriptorHandleForStart();
 		Offset(handle, index);
 
 		return handle;
@@ -41,32 +41,32 @@ namespace helios::gfx
 
 	uint32_t Descriptor::GetDescriptorIndex(const DescriptorHandle& descriptorHandle) const
 	{
-		return static_cast<uint32_t>((descriptorHandle.gpuDescriptorHandle.ptr - m_DescriptorHandleFromStart.gpuDescriptorHandle.ptr) / m_DescriptorSize);
+		return static_cast<uint32_t>((descriptorHandle.gpuDescriptorHandle.ptr - mDescriptorHandleFromStart.gpuDescriptorHandle.ptr) / mDescriptorSize);
 	}
 
 	uint32_t Descriptor::GetCurrentDescriptorIndex() const
 	{
-		return GetDescriptorIndex(m_CurrentDescriptorHandle);
+		return GetDescriptorIndex(mCurrentDescriptorHandle);
 	}
 
 	void Descriptor::Offset(D3D12_CPU_DESCRIPTOR_HANDLE& handle, uint32_t offset) const
 	{
-		handle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		handle.ptr += mDescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
 	void Descriptor::Offset(D3D12_GPU_DESCRIPTOR_HANDLE& handle, uint32_t offset) const
 	{
-		handle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		handle.ptr += mDescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
 	void Descriptor::Offset(DescriptorHandle& descriptorHandle, uint32_t offset) const
 	{
-		descriptorHandle.cpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
-		descriptorHandle.gpuDescriptorHandle.ptr += m_DescriptorSize * static_cast<unsigned long long>(offset);
+		descriptorHandle.cpuDescriptorHandle.ptr += mDescriptorSize * static_cast<unsigned long long>(offset);
+		descriptorHandle.gpuDescriptorHandle.ptr += mDescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
 	void Descriptor::OffsetCurrentHandle(uint32_t offset)
 	{
-		Offset(m_CurrentDescriptorHandle, offset);
+		Offset(mCurrentDescriptorHandle, offset);
 	}
 }

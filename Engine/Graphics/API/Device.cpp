@@ -14,9 +14,9 @@ namespace helios::gfx
 	void Device::InitDeviceResources()
 	{
 		// Create DXGI Factory.
-		UINT dxgiFactoryFlags = 0;
+		UINT dxgiFactoryFlags{0};
 #ifdef _DEBUG
-		dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+		dxgiFactoryFlags = {DXGI_CREATE_FACTORY_DEBUG};
 #endif
 
 		ThrowIfFailed(::CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&mFactory)));
@@ -37,10 +37,10 @@ namespace helios::gfx
 		ThrowIfFailed(mFactory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&mAdapter)));
 
 #ifdef _DEBUG
+		// The adapter descriptor will be displayed as message (check infoQueue below).
 		DXGI_ADAPTER_DESC adapterDesc{};
 		ThrowIfFailed(mAdapter->GetDesc(&adapterDesc));
-		std::wstring adapterInfo = L"\nAdapter Description : " + std::wstring(adapterDesc.Description) + L".\n";
-		OutputDebugString(adapterInfo.c_str());
+		std::string adapterInfo{ "\nAdapter Description : " + WstringToString(adapterDesc.Description) + ".\n" };
 #endif
 
 		// Create D3D12 device.
@@ -55,6 +55,8 @@ namespace helios::gfx
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+
+		infoQueue->AddApplicationMessage(D3D12_MESSAGE_SEVERITY_MESSAGE, adapterInfo.c_str());
 
 		// Configure queue filter to ignore info message severity.
 		std::array<D3D12_MESSAGE_SEVERITY, 1> ignoreMessageSeverities
@@ -83,11 +85,20 @@ namespace helios::gfx
 
 		ThrowIfFailed(mDevice->QueryInterface(IID_PPV_ARGS(&mDebugDevice)));
 #endif
+
+		// Create the descriptor heaps.
+		mRTVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
+		mDSVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
+		mSRVCBVUAVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
+
+		// Create the command queue's.
+		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
+		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
 	}
 
 	void Device::InitSwapChainResources()
 	{
-		// Check if tearing is supported (needed to know if tearing is supported).
+		// Check if tearing is supported (needed to know if tearing should be done when vsync is off).
 		BOOL allowTearing = TRUE;
 		if (FAILED(mFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
 		{
@@ -115,13 +126,29 @@ namespace helios::gfx
 		};
 
 		wrl::ComPtr<IDXGISwapChain1> swapChain1;
-		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
+		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(mGraphicsCommandQueue->GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
 
 		// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-		ThrowIfFailed(m_Factory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
+		ThrowIfFailed(mFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
 
-		ThrowIfFailed(swapChain1.As(&m_SwapChain));
+		ThrowIfFailed(swapChain1.As(&mSwapChain));
 
-		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
+		
+		// Create Backbuffer render target views.
+		for (int i = 0; i < NUMBER_OF_FRAMES; ++i)
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = mRTVDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle;
+
+			wrl::ComPtr<ID3D12Resource> backBuffer;
+			ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+			mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+			mBackBuffers[i] = backBuffer;
+			mBackBuffers[i]->SetName(L"SwapChain BackBuffer");
+
+			mRTVDescriptor->OffsetCurrentHandle();
+		}
 	}
 }

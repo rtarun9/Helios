@@ -486,9 +486,9 @@ void SandBox::LoadCubeMaps()
 
 	// Run compute shader to generate BRDF Convolution Texture.
 	{
-		auto commandList = m_ComputeCommandQueue.GetCommandList();
+		auto commandList = mDevice->GetComputeCommandQueue()->GetCommandList();
 
-		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
+		gfx::utils::SetDescriptorHeaps(commandList.Get(), mDevice->GetSRVCBVUAVDescriptor());
 		gfx::Material::BindRootSignatureCS(commandList.Get());
 
 		gfx::utils::TransitionResource(commandList.Get(), m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -565,11 +565,11 @@ void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::
 
 	std::array<D3D12_CPU_DESCRIPTOR_HANDLE , 5u> gPassRTVs
 	{
-		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(0u)).cpuDescriptorHandle,
-		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(1u)).cpuDescriptorHandle,
-		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(2u)).cpuDescriptorHandle,
-		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(3u)).cpuDescriptorHandle,
-		m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(4u)).cpuDescriptorHandle,
+		mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(0u)).cpuDescriptorHandle,
+		mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(1u)).cpuDescriptorHandle,
+		mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(2u)).cpuDescriptorHandle,
+		mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(3u)).cpuDescriptorHandle,
+		mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(4u)).cpuDescriptorHandle,
 	};
 
 	for (uint32_t i = 0; i < gPassRTVs.size(); ++i)
@@ -627,10 +627,10 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 	};
 
 	
-	auto deferredRtvHandle = m_RTVDescriptor.GetDescriptorHandleFromIndex(m_DeferredRT.GetRTVIndex());
+	auto deferredRtvHandle = mDevice->GetRTVDescriptor()->GetDescriptorHandleFromIndex(m_DeferredRT.GetRTVIndex());
 	gfx::utils::TransitionResource(commandList, m_DeferredRT.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	auto deferredDsvHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_DeferredDepthBuffer.GetBufferIndex());
+	auto deferredDsvHandle = mDevice->GetDSVDescriptor()->GetDescriptorHandleFromIndex(m_DeferredDepthBuffer.GetBufferIndex());
 
 	gfx::utils::ClearRTV(commandList, deferredRtvHandle, std::vector<float>{0.0f, 0.0f, 0.0f, 1.0f});
 	gfx::utils::ClearDepthBuffer(commandList, deferredDsvHandle);
@@ -654,7 +654,7 @@ void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::g
 	material.BindPSO(commandList);
 
 	commandList->RSSetViewports(1u, &m_ShadowViewport);
-	auto shadowDepthHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetBufferIndex());
+	auto shadowDepthHandle = mDevice->GetDSVDescriptor()->GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetBufferIndex());
 	
 	gfx::utils::TransitionResource(commandList, m_ShadowDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	
@@ -687,7 +687,7 @@ void SandBox::RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios
 	commandList->RSSetViewports(1u, &m_ShadowViewport);
 	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
 	{
-		auto shadowDepthHandle = m_DSVDescriptor.GetDescriptorHandleFromIndex(m_CSMDepthMaps[i].GetBufferIndex());
+		auto shadowDepthHandle = mDevice->GetDSVDescriptor()->GetDescriptorHandleFromIndex(m_CSMDepthMaps[i].GetBufferIndex());
 
 		gfx::utils::TransitionResource(commandList, m_CSMDepthMaps[i].GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
@@ -819,148 +819,5 @@ void SandBox::CalculateCSMMatrices()
 	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
 	{
 		m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i], CSM_CASCADES[i + 1]);
-	}
-}
-
-void SandBox::CreateFactory()
-{
-	UINT dxgiFactoryFlags = 0;
-#ifdef _DEBUG
-	dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-	ThrowIfFailed(::CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_Factory)));
-}
-
-void SandBox::EnableDebugLayer()
-{
-#ifdef _DEBUG
-	ThrowIfFailed(::D3D12GetDebugInterface(IID_PPV_ARGS(&m_DebugInterface)));
-	m_DebugInterface->EnableDebugLayer();
-	m_DebugInterface->SetEnableGPUBasedValidation(TRUE);
-	m_DebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
-
-	// Currently set to default behaviour.
-	m_DebugInterface->SetGPUBasedValidationFlags(D3D12_GPU_BASED_VALIDATION_FLAGS_NONE);
-#endif
-}
-
-void SandBox::SelectAdapter()
-{
-	// Index 0 will be the GPU with highest preference.
-	ThrowIfFailed(m_Factory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&m_Adapter)));
-	
-#ifdef _DEBUG
-	DXGI_ADAPTER_DESC adapterDesc{};
-	ThrowIfFailed(m_Adapter->GetDesc(&adapterDesc));
-	std::wstring adapterInfo = L"Adapter Description : " + std::wstring(adapterDesc.Description) + L".\n";
-	OutputDebugString(adapterInfo.c_str());
-#endif
-}
-
-void SandBox::CreateDevice()
-{
-	ThrowIfFailed(::D3D12CreateDevice(m_Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device)));
-	m_Device->SetName(L"D3D12 Device");
-
-	// Set break points on certain severity levels in debug mode.
-#ifdef _DEBUG
-	wrl::ComPtr<ID3D12InfoQueue> infoQueue;
-	ThrowIfFailed(m_Device.As(&infoQueue));
-
-	infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-	infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-	infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-
-	// Configure queue filter to ignore info message severity.
-	std::array<D3D12_MESSAGE_SEVERITY, 1> ignoreMessageSeverities
-	{
-		D3D12_MESSAGE_SEVERITY_INFO
-	};
-
-	// Configure queue filter to ignore individual messages using thier ID.
-	std::array<D3D12_MESSAGE_ID, 2> ignoreMessageIDs
-	{
-		D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
-	};
-
-	D3D12_INFO_QUEUE_FILTER infoQueueFilter
-	{
-		.DenyList
-		{
-			.NumSeverities = static_cast<UINT>(ignoreMessageSeverities.size()),
-			.pSeverityList = ignoreMessageSeverities.data(),
-			.NumIDs = static_cast<UINT>(ignoreMessageIDs.size()),
-			.pIDList = ignoreMessageIDs.data()
-		},
-	};
-
-	ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
-
-	ThrowIfFailed(m_Device->QueryInterface(IID_PPV_ARGS(&m_DebugDevice)));
-#endif
-}
-
-void SandBox::CheckTearingSupport()
-{
-	BOOL allowTearing = TRUE;
-	wrl::ComPtr<IDXGIFactory5> dxgiFactory;
-	
-	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
-	if (FAILED(dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
-	{
-		allowTearing = FALSE;
-	}
-
-	m_IsTearingSupported = allowTearing;
-}
-
-void SandBox::CreateSwapChain()
-{
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc
-	{
-		.Width = m_Width,
-		.Height = m_Height,
-		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.Stereo = FALSE,
-		.SampleDesc
-		{
-			.Count = 1,
-			.Quality = 0,
-		},
-		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-		.BufferCount = NUMBER_OF_FRAMES,
-		.Scaling = DXGI_SCALING_STRETCH,
-		.SwapEffect = m_VSync ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_FLIP_DISCARD,
-		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-		.Flags = m_IsTearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0u
-	};
-
-	wrl::ComPtr<IDXGISwapChain1> swapChain1;
-	ThrowIfFailed(m_Factory->CreateSwapChainForHwnd(m_CommandQueue.GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
-	
-	// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-	ThrowIfFailed(m_Factory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
-	
-	ThrowIfFailed(swapChain1.As(&m_SwapChain));
-
-	m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-}
-
-void SandBox::CreateBackBufferRenderTargetViews()
-{
-	for (int i = 0; i < NUMBER_OF_FRAMES; ++i)
-	{
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RTVDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle;
-		
-		wrl::ComPtr<ID3D12Resource> backBuffer;
-		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-		m_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
-		m_BackBuffers[i] = backBuffer;
-		m_BackBuffers[i]->SetName(L"SwapChain BackBuffer");
-
-		m_RTVDescriptor.OffsetCurrentHandle();
 	}
 }

@@ -1,6 +1,5 @@
 workspace "Helios"
     architecture "x64"
-    location "VsFiles"
 
     configurations
     {
@@ -73,23 +72,23 @@ project "Helios"
     filter "options:copy_thirdparty_folders=Yes"
         prebuildcommands
         {
-            "{COPYDIR} ../ThirdParty/DirectXShaderCompiler/bin/x64 ../Shaders",
-            "{CHDIR} ../Shaders/",
+            "{COPYDIR} ThirdParty/DirectXShaderCompiler/bin/x64 ../Shaders",
+            "{CHDIR} Shaders/",
             "call CompileShaders.bat",
             "{CHDIR} ../"
         }
 
         postbuildcommands 
         {
-            "{COPYDIR} ../ThirdParty/DirectXAgilitySDK/build/native/bin/x64 ../Bin/%{cfg.buildcfg}/D3D12/",
+            "{COPYDIR} ThirdParty/DirectXAgilitySDK/build/native/bin/x64 Bin/%{cfg.buildcfg}/D3D12/",
         }
 
     filter "options:copy_thirdparty_folders=No"
         prebuildcommands
         {
-            "{CHDIR} ../Shaders/",
+            "{CHDIR} Shaders/",
             "call CompileShaders.bat",
-            "{CHDIR} ../"
+            "{CHDIR} .."
         }
 
     filter "configurations:Debug"

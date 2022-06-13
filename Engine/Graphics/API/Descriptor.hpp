@@ -23,13 +23,13 @@ namespace helios::gfx
 	class Descriptor
 	{
 	public:
-		void Init(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName);
+		Descriptor(ID3D12Device* const device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType, D3D12_DESCRIPTOR_HEAP_FLAGS heapFlags, uint32_t descriptorCount, std::wstring_view descriptorName);
 
-		ID3D12DescriptorHeap* const GetDescriptorHeap() const { return m_DescriptorHeap.Get(); }
-		uint32_t GetDescriptorSize() const { return m_DescriptorSize; };
+		ID3D12DescriptorHeap* const GetDescriptorHeap() const { return mDescriptorHeap.Get(); }
+		uint32_t GetDescriptorSize() const { return mDescriptorSize; };
 
-		DescriptorHandle GetDescriptorHandleForStart() const { return m_DescriptorHandleFromStart; };
-		DescriptorHandle GetCurrentDescriptorHandle() const { return m_CurrentDescriptorHandle; };
+		DescriptorHandle GetDescriptorHandleForStart() const { return mDescriptorHandleFromStart; };
+		DescriptorHandle GetCurrentDescriptorHandle() const { return mCurrentDescriptorHandle; };
 
 		DescriptorHandle GetDescriptorHandleFromIndex(uint32_t index) const;
 
@@ -45,10 +45,10 @@ namespace helios::gfx
 		void OffsetCurrentHandle(uint32_t offset = 1u);
 
 	private:
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescriptorHeap;
-		uint32_t m_DescriptorSize{};
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDescriptorHeap{};
+		uint32_t mDescriptorSize{};
 
-		DescriptorHandle m_DescriptorHandleFromStart{};
-		DescriptorHandle m_CurrentDescriptorHandle{};
+		DescriptorHandle mDescriptorHandleFromStart{};
+		DescriptorHandle mCurrentDescriptorHandle{};
 	};
 }
