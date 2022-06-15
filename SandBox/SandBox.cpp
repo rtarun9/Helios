@@ -20,43 +20,15 @@ void SandBox::OnInit()
 
 void SandBox::OnUpdate()
 {
-	m_Camera.Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
-
-	m_ViewMatrix = dx::XMMatrixTranspose(m_Camera.GetViewMatrix());
-	m_ProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XMConvertToRadians(m_FOV), m_AspectRatio, 0.1f, 1000.0f));
-
-	// Assuming that the directional light is at index 0 (i.e the light index is 0u).
-	auto directionalLightPosition = gfx::Light::GetLightData().lightPosition[0u];
-	auto directionalLightPositionVector = dx::XMLoadFloat4(&directionalLightPosition);
-
-	dx::XMVECTOR lightPosition = DirectX::XMVectorZero() - m_BackOffDistance * dx::XMVector4Normalize(directionalLightPositionVector);
-
-	m_LightViewMatrix = dx::XMMatrixTranspose(dx::XMMatrixLookAtLH(lightPosition, DirectX::XMVectorZero(), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-	m_LightProjectionMatrix = dx::XMMatrixTranspose(dx::XMMatrixOrthographicOffCenterLH(-m_Extents, m_Extents, -m_Extents, m_Extents, 0.1f, 100.0f));
-
-	m_ShadowMappingData.GetBufferData() = { .lightViewMatrix = m_LightViewMatrix, .lightProjectionMatrix = m_LightProjectionMatrix};
-
-	CalculateCSMMatrices();
-
-	uint32_t csmIndex{};
-	for (auto& csmShadowMappingData : m_CSMShadowMappingData)
-	{
-		csmShadowMappingData.GetBufferData() = { .lightViewMatrix = m_CSMLightMatrices[csmIndex].first, .lightProjectionMatrix = m_CSMLightMatrices[csmIndex].second };
-		csmShadowMappingData.Update();
-		csmIndex++;
-	}
-
-	m_ShadowMappingData.Update();
-	m_RenderTargetSettingsData.Update();
+	mRenderTargetSettingsData.Update();
 
 }
 
 void SandBox::OnRender()
 {
-	auto commandList = m_CommandQueue.GetCommandList();
-	wrl::ComPtr<ID3D12Resource> currentBackBuffer = m_BackBuffers[m_CurrentBackBufferIndex];
+	auto commandList = mDevice->GetGraphicsCommandQueue()->GetCommandList();
 
-	PopulateCommandList(commandList.Get(), currentBackBuffer.Get());
+	PopulateCommandList(commandList, currentBackBuffer.Get());
 
 	m_FrameFenceValues[m_CurrentBackBufferIndex] = m_CommandQueue.ExecuteCommandList(commandList.Get());
 
@@ -88,26 +60,10 @@ void SandBox::OnResize()
 {
 	if (m_Width != Application::GetClientWidth() || m_Height != Application::GetClientHeight())
 	{
-		m_CommandQueue.FlushQueue();
-
-		for (int i = 0; i < NUMBER_OF_FRAMES; i++)
-		{
-			m_BackBuffers[i].Reset();
-			m_FrameFenceValues[i] = m_FrameFenceValues[m_CurrentBackBufferIndex];
-		}
-		
-		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
-		ThrowIfFailed(m_SwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(m_SwapChain->ResizeBuffers(NUMBER_OF_FRAMES, Application::GetClientWidth(), Application::GetClientHeight(), swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
-		m_CurrentBackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+		mDevice->ResizeBuffers();
 
 		m_Width = Application::GetClientWidth();
 		m_Height = Application::GetClientHeight();
-
-		CreateBackBufferRenderTargetViews();
-
-		m_DepthBuffer.Init(m_Device.Get(), m_DSVDescriptor, m_SRV_CBV_UAV_Descriptor, DXGI_FORMAT_D24_UNORM_S8_UINT, m_Width, m_Height, L"Depth Buffer");
 	}
 }
 
@@ -187,14 +143,14 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 
 	// Set descriptor heaps and root signature once per command list.
 	gfx::utils::SetDescriptorHeaps(commandList, m_SRV_CBV_UAV_Descriptor);
-	gfx::Material::BindRootSignature(commandList);
+	gfx::PipelineState::BindRootSignature(commandList);
 
-	RenderShadowPass(commandList, m_Materials[L"ShadowPassMaterial"], rtvHandle, dsvHandle);
-	RenderShadowCSMPass(commandList, m_Materials[L"ShadowPassMaterial"], rtvHandle, dsvHandle);
-	RenderGBufferPass(commandList, m_Materials[L"GPassMaterial"], dsvHandle);
-	RenderDeferredPass(commandList, m_Materials[L"PBRDeferredMaterial"], enableIBL, rtvHandle,  dsvHandle);
-	RenderLightSources(commandList, m_Materials[L"LightMaterial"]);
-	RenderSkyBox(commandList, m_Materials[L"SkyBoxMaterial"]);
+	RenderShadowPass(commandList, m_PipelineStates[L"ShadowPassPipelineState"], rtvHandle, dsvHandle);
+	RenderShadowCSMPass(commandList, m_PipelineStates[L"ShadowPassPipelineState"], rtvHandle, dsvHandle);
+	RenderGBufferPass(commandList, m_PipelineStates[L"GPassPipelineState"], dsvHandle);
+	RenderDeferredPass(commandList, m_PipelineStates[L"PBRDeferredPipelineState"], enableIBL, rtvHandle,  dsvHandle);
+	RenderLightSources(commandList, m_PipelineStates[L"LightPipelineState"]);
+	RenderSkyBox(commandList, m_PipelineStates[L"SkyBoxPipelineState"]);
 
 	gfx::utils::TransitionResource(commandList, m_OffscreenRT.GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
@@ -204,7 +160,7 @@ void SandBox::PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12
 	rtvHandle = m_RTVDescriptor.GetDescriptorHandleForStart();
 	m_RTVDescriptor.Offset(rtvHandle, m_CurrentBackBufferIndex);
 	
-	RenderToBackBuffer(commandList, m_Materials[L"OffscreenRTMaterial"], rtvHandle, dsvHandle);
+	RenderToBackBuffer(commandList, m_PipelineStates[L"OffscreenRTPipelineState"], rtvHandle, dsvHandle);
 
 	m_UIManager.FrameEnd(commandList);
 
@@ -251,18 +207,18 @@ void SandBox::InitRendererCore()
 
 void SandBox::LoadContent()
 {
-	gfx::Material::CreateBindlessRootSignature(m_Device.Get(), L"Shaders/BindlessRS.cso");
+	gfx::PipelineState::CreateBindlessRootSignature(m_Device.Get(), L"Shaders/BindlessRS.cso");
 	
 	auto commandList = m_CommandQueue.GetCommandList();
 	
 	m_Camera.Init(m_Device.Get(), commandList.Get(), m_SRV_CBV_UAV_Descriptor);
 
-	LoadMaterials();
+	LoadPipelineStates();
 	LoadTextures(commandList.Get());
 
 	m_CommandQueue.ExecuteAndFlush(commandList.Get());
 
-	// Cube maps require data that gets ready in LoadTextures and LoadMaterials, hence why they are executed before the cube map function.
+	// Cube maps require data that gets ready in LoadTextures and LoadPipelineStates, hence why they are executed before the cube map function.
 	// This behavious is not ideal, and will be fixed soon.
 	std::thread cubeMapThread(std::bind(&SandBox::LoadCubeMaps, this));
 	
@@ -279,24 +235,24 @@ void SandBox::LoadContent()
 	cubeMapThread.join();
 }
 
-void SandBox::LoadMaterials()
+void SandBox::LoadPipelineStates()
 {
-	m_Materials[L"LightMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{.vsShaderPath = L"Shaders/LightVS.cso", .psShaderPath = L"Shaders/LightPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT}, L"Light Material");
-	m_Materials[L"PBRMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRVS.cso", .psShaderPath = L"Shaders/PBRPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT,  .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR Material");
-	m_Materials[L"OffscreenRTMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/OffscreenRTVS.cso", .psShaderPath = L"Shaders/OffscreenRTPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R8G8B8A8_UNORM ,.depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Offscreen RT Material");
+	m_PipelineStates[L"LightPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{.vsShaderPath = L"Shaders/LightVS.cso", .psShaderPath = L"Shaders/LightPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT}, L"Light PipelineState");
+	m_PipelineStates[L"PBRPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/PBRVS.cso", .psShaderPath = L"Shaders/PBRPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT,  .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR PipelineState");
+	m_PipelineStates[L"OffscreenRTPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/OffscreenRTVS.cso", .psShaderPath = L"Shaders/OffscreenRTPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R8G8B8A8_UNORM ,.depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Offscreen RT PipelineState");
 
-	m_Materials[L"GPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/GPassVS.cso", .psShaderPath = L"Shaders/GPassPS.cso", .rtvCount = DEFERRED_PASS_RENDER_TARGETS, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"G Pass Material");
-	m_Materials[L"PBRDeferredMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/PBRDeferredVS.cso", .psShaderPath = L"Shaders/PBRDeferredPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR Deferred Material");
+	m_PipelineStates[L"GPassPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/GPassVS.cso", .psShaderPath = L"Shaders/GPassPS.cso", .rtvCount = DEFERRED_PASS_RENDER_TARGETS, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"G Pass PipelineState");
+	m_PipelineStates[L"PBRDeferredPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/PBRDeferredVS.cso", .psShaderPath = L"Shaders/PBRDeferredPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"PBR Deferred PipelineState");
 
-	m_Materials[L"ShadowPassMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/ShadowVS.cso", .psShaderPath = L"Shaders/ShadowPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_D32_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Shadow Pass Material");
+	m_PipelineStates[L"ShadowPassPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/ShadowVS.cso", .psShaderPath = L"Shaders/ShadowPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_D32_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT }, L"Shadow Pass PipelineState");
 
-	m_Materials[L"SkyBoxMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::GraphicsMaterialData{ .vsShaderPath = L"Shaders/SkyBoxVS.cso", .psShaderPath = L"Shaders/SkyBoxPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT, .depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL }, L"Sky Box Material");
+	m_PipelineStates[L"SkyBoxPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::GraphicsPipelineStateData{ .vsShaderPath = L"Shaders/SkyBoxVS.cso", .psShaderPath = L"Shaders/SkyBoxPS.cso", .rtvCount = 1u, .format = DXGI_FORMAT_R16G16B16A16_FLOAT, .depthFormat = DXGI_FORMAT_D32_FLOAT, .depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL }, L"Sky Box PipelineState");
 	
-	m_Materials[L"EquirectEnvironmentMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/CubeFromEquirectTextureCS.cso" }, L"Cube From Equirect Material");
-	m_Materials[L"CubeMapConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/CubeMapConvolutionCS.cso" }, L"Cube Map Convolution Material");
-	m_Materials[L"PreFilterCubeMapMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/PreFilterCubeMapCS.cso" }, L"Pre Filter Cube Map");
+	m_PipelineStates[L"EquirectEnvironmentPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::ComputePipelineStateData{ .csShaderPath = L"Shaders/CubeFromEquirectTextureCS.cso" }, L"Cube From Equirect PipelineState");
+	m_PipelineStates[L"CubeMapConvolutionPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::ComputePipelineStateData{ .csShaderPath = L"Shaders/CubeMapConvolutionCS.cso" }, L"Cube Map Convolution PipelineState");
+	m_PipelineStates[L"PreFilterCubeMapPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::ComputePipelineStateData{ .csShaderPath = L"Shaders/PreFilterCubeMapCS.cso" }, L"Pre Filter Cube Map");
 
-	m_Materials[L"BRDFConvolutionMaterial"] = gfx::Material::CreateMaterial(m_Device.Get(), gfx::ComputeMaterialData{ .csShaderPath = L"Shaders/BRDFConvolutionCS.cso" }, L"BRDF Convolution Material");
+	m_PipelineStates[L"BRDFConvolutionPipelineState"] = gfx::PipelineState::CreatePipelineState(m_Device.Get(), gfx::ComputePipelineStateData{ .csShaderPath = L"Shaders/BRDFConvolutionCS.cso" }, L"BRDF Convolution PipelineState");
 }
 
 void SandBox::LoadTextures(ID3D12GraphicsCommandList* commandList)
@@ -393,9 +349,9 @@ void SandBox::LoadCubeMaps()
 		gfx::utils::TransitionResource(commandList.Get(), m_EnvironmentTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
-		gfx::Material::BindRootSignatureCS(commandList.Get());
+		gfx::PipelineState::BindRootSignatureCS(commandList.Get());
 
-		m_Materials[L"EquirectEnvironmentMaterial"].BindPSO(commandList.Get());
+		m_PipelineStates[L"EquirectEnvironmentPipelineState"].BindPSO(commandList.Get());
 
 		uint32_t size{ ENV_TEXTURE_DIMENSION };
 		for (uint32_t i = 0; i < m_EnvironmentTexture.GetMipLevels(); ++i)
@@ -427,11 +383,11 @@ void SandBox::LoadCubeMaps()
 		auto commandList = m_ComputeCommandQueue.GetCommandList();
 
 		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
-		gfx::Material::BindRootSignatureCS(commandList.Get());
+		gfx::PipelineState::BindRootSignatureCS(commandList.Get());
 
 		gfx::utils::TransitionResource(commandList.Get(), m_IrradianceMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-		m_Materials[L"CubeMapConvolutionMaterial"].BindPSO(commandList.Get());
+		m_PipelineStates[L"CubeMapConvolutionPipelineState"].BindPSO(commandList.Get());
 
 		CubeMapConvolutionRenderResources cubeMapConvolutionRenderResources
 		{
@@ -455,9 +411,9 @@ void SandBox::LoadCubeMaps()
 		gfx::utils::TransitionResource(commandList.Get(), m_PreFilterMapTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		gfx::utils::SetDescriptorHeaps(commandList.Get(), m_SRV_CBV_UAV_Descriptor);
-		gfx::Material::BindRootSignatureCS(commandList.Get());
+		gfx::PipelineState::BindRootSignatureCS(commandList.Get());
 
-		m_Materials[L"PreFilterCubeMapMaterial"].BindPSO(commandList.Get());
+		m_PipelineStates[L"PreFilterCubeMapPipelineState"].BindPSO(commandList.Get());
 
 		uint32_t size{ PREFILTER_TEXTURE_DIMENSION };
 		for (uint32_t i = 0; i < m_PreFilterMapTexture.GetMipLevels(); i++)
@@ -489,11 +445,11 @@ void SandBox::LoadCubeMaps()
 		auto commandList = mDevice->GetComputeCommandQueue()->GetCommandList();
 
 		gfx::utils::SetDescriptorHeaps(commandList.Get(), mDevice->GetSRVCBVUAVDescriptor());
-		gfx::Material::BindRootSignatureCS(commandList.Get());
+		gfx::PipelineState::BindRootSignatureCS(commandList.Get());
 
 		gfx::utils::TransitionResource(commandList.Get(), m_BRDFConvolutionTexture.GetTextureResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-		m_Materials[L"BRDFConvolutionMaterial"].BindPSO(commandList.Get());
+		m_PipelineStates[L"BRDFConvolutionPipelineState"].BindPSO(commandList.Get());
 
 		m_BRDFConvolutionTexture.CreateUAV(m_Device.Get(), m_SRV_CBV_UAV_Descriptor, 0u);
 
@@ -512,10 +468,10 @@ void SandBox::LoadCubeMaps()
 	}
 }
 
-void SandBox::RenderLightSources(ID3D12GraphicsCommandList* commandList, gfx::Material& material)
+void SandBox::RenderLightSources(ID3D12GraphicsCommandList* commandList, gfx::PipelineState& PipelineState)
 {
 	// Draw the light source
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	LightRenderResources lightRenderResources{};
 
@@ -534,9 +490,9 @@ void SandBox::RenderLightSources(ID3D12GraphicsCommandList* commandList, gfx::Ma
 	}
 }
 
-void SandBox::RenderGameObjects(ID3D12GraphicsCommandList* commandList, gfx::Material& material, bool enableIBL)
+void SandBox::RenderGameObjects(ID3D12GraphicsCommandList* commandList, gfx::PipelineState& PipelineState, bool enableIBL)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	PBRRenderResources pbrRenderResources
 	{
@@ -554,7 +510,7 @@ void SandBox::RenderGameObjects(ID3D12GraphicsCommandList* commandList, gfx::Mat
 	}
 }
 
-void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& PipelineState, gfx::DescriptorHandle& dsvHandle)
 {
 	// For reference : 
 	// gfx::DescriptorHandle albedoRTV =	m_RTVDescriptor.GetDescriptorHandleFromIndex(m_GBuffer.GetRTVIndex(0u));
@@ -586,7 +542,7 @@ void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::
 		commandList->ClearRenderTargetView(gPassRTVs[i], clearColor, 0u, nullptr);
 	}
 
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	GPassRenderResources gPassRenderResources{};
 
@@ -603,9 +559,9 @@ void SandBox::RenderGBufferPass(ID3D12GraphicsCommandList* commandList, helios::
 	}
 }
 
-void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, bool enableIBL, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& PipelineState, bool enableIBL, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	DeferredPassRenderResources deferredPBRRenderResources
 	{
@@ -649,9 +605,9 @@ void SandBox::RenderDeferredPass(ID3D12GraphicsCommandList* commandList, helios:
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
 }
 
-void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& PipelineState, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	commandList->RSSetViewports(1u, &m_ShadowViewport);
 	auto shadowDepthHandle = mDevice->GetDSVDescriptor()->GetDescriptorHandleFromIndex(m_ShadowDepthBuffer.GetBufferIndex());
@@ -680,9 +636,9 @@ void SandBox::RenderShadowPass(ID3D12GraphicsCommandList* commandList, helios::g
 	commandList->RSSetViewports(1u, &m_Viewport);
 }
 
-void SandBox::RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& PipelineState, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	commandList->RSSetViewports(1u, &m_ShadowViewport);
 	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
@@ -714,9 +670,9 @@ void SandBox::RenderShadowCSMPass(ID3D12GraphicsCommandList* commandList, helios
 	commandList->RSSetViewports(1u, &m_Viewport);
 }
 
-void SandBox::RenderSkyBox(ID3D12GraphicsCommandList* commandList, gfx::Material& material)
+void SandBox::RenderSkyBox(ID3D12GraphicsCommandList* commandList, gfx::PipelineState& PipelineState)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	SkyBoxRenderResources skyBoxRenderResources
 	{
@@ -726,9 +682,9 @@ void SandBox::RenderSkyBox(ID3D12GraphicsCommandList* commandList, gfx::Material
 	m_SkyBoxModel.Draw(commandList, skyBoxRenderResources);
 }
 
-void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::Material& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
+void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& PipelineState, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle)
 {
-	material.BindPSO(commandList);
+	PipelineState.BindPSO(commandList);
 
 	gfx::RenderTarget::Bind(commandList);
 	commandList->OMSetRenderTargets(1u, &rtvHandle.cpuDescriptorHandle, FALSE, &dsvHandle.cpuDescriptorHandle);
@@ -745,79 +701,4 @@ void SandBox::RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios:
 	commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_ROOTCONSTANTS, &bindlessRenderResource, 0u);
 
 	commandList->DrawIndexedInstanced(gfx::RenderTarget::RT_INDICES_COUNT, 1u, 0u, 0u, 0u);
-}
-
-std::array<DirectX::XMVECTOR, 8> SandBox::GetFrustumCorners(DirectX::XMMATRIX& projectionMatrix)
-{
-	dx::XMMATRIX inverseViewProjection = (dx::XMMatrixInverse(nullptr, m_Camera.GetViewMatrix() * (projectionMatrix)));
-
-	std::array<dx::XMVECTOR, 8> frustrumCorners{};
-	uint32_t cornerIndex{};
-	for (int x = 0; x < 2; ++x)
-	{
-		for (int y = 0; y < 2; ++y)
-		{
-			for (int z = 0; z < 2; ++z)
-			{
-				dx::XMVECTOR point = dx::XMVector4Transform(dx::XMVectorSet(2.0f * x - 1.0f, 2.0f * y - 1.0f, (float)z, 1.0f), inverseViewProjection);
-				point = dx::XMVectorSet(dx::XMVectorGetX(point) / dx::XMVectorGetW(point), dx::XMVectorGetY(point) / dx::XMVectorGetW(point), dx::XMVectorGetZ(point) / dx::XMVectorGetW(point), 1.0f);
-				frustrumCorners[cornerIndex++] = point;
-			}
-		}
-	}
-
-	return frustrumCorners;
-}
-
-std::pair<DirectX::XMMATRIX, DirectX::XMMATRIX> SandBox::GetLightSpaceMatrix(float nearPlane, float farPlane)
-{
-	dx::XMMATRIX projectionMatrix = dx::XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, nearPlane, farPlane);
-	const auto frustrumCorners = GetFrustumCorners(projectionMatrix);
-
-	// Get the center of the frustrum.
-	dx::XMVECTOR frustrumCenter{ dx::XMVectorZero() };
-	for (const auto& corner : frustrumCorners)
-	{
-		frustrumCenter = dx::XMVectorSet(dx::XMVectorGetX(frustrumCenter) + dx::XMVectorGetX(corner), dx::XMVectorGetY(frustrumCenter) + dx::XMVectorGetY(corner), dx::XMVectorGetZ(frustrumCenter) + dx::XMVectorGetZ(corner), 1.0f);
-	}
-
-	frustrumCenter = dx::XMVectorSet(dx::XMVectorGetX(frustrumCenter) / 8.0f, dx::XMVectorGetY(frustrumCenter) / 8.0f, dx::XMVectorGetZ(frustrumCenter) / 8.0f, 1.0f);
-
-	dx::XMVECTOR upVector = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	dx::XMVECTOR lightDirection = dx::XMLoadFloat4(&gfx::Light::GetLightData().lightPosition[0]);
-	m_CSMLightViewMatrix = dx::XMMatrixLookAtLH(frustrumCenter + lightDirection, frustrumCenter, upVector);
-
-	// Finding AABB of the orthographics projection so that it fits tightly about the frustrum (in light view space).
-	// Main resource https://learnopengl.com/Guest-Articles/2021/CSM	
-	float minX = std::numeric_limits<float>::max();
-	float maxX = std::numeric_limits<float>::min();
-	float minY = std::numeric_limits<float>::max();
-	float maxY = std::numeric_limits<float>::min();
-	float minZ = std::numeric_limits<float>::max();
-	float maxZ = std::numeric_limits<float>::min();
-
-	for (const auto& corner : frustrumCorners)
-	{
-		dx::XMVECTOR lightViewSpaceCorner = dx::XMVector4Transform(corner, m_CSMLightViewMatrix);
-		minX = std::min(minX, dx::XMVectorGetX(lightViewSpaceCorner));
-		maxX = std::max(maxX, dx::XMVectorGetX(lightViewSpaceCorner));
-		minY = std::min(minY, dx::XMVectorGetY(lightViewSpaceCorner));
-		maxY = std::max(maxY, dx::XMVectorGetY(lightViewSpaceCorner));
-		minZ = std::min(minZ, dx::XMVectorGetZ(lightViewSpaceCorner));
-		maxZ = std::max(maxZ, dx::XMVectorGetZ(lightViewSpaceCorner));
-	}
-
-	minZ = minZ < 0.0f ? minZ *= m_ZMultiplier : minZ /= m_ZMultiplier;
-	maxZ = maxZ < 0.0f ? maxZ /= m_ZMultiplier : maxX *= m_ZMultiplier;
-
-	m_CSMLightProjectionMatrix = dx::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
-	return { dx::XMMatrixTranspose(m_CSMLightViewMatrix), dx::XMMatrixTranspose(m_CSMLightProjectionMatrix)};
-}
-
-void SandBox::CalculateCSMMatrices()
-{
-	for (uint32_t i = 0; i < CSM_DEPTH_MAPS; ++i)
-	{
-		m_CSMLightMatrices[i] = GetLightSpaceMatrix(CSM_CASCADES[i], CSM_CASCADES[i + 1]);
-	}
 }

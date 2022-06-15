@@ -49,26 +49,6 @@ static inline void GetBlobMessage(ID3DBlob* blob)
 	}
 }
 
-// Currently unused.
-static inline std::wstring GetAssetsPath()
-{
-	WCHAR assetsPath[MAX_PATH]{};
-	DWORD size = GetModuleFileName(nullptr, assetsPath, sizeof(assetsPath));
-
-	if (size == 0)
-	{
-		throw std::exception("Invalid size = 0 in GetAssetsPath helper function.");
-	}
-
-	WCHAR* lastSlash = wcsrchr(assetsPath, L'\\');
-	if (lastSlash)
-	{
-		*(lastSlash + 1) = L'\0';
-	}
-
-	return std::wstring(assetsPath);
-}
-
 #define CREATE_LAMBDA_FUNCTION(function) ([&](){function;})
 
 // Deferred execution queue for templated functions.

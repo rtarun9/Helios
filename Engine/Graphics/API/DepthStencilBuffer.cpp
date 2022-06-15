@@ -4,8 +4,9 @@
 
 namespace helios::gfx
 {
-	void DepthStencilBuffer::Init(ID3D12Device* const device, Descriptor& dsvDescriptor, Descriptor& srvDescriptor, DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName)
+	DepthStencilBuffer::DepthStencilBuffer(ID3D12Device* const device, Descriptor& dsvDescriptor, Descriptor& srvDescriptor, DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName)
 	{
+		// note (rtarun9) : this logic needs to be reviewed.
 		// DX_SX format version of the passed in typeless format.
 		DXGI_FORMAT dsFormat{format};
 		switch (format)
@@ -18,6 +19,7 @@ namespace helios::gfx
 
 			case DXGI_FORMAT_R24G8_TYPELESS:
 			{
+				format = DXGI_FORMAT_R32_FLOAT;
 				dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 			}break;
 		}
@@ -35,9 +37,9 @@ namespace helios::gfx
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_RESOURCE_DESC depthTextureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(dsFormat, width, height, 1u, 0u, 1u, 0u, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &depthTextureResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&m_DepthStencilBuffer)));
+		ThrowIfFailed(device->CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &depthTextureResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&mDepthStencilBuffer)));
 
-		m_DepthStencilBuffer->SetName(bufferName.data());
+		mDepthStencilBuffer->SetName(bufferName.data());
 
 		// Create DSV for the texture
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc
@@ -53,9 +55,9 @@ namespace helios::gfx
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle;
 
-		device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, dsvHandle);
+		device->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsvDesc, dsvHandle);
 
-		m_BufferIndexInDescriptorHeap = dsvDescriptor.GetCurrentDescriptorIndex();
+		mBufferIndexInDescriptorHeap = dsvDescriptor.GetCurrentDescriptorIndex();
 		dsvDescriptor.OffsetCurrentHandle();
 
 		// Create SRV.
@@ -71,8 +73,8 @@ namespace helios::gfx
 			}
 		};
 
-		device->CreateShaderResourceView(m_DepthStencilBuffer.Get(), &srvDesc, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
-		m_SRVIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
+		device->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		mSRVIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
 		srvDescriptor.OffsetCurrentHandle();
 	}
 }

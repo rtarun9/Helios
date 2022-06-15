@@ -13,14 +13,6 @@ namespace helios::gfx
 
 	void Device::InitDeviceResources()
 	{
-		// Create DXGI Factory.
-		UINT dxgiFactoryFlags{0};
-#ifdef _DEBUG
-		dxgiFactoryFlags = {DXGI_CREATE_FACTORY_DEBUG};
-#endif
-
-		ThrowIfFailed(::CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&mFactory)));
-
 		// Enable the debug layer.
 #ifdef _DEBUG
 		ThrowIfFailed(::D3D12GetDebugInterface(IID_PPV_ARGS(&mDebugInterface)));
@@ -32,9 +24,22 @@ namespace helios::gfx
 		mDebugInterface->SetGPUBasedValidationFlags(D3D12_GPU_BASED_VALIDATION_FLAGS_NONE);
 #endif
 
+		// Create DXGI Factory.
+		UINT dxgiFactoryFlags{0};
+#ifdef _DEBUG
+		dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+#endif
+
+		ThrowIfFailed(::CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&mFactory)));
+
 		// Select the adapter (in this case GPU with best performance).
 		// Index 0 will be the GPU with highest preference.
 		ThrowIfFailed(mFactory->EnumAdapterByGpuPreference(0u, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&mAdapter)));
+
+		if (!mAdapter)
+		{
+			ErrorMessage(L"Could not get a D3D12 compatible adapter.");
+		}
 
 #ifdef _DEBUG
 		// The adapter descriptor will be displayed as message (check infoQueue below).
@@ -83,6 +88,7 @@ namespace helios::gfx
 
 		ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
 
+		// Debug device currently unused.
 		ThrowIfFailed(mDevice->QueryInterface(IID_PPV_ARGS(&mDebugDevice)));
 #endif
 
@@ -94,15 +100,17 @@ namespace helios::gfx
 		// Create the command queue's.
 		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
 		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
+
+		// Create the depth stencil buffer
+		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor, mSRVCBVUAVDescriptor, DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
 	}
 
 	void Device::InitSwapChainResources()
 	{
 		// Check if tearing is supported (needed to know if tearing should be done when vsync is off).
-		BOOL allowTearing = TRUE;
-		if (FAILED(mFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
+		if (FAILED(mFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &mTearingSupported, sizeof(mTearingSupported))))
 		{
-			allowTearing = FALSE;
+			mTearingSupported = FALSE;
 		}
 
 		// Create the swapchain.
@@ -120,19 +128,26 @@ namespace helios::gfx
 			.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 			.BufferCount = NUMBER_OF_FRAMES,
 			.Scaling = DXGI_SCALING_STRETCH,
-			.SwapEffect = mVSync ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_FLIP_DISCARD,
+			.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 			.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-			.Flags = allowTearing && !mVSync ? DXGI_PRESENT_ALLOW_TEARING : 0u
+			.Flags = mTearingSupported && !mVSync ? DXGI_PRESENT_ALLOW_TEARING : 0u
 		};
 
 		wrl::ComPtr<IDXGISwapChain1> swapChain1;
-		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(mGraphicsCommandQueue->GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
+		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(mGraphicsCommandQueue->GetCommandQueue(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
 
 		// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
 		ThrowIfFailed(mFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
 
 		ThrowIfFailed(swapChain1.As(&mSwapChain));
 
+		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
+		
+		CreateBackBufferRTVs();
+	}
+
+	void Device::CreateBackBufferRTVs()
+	{
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 		
 		// Create Backbuffer render target views.
@@ -148,7 +163,56 @@ namespace helios::gfx
 			mBackBuffers[i] = backBuffer;
 			mBackBuffers[i]->SetName(L"SwapChain BackBuffer");
 
+			mBackBufferDescriptorHandles[i] = mRTVDescriptor->GetCurrentDescriptorHandle();
+
 			mRTVDescriptor->OffsetCurrentHandle();
 		}
+	}
+
+	void Device::ResizeBuffers()
+	{
+		mGraphicsCommandQueue->FlushQueue();
+
+		// Resize the swap chain's back buffer.
+		for (int i = 0; i < NUMBER_OF_FRAMES; i++)
+		{
+			mBackBuffers[i].Reset();
+			mFrameFenceValues[i] = mFrameFenceValues[mCurrentBackBufferIndex];
+		}
+
+		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
+		ThrowIfFailed(mSwapChain->GetDesc(&swapChainDesc));
+		ThrowIfFailed(mSwapChain->ResizeBuffers(NUMBER_OF_FRAMES, Application::GetClientWidth(), Application::GetClientHeight(), swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
+
+		CreateBackBufferRTVs();
+
+		// Resize the depth buffer.
+		// note (rtarun9) : approach of recreating depth buffer while resizing maybe correct, but have to look into it a bit more.
+		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor, mSRVCBVUAVDescriptor, DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
+	}
+
+	void Device::BeginFrame()
+	{
+		wrl::ComPtr<ID3D12Resource> currentBackBuffer = mBackBuffers[mCurrentBackBufferIndex];
+	}
+
+	void Device::EndFrame(ID3D12GraphicsCommandList* commandList)
+	{
+		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandList(commandList);
+		Present();
+
+		mGraphicsCommandQueue->WaitForFenceValue(mFrameFenceValues[mCurrentBackBufferIndex]);
+	}
+
+	void Device::Present()
+	{
+		uint32_t syncInterval = mVSync ? 1u : 0u;
+		uint32_t presentFlags = mTearingSupported && !mVSync ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+
+		ThrowIfFailed(mSwapChain->Present(syncInterval, presentFlags));
+
+		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 	}
 }

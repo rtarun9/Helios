@@ -4,11 +4,9 @@
 
 namespace helios::gfx
 {
-	CommandQueue::CommandQueue(ID3D12Device* const device, D3D12_COMMAND_LIST_TYPE commandListType, std::wstring_view commandQueueName)
+	CommandQueue::CommandQueue(ID3D12Device* const device, D3D12_COMMAND_LIST_TYPE commandListType, std::wstring_view commandQueueName) 
+		: mDevice(device), mCommandListType(commandListType)
 	{
-		mDevice = device;
-		mCommandListType = commandListType;
-
 		// Create the command queue based on list type.
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc
 		{
@@ -34,7 +32,7 @@ namespace helios::gfx
 		}
 	}
 	
-	wrl::ComPtr<ID3D12GraphicsCommandList> CommandQueue::GetCommandList()
+	ID3D12GraphicsCommandList* CommandQueue::GetCommandList()
 	{
 		// Check if there is command allocator (that allocates the list) is not in flight -> if so it can be reused.
 		// Other wise a new command allocator has to be created.
@@ -72,7 +70,7 @@ namespace helios::gfx
 
 		ThrowIfFailed(commandList->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.Get()));
 
-		return commandList;
+		return commandList.Get();
 	}
 
 	// Returns the fence value to wait for to notify when command list has finished execution.

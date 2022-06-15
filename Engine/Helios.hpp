@@ -19,7 +19,7 @@
 #include "Graphics/API/Texture.hpp"
 #include "Graphics/API/GenerateMipsPSO.hpp"
 #include "Graphics/API/RenderTarget.hpp"
-#include "Graphics/API/Material.hpp"
+#include "Graphics/API/PipelineState.hpp"
 #include "Graphics/API/DepthStencilBuffer.hpp"
 
 #include "Graphics/Model/Model.hpp"

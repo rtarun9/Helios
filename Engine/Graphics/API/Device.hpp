@@ -4,6 +4,7 @@
 
 #include "Descriptor.hpp"
 #include "CommandQueue.hpp"
+#include "DepthStencilBuffer.hpp"
 
 namespace helios::gfx
 {
@@ -34,6 +35,13 @@ namespace helios::gfx
 		void InitDeviceResources();
 		void InitSwapChainResources();
 
+		void CreateBackBufferRTVs();
+		void ResizeBuffers();
+
+		// Rendering related functions.
+		void BeginFrame();
+		void EndFrame(ID3D12GraphicsCommandList* commandList);
+		void Present();
 
 	private:
 		// Number of SwapChain backbuffers.
@@ -46,10 +54,14 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<IDXGIFactory7> mFactory{};
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter{};
 		Microsoft::WRL::ComPtr<IDXGISwapChain4> mSwapChain{};
+		
 		bool mVSync{};
+		bool mTearingSupported{};
 
 		uint32_t mCurrentBackBufferIndex{};
 		std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NUMBER_OF_FRAMES> mBackBuffers{};
+		std::array<DescriptorHandle, NUMBER_OF_FRAMES> mBackBufferDescriptorHandles{};
+
 		std::array<uint64_t, NUMBER_OF_FRAMES> mFrameFenceValues{};
 
 		std::unique_ptr<Descriptor> mRTVDescriptor{};
@@ -58,5 +70,7 @@ namespace helios::gfx
 
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
+
+		std::unique_ptr<DepthStencilBuffer> mDepthStencilBuffer{};
 	};
 }

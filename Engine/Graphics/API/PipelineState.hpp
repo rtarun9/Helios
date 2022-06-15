@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	struct GraphicsMaterialData
+	struct GraphicsPipelineStateData
 	{
 		std::wstring_view vsShaderPath{};
 		std::wstring_view psShaderPath{};
@@ -14,39 +14,32 @@ namespace helios::gfx
 		D3D12_COMPARISON_FUNC depthComparisonFunc{D3D12_COMPARISON_FUNC_LESS};
 	};
 
-	struct ComputeMaterialData
+	struct ComputePipelineStateData
 	{
 		std::wstring_view csShaderPath{};
 	};
-	
-	enum class MaterialTypes : uint8_t
-	{
-		GraphicsMaterialData,
-		ComputeMaterialData
-	};
 
-	// Material : Abstraction over pipeline state and root signature (Graphics and Compute pipelines).
+	// PipelineState : Abstraction over pipeline state and root signature (Graphics and Compute pipelines).
 	// As the engine is bindless, there is a common state root signature used for both Graphics and Compute pipeline's.
-	struct Material
+	struct PipelineState
 	{
 	public:
+		PipelineState(ID3D12Device* const device, const GraphicsPipelineStateData& pipelineStateData, std::wstring_view pipelineStateName);
+		PipelineState(ID3D12Device* const device, const ComputePipelineStateData& pipelineStateData, std::wstring_view pipelineStateName);
+
 		static void CreateBindlessRootSignature(ID3D12Device* const device, std::wstring_view shaderPath);
 
 		// Bind the Graphics / Compute root signature and pso.
-		void BindGraphicsMaterial(ID3D12GraphicsCommandList* const commandList) const;
-		void BindComputeMaterial(ID3D12GraphicsCommandList* const commandList) const;
+		void BindGraphicsPipelineState(ID3D12GraphicsCommandList* const commandList) const;
+		void BindComputePipelineState(ID3D12GraphicsCommandList* const commandList) const;
 
 		static void BindRootSignature(ID3D12GraphicsCommandList* const commandList);
 		static void BindRootSignatureCS(ID3D12GraphicsCommandList* const commandList);
 
 		void BindPSO(ID3D12GraphicsCommandList* const commandList) const;
 
-		// Creates graphics / compute pipeline state object and returns a Material.
-		static Material CreateMaterial(ID3D12Device* const device, std::variant<GraphicsMaterialData, ComputeMaterialData> materialData, std::wstring_view materialName);
-
-
 	private:
-		static D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, GraphicsMaterialData& graphicsMaterialData);
+		static D3D12_GRAPHICS_PIPELINE_STATE_DESC CreateGraphicsPSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const vertexShaderBlob, ID3DBlob* const pixelShaderBlob, const GraphicsPipelineStateData& graphicsPipelineStateData);
 		static D3D12_COMPUTE_PIPELINE_STATE_DESC CreateComputePSODesc(ID3D12RootSignature* const rootSignatureBlob, ID3DBlob* const computeShaderBlob);
 
 	public:
