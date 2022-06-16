@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "Material.hpp"
+#include "PipelineState.hpp"
 #include "Descriptor.hpp"
 
 namespace helios::gfx::utils

@@ -53,10 +53,12 @@
 #include <thread>
 
 #include "Core/Helpers.hpp"
+#include "Graphics/API/GFXTypes.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;
 namespace dx = DirectX;
+namespace math = DirectX::SimpleMath;
 
 // For setting the Agility SDK paramters.
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u; }

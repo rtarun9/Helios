@@ -19,22 +19,10 @@ public:
 	void OnResize() override;
 
 private:
-	void PopulateCommandList(ID3D12GraphicsCommandList* commandList, ID3D12Resource* currentBackBuffer);
-
-	void InitRendererCore();
-
-	void LoadContent();
-
-	void RenderToBackBuffer(ID3D12GraphicsCommandList* commandList, helios::gfx::PipelineState& material, helios::gfx::DescriptorHandle& rtvHandle, helios::gfx::DescriptorHandle& dsvHandle);
 
 private:
 	D3D12_VIEWPORT mViewport{};
 	D3D12_RECT mScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
 
-	helios::UIManager mUIManager{};
-
-	// Render target Data.
-	helios::gfx::RenderTarget mOffscreenRT{};
-
-	helios::gfx::ConstantBuffer<RenderTargetSettings> mRenderTargetSettingsData{};
+	helios::Camera mCamera{};
 };

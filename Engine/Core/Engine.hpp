@@ -46,7 +46,5 @@ namespace helios
 		uint64_t m_FrameIndex{};
 
 		std::unique_ptr<gfx::Device> mDevice{};
-
-		Camera mCamera{};
 	};
 }

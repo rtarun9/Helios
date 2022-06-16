@@ -10,7 +10,7 @@ namespace helios::gfx
 	class DepthStencilBuffer
 	{
 	public:
-		DepthStencilBuffer(ID3D12Device* const device, Descriptor& dsvDescriptor, Descriptor& srvDescriptr, DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName);
+		DepthStencilBuffer(ID3D12Device5* const device, Descriptor* const dsvDescriptor, Descriptor* const srvDescriptor, DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName);
 
 		uint32_t GetBufferIndex() const { return mBufferIndexInDescriptorHeap; }
 		uint32_t GetSRVIndex() const { return mSRVIndexInDescriptorHeap; }

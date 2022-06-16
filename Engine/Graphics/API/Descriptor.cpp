@@ -65,7 +65,7 @@ namespace helios::gfx
 		descriptorHandle.gpuDescriptorHandle.ptr += mDescriptorSize * static_cast<unsigned long long>(offset);
 	}
 
-	void Descriptor::OffsetCurrentHandle(uint32_t offset)
+	void Descriptor::OffsetCurrentHandle(uint32_t offset) 
 	{
 		Offset(mCurrentDescriptorHandle, offset);
 	}

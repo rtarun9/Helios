@@ -5,6 +5,7 @@
 #include "Descriptor.hpp"
 #include "CommandQueue.hpp"
 #include "DepthStencilBuffer.hpp"
+#include "GraphicsContext.hpp"
 
 namespace helios::gfx
 {
@@ -15,11 +16,11 @@ namespace helios::gfx
 	{
 	public:
 		Device();
-		~Device() = default;
+		~Device();
 
 		// Getters
 		ID3D12Device5* GetDevice() const { return mDevice.Get(); }
-		IDXGIFactory7* GetFactory() const { return mFactory.Get(); }
+		IDXGIFactory6* GetFactory() const { return mFactory.Get(); }
 		IDXGIAdapter4* GetAdapter() const { return mAdapter.Get(); }
 		IDXGISwapChain4* GetSwapChain() const { return mSwapChain.Get(); }
 
@@ -30,6 +31,11 @@ namespace helios::gfx
 		CommandQueue* GetGraphicsCommandQueue() const { return mGraphicsCommandQueue.get(); }
 		CommandQueue* GetComputeCommandQueue() const { return mComputeCommandQueue.get(); }
 		
+		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
+
+		// Helper creation functions.
+		std::unique_ptr<GraphicsContext> CreateGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
+
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
 		void InitDeviceResources();
@@ -40,7 +46,7 @@ namespace helios::gfx
 
 		// Rendering related functions.
 		void BeginFrame();
-		void EndFrame(ID3D12GraphicsCommandList* commandList);
+		void EndFrame(std::unique_ptr<GraphicsContext> graphicsContext);
 		void Present();
 
 	private:
@@ -51,7 +57,7 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12DebugDevice2> mDebugDevice{};
 		Microsoft::WRL::ComPtr<ID3D12Debug3> mDebugInterface{};
 
-		Microsoft::WRL::ComPtr<IDXGIFactory7> mFactory{};
+		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory{};
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter{};
 		Microsoft::WRL::ComPtr<IDXGISwapChain4> mSwapChain{};
 		
@@ -59,8 +65,7 @@ namespace helios::gfx
 		bool mTearingSupported{};
 
 		uint32_t mCurrentBackBufferIndex{};
-		std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NUMBER_OF_FRAMES> mBackBuffers{};
-		std::array<DescriptorHandle, NUMBER_OF_FRAMES> mBackBufferDescriptorHandles{};
+		std::array<BackBuffer, NUMBER_OF_FRAMES> mBackBuffers{};
 
 		std::array<uint64_t, NUMBER_OF_FRAMES> mFrameFenceValues{};
 

@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	DepthStencilBuffer::DepthStencilBuffer(ID3D12Device* const device, Descriptor& dsvDescriptor, Descriptor& srvDescriptor, DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName)
+	DepthStencilBuffer::DepthStencilBuffer(ID3D12Device5* const device, Descriptor* const dsvDescriptor, Descriptor* const srvDescriptor,  DXGI_FORMAT format, uint32_t width, uint32_t height, std::wstring_view bufferName)
 	{
 		// note (rtarun9) : this logic needs to be reviewed.
 		// DX_SX format version of the passed in typeless format.
@@ -19,7 +19,7 @@ namespace helios::gfx
 
 			case DXGI_FORMAT_R24G8_TYPELESS:
 			{
-				format = DXGI_FORMAT_R32_FLOAT;
+				format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 				dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 			}break;
 		}
@@ -53,12 +53,12 @@ namespace helios::gfx
 			},
 		};
 
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle;
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle;
 
 		device->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsvDesc, dsvHandle);
 
-		mBufferIndexInDescriptorHeap = dsvDescriptor.GetCurrentDescriptorIndex();
-		dsvDescriptor.OffsetCurrentHandle();
+		mBufferIndexInDescriptorHeap = dsvDescriptor->GetCurrentDescriptorIndex();
+		dsvDescriptor->OffsetCurrentHandle();
 
 		// Create SRV.
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
@@ -73,8 +73,8 @@ namespace helios::gfx
 			}
 		};
 
-		device->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
-		mSRVIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
-		srvDescriptor.OffsetCurrentHandle();
+		device->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, srvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		mSRVIndexInDescriptorHeap = srvDescriptor->GetCurrentDescriptorIndex();
+		srvDescriptor->OffsetCurrentHandle();
 	}
 }
