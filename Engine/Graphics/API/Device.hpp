@@ -6,6 +6,8 @@
 #include "CommandQueue.hpp"
 #include "DepthStencilBuffer.hpp"
 #include "GraphicsContext.hpp"
+#include "UploadContext.hpp"
+#include "StructuredBuffer.hpp"
 
 namespace helios::gfx
 {
@@ -33,9 +35,6 @@ namespace helios::gfx
 		
 		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
 
-		// Helper creation functions.
-		std::unique_ptr<GraphicsContext> CreateGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
-
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
 		void InitDeviceResources();
@@ -46,8 +45,16 @@ namespace helios::gfx
 
 		// Rendering related functions.
 		void BeginFrame();
-		void EndFrame(std::unique_ptr<GraphicsContext> graphicsContext);
+		void EndFrame();
+
+		void ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext);
 		void Present();
+
+		// Helper creation functions.
+		std::unique_ptr<GraphicsContext> CreateGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
+
+		// Create Resource functions.
+
 
 	private:
 		// Number of SwapChain backbuffers.
@@ -61,7 +68,7 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter{};
 		Microsoft::WRL::ComPtr<IDXGISwapChain4> mSwapChain{};
 		
-		bool mVSync{};
+		bool mVSync{true};
 		bool mTearingSupported{};
 
 		uint32_t mCurrentBackBufferIndex{};
@@ -75,6 +82,9 @@ namespace helios::gfx
 
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
+		std::unique_ptr<CommandQueue> mUploadCommandQueue{};
+
+		std::unique_ptr<UploadContext> mUploadContext{};
 
 		std::unique_ptr<DepthStencilBuffer> mDepthStencilBuffer{};
 	};

@@ -19,9 +19,9 @@ namespace helios
 {
 	struct TransformComponent
 	{
-		DirectX::XMFLOAT3 rotation{0.0f, 0.0f, 0.0f};
-		DirectX::XMFLOAT3 scale{1.0f, 1.0f, 1.0f};
-		DirectX::XMFLOAT3 translate{0.0f, 0.0f, 0.0f};
+		DirectX::SimpleMath::Vector3 rotation{0.0f, 0.0f, 0.0f};
+		DirectX::SimpleMath::Vector3 scale{1.0f, 1.0f, 1.0f};
+		DirectX::SimpleMath::Vector3 translate{0.0f, 0.0f, 0.0f};
 	};
 
 	// Note : The PBRMaterial struct does not need to hold textures at all : It can be just indices.
@@ -37,10 +37,10 @@ namespace helios
 
 	struct Mesh
 	{
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> positionBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT2> textureCoordsBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT3> normalBuffer{};
-		gfx::StructuredBuffer<DirectX::XMFLOAT4> tangentBuffer{};
+		gfx::StructuredBuffer<DirectX::SimpleMath::Vector3> positionBuffer{};
+		gfx::StructuredBuffer<DirectX::SimpleMath::Vector2> textureCoordsBuffer{};
+		gfx::StructuredBuffer<DirectX::SimpleMath::Vector3> normalBuffer{};
+		gfx::StructuredBuffer<DirectX::SimpleMath::Vector4> tangentBuffer{};
 
 		gfx::IndexBuffer indexBuffer{};
 		uint32_t indicesCount{};

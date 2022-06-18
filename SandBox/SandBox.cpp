@@ -31,11 +31,12 @@ void SandBox::OnRender()
 
 	graphicsContext->AddResourceBarrier(currentBackBuffer->GetResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		
-	graphicsContext->ClearRenderTargetView(currentBackBuffer, math::Color(0.0f, 1.0f, 0.0f, 0.0f));
+	graphicsContext->ClearRenderTargetView(currentBackBuffer, math::Color(0.0f, 1.0f, sin(m_FrameIndex / 10), 0.0f));
 
 	graphicsContext->AddResourceBarrier(currentBackBuffer->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-	mDevice->EndFrame(std::move(graphicsContext));
+	mDevice->ExecuteContext(std::move(graphicsContext));
+	mDevice->EndFrame();
 	mDevice->Present();
 
 	m_FrameIndex++;

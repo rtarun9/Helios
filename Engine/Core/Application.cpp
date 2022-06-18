@@ -68,9 +68,6 @@ namespace helios
 			::ShowWindow(sWindowHandle, SW_SHOW);
 		}
 
-		// Application initially starts in FullScreen mode by default.
-		Application::ToggleFullScreenMode();
-
 		// Main game loop
 		MSG message{};
 		while (message.message != WM_QUIT)

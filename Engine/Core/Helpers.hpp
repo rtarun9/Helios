@@ -3,13 +3,7 @@
 #include "Pch.hpp"
 
 // Reference : https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloWindow/DXSampleHelper.h.
-static inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw std::exception("Failed HRESULT.");
-	}
-}
+
 
 static inline std::string WstringToString(std::wstring_view inputWString)
 {
@@ -27,11 +21,20 @@ static inline std::wstring StringToWString(std::string_view inputString)
 	return std::wstring(ca2w);
 }
 
-static inline std::wstring HresultToString(HRESULT hr)
+static inline std::string HresultToString(HRESULT hr)
 {
 	char str[128]{};
 	sprintf_s(str, "HRESULT : 0x%08X", static_cast<UINT>(hr));
-	return StringToWString(str);
+	return std::string(str);
+}
+
+static inline void ThrowIfFailed(HRESULT hr)
+{
+	if (FAILED(hr))
+	{
+		throw std::exception(HresultToString(hr).c_str());
+		exit(EXIT_FAILURE);
+	}
 }
 
 static inline void ErrorMessage(std::wstring_view message)

@@ -25,13 +25,10 @@ namespace helios::gfx
 		mDebugInterface->EnableDebugLayer();
 		mDebugInterface->SetEnableGPUBasedValidation(TRUE);
 		mDebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
-
-		// Currently set to default behaviour.
-		mDebugInterface->SetGPUBasedValidationFlags(D3D12_GPU_BASED_VALIDATION_FLAGS_NONE);
 #endif
 
 		// Create DXGI Factory.
-		UINT dxgiFactoryFlags{0};
+		UINT dxgiFactoryFlags{ 0 };
 #ifdef _DEBUG
 		dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
@@ -55,7 +52,7 @@ namespace helios::gfx
 #endif
 
 		// Create D3D12 device.
-		ThrowIfFailed(::D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&mDevice)));
+		ThrowIfFailed(::D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mDevice)));
 		mDevice->SetName(L"D3D12 Device");
 
 		// Set break points on certain severity levels in debug mode.
@@ -93,16 +90,23 @@ namespace helios::gfx
 		};
 
 		ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
+
+		// Get the debug device.
+		ThrowIfFailed(mDevice->QueryInterface(IID_PPV_ARGS(&mDebugDevice)));
 #endif
+
+		// Create the command queue's.
+		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
+		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
+		mUploadCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Upload Command Queue");
+
+		// Create the UploadContext to be used in creating different resources.
+		mUploadContext = std::make_unique<UploadContext>(mUploadCommandQueue->GetCommandList());
 
 		// Create the descriptor heaps.
 		mRTVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
 		mDSVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
 		mSRVCBVUAVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
-
-		// Create the command queue's.
-		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
-		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
 
 		// Create the depth stencil buffer
 		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor.get(), mSRVCBVUAVDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
@@ -111,7 +115,7 @@ namespace helios::gfx
 	void Device::InitSwapChainResources()
 	{
 		// Check if tearing is supported (needed to know if tearing should be done when vsync is off).
-		BOOL allowTearing = TRUE;
+		BOOL allowTearing = FALSE;
 		if (FAILED(mFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
 		{
 			allowTearing = FALSE;
@@ -133,9 +137,9 @@ namespace helios::gfx
 			.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 			.BufferCount = NUMBER_OF_FRAMES,
 			.Scaling = DXGI_SCALING_STRETCH,
-			.SwapEffect = mVSync ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_FLIP_DISCARD,
+			.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 			.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-			.Flags = mTearingSupported && !mVSync ? DXGI_PRESENT_ALLOW_TEARING : 0u
+			.Flags = mTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u
 		};
 
 		wrl::ComPtr<IDXGISwapChain1> swapChain1;
@@ -202,7 +206,11 @@ namespace helios::gfx
 	{
 	}
 
-	void Device::EndFrame(std::unique_ptr<GraphicsContext> graphicsContext)
+	void Device::EndFrame()
+	{
+	}
+
+	void Device::ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext)
 	{
 		// Execute commands recorded into the graphics context.
 		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandList(graphicsContext->GetCommandList());

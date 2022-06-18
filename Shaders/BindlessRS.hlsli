@@ -3,6 +3,9 @@
 
 #ifndef __cplusplus
 
+// Set the matrix packing to row major by default. Prevents needing to transpose matrice's on the C++ side.
+#pragma pack_matrix(row_major)
+
 #define BindlessRootSignature           \
     "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED)," \
     "RootConstants(b0, num32BitConstants=64, visibility = SHADER_VISIBILITY_ALL)," \
@@ -32,6 +35,11 @@ SamplerState anisotropicSampler : register(s8);
 #endif
 
 // All *RenderResources structs are placed here to prevent having them in multiple places.
+struct MeshViewerRenderResources
+{
+    uint positionBufferIndex;
+};
+
 struct TestRenderResources
 {
     uint positionBufferIndex;

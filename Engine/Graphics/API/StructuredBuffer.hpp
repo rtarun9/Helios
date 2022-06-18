@@ -3,7 +3,7 @@
 #include "Pch.hpp"
 
 #include "Descriptor.hpp"
-#include "GFXUtils.hpp"
+#include "UploadContext.hpp"
 
 namespace helios::gfx
 {
@@ -12,18 +12,8 @@ namespace helios::gfx
 	class StructuredBuffer
 	{
 	public:
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, Descriptor& srvDescriptor, std::span<const T> data, D3D12_RESOURCE_FLAGS resourceFlag = D3D12_RESOURCE_FLAG_NONE, std::wstring_view bufferName = "Structured Buffer")
+		StructuredBuffer(ID3D12Device* const device, ID3D12Resource** bufferResource, ID3D12Resource** intermediateBufferResource, Descriptor* const srvDescriptor, std::span<const T> data, D3D12_RESOURCE_FLAGS resourceFlag = D3D12_RESOURCE_FLAG_NONE)
 		{
-			std::pair<ID3D12Resource*, ID3D12Resource*> gpuBuffer =  gfx::utils::CreateGPUBuffer<T>(device, commandList, data, resourceFlag);
-
-			m_DestinationResource = gpuBuffer.first;
-			m_IntermediateResource = gpuBuffer.second;
-
-			m_DestinationResource->SetName(bufferName.data());
-			
-			std::wstring intermediateBufferName = bufferName.data() + std::wstring(L" Intermediate Buffer");
-			m_IntermediateResource->SetName(intermediateBufferName.c_str());
-
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
 			{
 				.Format = DXGI_FORMAT_UNKNOWN,
@@ -37,22 +27,17 @@ namespace helios::gfx
 				}
 			};
 
-			device->CreateShaderResourceView(m_DestinationResource.Get(), &srvDesc, srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle);
+			device->CreateShaderResourceView(*bufferResource, &srvDesc, srvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
 
-			m_SRVIndexInDescriptorHeap = srvDescriptor.GetCurrentDescriptorIndex();
+			mSRVIndexInDescriptorHeap = srvDescriptor->GetCurrentDescriptorIndex();
 
-			srvDescriptor.OffsetCurrentHandle();
+			srvDescriptor->OffsetCurrentHandle();
 		}
 
-		ID3D12Resource* const GetResource() const { return m_DestinationResource.Get(); }
-
-		uint32_t GetSRVIndex() const {return m_SRVIndexInDescriptorHeap;};
+		uint32_t GetSRVIndex() const {return mSRVIndexInDescriptorHeap;};
 
 	private:
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_DestinationResource;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_IntermediateResource;
-
-		uint32_t m_SRVIndexInDescriptorHeap{};
+		uint32_t mSRVIndexInDescriptorHeap{};
 	};
 }
 
