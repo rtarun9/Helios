@@ -3,7 +3,7 @@
 #include "Pch.hpp"
 
 #include "Descriptor.hpp"
-#include "UploadContext.hpp"
+#include "MemoryAllocator.hpp"
 
 namespace helios::gfx
 {
@@ -12,31 +12,54 @@ namespace helios::gfx
 	class StructuredBuffer
 	{
 	public:
-		StructuredBuffer(ID3D12Device* const device, ID3D12Resource** bufferResource, ID3D12Resource** intermediateBufferResource, Descriptor* const srvDescriptor, std::span<const T> data, D3D12_RESOURCE_FLAGS resourceFlag = D3D12_RESOURCE_FLAG_NONE)
+		StructuredBuffer(Device* const device, MemoryAllocator* const memoryAllocator, std::span<const T> data, std::wstring_view bufferName)
 		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc
+			ResourceCreationDesc resourceCreationDesc
 			{
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Buffer
+				.resourceDesc
 				{
-					.FirstElement = 0u,
-					.NumElements = static_cast<UINT>(data.size()),
-					.StructureByteStride = sizeof(T)
+					.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+					.Alignment = 0u,
+					.Width = data.size_bytes(),
+					.Height = 1u,
+					.DepthOrArraySize = 1u,
+					.MipLevels = 0u,
+					.Format = DXGI_FORMAT_UNKNOWN,
+					.SampleDesc
+					{
+						.Count = 1u,
+						.Quality = 0u
+					},
+					.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+					.Flags = D3D12_RESOURCE_FLAG_NONE
 				}
 			};
 
-			device->CreateShaderResourceView(*bufferResource, &srvDesc, srvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+			mAllocation = memoryAllocator->CreateResource(resourceCreationDesc, bufferName);
 
-			mSRVIndexInDescriptorHeap = srvDescriptor->GetCurrentDescriptorIndex();
+			SRVCreationDesc srvCreationDesc
+			{
+				.srvDesc
+				{
+					.Format = DXGI_FORMAT_UNKNOWN,
+					.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+					.Buffer
+					{
+						.FirstElement = 0u,
+						.NumElements = static_cast<UINT>(data.size()),
+						.StructureByteStride = sizeof(T)
+					}
+				}
+			};
 
-			srvDescriptor->OffsetCurrentHandle();
+			mSRVIndexInDescriptorHeap = device->CreateSRV(srvCreationDesc);
 		}
 
 		uint32_t GetSRVIndex() const {return mSRVIndexInDescriptorHeap;};
 
 	private:
+		std::unique_ptr<Allocation> mAllocation{};
 		uint32_t mSRVIndexInDescriptorHeap{};
 	};
 }

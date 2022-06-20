@@ -8,6 +8,7 @@
 #include "GraphicsContext.hpp"
 #include "UploadContext.hpp"
 #include "StructuredBuffer.hpp"
+#include "MemoryAllocator.hpp"
 
 namespace helios::gfx
 {
@@ -32,8 +33,10 @@ namespace helios::gfx
 
 		CommandQueue* GetGraphicsCommandQueue() const { return mGraphicsCommandQueue.get(); }
 		CommandQueue* GetComputeCommandQueue() const { return mComputeCommandQueue.get(); }
+		CommandQueue* GetUploadCommandQueue() const { return mUploadCommandQueue.get(); }
 		
 		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
+		MemoryAllocator* GetMemoryAllocat() const { return mMemoryAllocator.get(); }
 
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
@@ -52,10 +55,8 @@ namespace helios::gfx
 
 		// Helper creation functions.
 		std::unique_ptr<GraphicsContext> CreateGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
-
-		// Create Resource functions.
-
-
+		std::unique_ptr<UploadContext> CreateUploadContext() { return std::move(std::make_unique<UploadContext>(mUploadCommandQueue->GetCommandList())); }
+		
 	private:
 		// Number of SwapChain backbuffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
@@ -76,6 +77,8 @@ namespace helios::gfx
 
 		std::array<uint64_t, NUMBER_OF_FRAMES> mFrameFenceValues{};
 
+		std::unique_ptr<MemoryAllocator> mMemoryAllocator{};
+
 		std::unique_ptr<Descriptor> mRTVDescriptor{};
 		std::unique_ptr<Descriptor> mDSVDescriptor{};
 		std::unique_ptr<Descriptor> mSRVCBVUAVDescriptor{};
@@ -83,8 +86,6 @@ namespace helios::gfx
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
 		std::unique_ptr<CommandQueue> mUploadCommandQueue{};
-
-		std::unique_ptr<UploadContext> mUploadContext{};
 
 		std::unique_ptr<DepthStencilBuffer> mDepthStencilBuffer{};
 	};

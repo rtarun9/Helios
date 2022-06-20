@@ -95,13 +95,13 @@ namespace helios::gfx
 		ThrowIfFailed(mDevice->QueryInterface(IID_PPV_ARGS(&mDebugDevice)));
 #endif
 
+		// Create memory allocator.
+		mMemoryAllocator = std::make_unique<MemoryAllocator>(mDevice.Get(), mAdapter.Get());
+
 		// Create the command queue's.
 		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
 		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
 		mUploadCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Upload Command Queue");
-
-		// Create the UploadContext to be used in creating different resources.
-		mUploadContext = std::make_unique<UploadContext>(mUploadCommandQueue->GetCommandList());
 
 		// Create the descriptor heaps.
 		mRTVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");

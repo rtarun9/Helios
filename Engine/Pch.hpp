@@ -26,6 +26,9 @@
 // Math wrapper for DirectXMath : Provided by DirectXTK12.
 #include "SimpleMath/SimpleMath.h"
 
+// D3D12 memory allocator (will be removed eventually in project when custom allocator is used).
+#include "D3D12MemoryAllocator/D3D12MemAlloc.h"
+
 // For the ComPtr<> template class.
 #include <wrl/client.h>
 

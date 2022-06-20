@@ -4,14 +4,9 @@
 
 namespace helios::gfx
 {
-	UploadContext::UploadContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, uint32_t alignment)
+	UploadContext::UploadContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList)
 	{
 		mCommandList = commandList;
-	}
-
-	void UploadContext::Upload()
-	{
-
 	}
 }
 

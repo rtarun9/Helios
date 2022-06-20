@@ -6,25 +6,21 @@ namespace helios::gfx
 {
 	class Device;
 
-	// Wrapper class for Upload CommandList, which provides a set of easy and simple functions useful in creating GPU buffers.
-	// The Device will have a UploadContext, unlike the GraphicsContext as it will be used in all CreateX functions.
-	// note (rtarun9) : This design is subject to change. In the future I want to add a linear allocator, but for now this will do.
+	// Wrapper class for CommandList used only for copying data from CPU to GPU only memory.
+	// Provides of easy and simple functions to record commands for execution by GPU.
+	// The command queue will contain a queue of command list, which can be passed into the UploadContext's constructor to create a UploadContext object.
+	// note (rtarun9) : This design is subject to change.
 	class UploadContext
 	{
 	public:
-		UploadContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, uint32_t alignment);
-
+		UploadContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 		ID3D12GraphicsCommandList* const GetCommandList() { return mCommandList.Get(); }
-		ID3D12Resource* const GetResource() { return mUploadBuffer.Get(); }
-		void* const GetCPUAddress() { return mCPUAddress; }
 
 		// Core functionalities.
-		void Upload();
+		
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList;
-		Microsoft::WRL::ComPtr<ID3D12Resource> mUploadBuffer{};
-		void* mCPUAddress{ nullptr };
 	};
 }
 

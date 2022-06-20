@@ -14,4 +14,18 @@ namespace helios::gfx
 
 		ID3D12Resource* GetResource() { return backBufferResource.Get(); }
 	};
+
+	// Struct for various resource types : used to make resource creation simpler.
+	// Will be updated as new requirements are found.
+	struct ResourceCreationDesc
+	{
+		D3D12_RESOURCE_DESC resourceDesc{};
+		bool isCPUVisible{false};
+	};
+
+	struct SRVCreationDesc
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	};
+
 }

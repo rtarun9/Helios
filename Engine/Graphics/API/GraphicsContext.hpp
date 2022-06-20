@@ -7,7 +7,7 @@ namespace helios::gfx
 	class Device;
 
 	// Wrapper class for Graphics CommandList, which provides a set of easy and simple functions to record commands for execution by GPU.
-	// The command queue will contain a queue of command list, which can be passed into the GraphicsContext's constructor to create a GraphicsContext class.
+	// The command queue will contain a queue of command list, which can be passed into the GraphicsContext's constructor to create a GraphicsContext object.
 	// note (rtarun9) : This design is subject to change.
 	class GraphicsContext
 	{
