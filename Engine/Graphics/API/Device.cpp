@@ -101,7 +101,9 @@ namespace helios::gfx
 		// Create the command queue's.
 		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
 		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
-		mUploadCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Upload Command Queue");
+		
+		// Create the upload context (creates copy command queue internally).
+		mUploadContext = std::make_unique<UploadContext>(mDevice.Get(), mMemoryAllocator.get());
 
 		// Create the descriptor heaps.
 		mRTVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
@@ -226,5 +228,22 @@ namespace helios::gfx
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 
 		mGraphicsCommandQueue->WaitForFenceValue(mFrameFenceValues[mCurrentBackBufferIndex]);
+	}
+
+	// As of now, SRV/RTV CreationDescs are not used, hence why nullptr is passed directly to the device->CreateView function.
+	uint32_t Device::CreateSRV(const SRVCreationDesc& srvCreationDesc, ID3D12Resource* resource)
+	{
+		mDevice->CreateShaderResourceView(resource, nullptr, mSRVCBVUAVDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		mSRVCBVUAVDescriptor->OffsetCurrentHandle();
+
+		return mSRVCBVUAVDescriptor->GetCurrentDescriptorIndex();
+	}
+
+	uint32_t Device::CreateRTV(const RTVCreationDesc& rtvCreationDesc, ID3D12Resource* resource)
+	{
+		mDevice->CreateRenderTargetView(resource, nullptr, mRTVDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		mRTVDescriptor->OffsetCurrentHandle();
+
+		return mRTVDescriptor->GetCurrentDescriptorIndex();
 	}
 }

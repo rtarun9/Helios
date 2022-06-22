@@ -7,7 +7,7 @@
 
 namespace helios::gfx
 {
-	void IndexBuffer::Init(Device* const device, MemoryAllocator* const memoryAllocator, std::span<const uint32_t> data, std::wstring_view indexBufferName)
+	void IndexBuffer::Init(Device* const device, std::span<const uint32_t> data, std::wstring_view indexBufferName)
 	{
 		ResourceCreationDesc resourceCreationDesc
 		{
@@ -30,7 +30,11 @@ namespace helios::gfx
 			}
 		};
 
-		mAllocation = memoryAllocator->CreateResource(resourceCreationDesc, indexBufferName);
+		mAllocation = device->GetMemoryAllocator()->CreateResource(resourceCreationDesc, indexBufferName);
+		std::unique_ptr<UploadAllocation> uploadAllocation = device->GetUploadContext()->Allocate(data.size_bytes());
+		uploadAllocation->Update(data);
+		uploadAllocation->CopyResource(mAllocation.get());
+		device->GetUploadContext()->ProcessUploadAllocations(std::move(uploadAllocation));
 
 		mBufferView =
 		{
@@ -38,7 +42,5 @@ namespace helios::gfx
 			.SizeInBytes = static_cast<UINT>(data.size_bytes()),
 			.Format = DXGI_FORMAT_R32_UINT
 		};
-
-		device->getupload
 	}
 }

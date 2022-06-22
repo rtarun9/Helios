@@ -1,5 +1,5 @@
 #pragma once
-
+/*
 #include "Pch.hpp"
 
 #include "Graphics/API/StructuredBuffer.hpp"
@@ -83,3 +83,4 @@ namespace helios
 	};
 }
 
+*/

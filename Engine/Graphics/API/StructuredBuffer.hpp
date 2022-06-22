@@ -2,6 +2,7 @@
 
 #include "Pch.hpp"
 
+#include "Device.hpp"
 #include "Descriptor.hpp"
 #include "MemoryAllocator.hpp"
 
@@ -12,7 +13,7 @@ namespace helios::gfx
 	class StructuredBuffer
 	{
 	public:
-		StructuredBuffer(Device* const device, MemoryAllocator* const memoryAllocator, std::span<const T> data, std::wstring_view bufferName)
+		StructuredBuffer(Device* const device, std::span<const T> data, std::wstring_view bufferName)
 		{
 			ResourceCreationDesc resourceCreationDesc
 			{
@@ -32,11 +33,20 @@ namespace helios::gfx
 					},
 					.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 					.Flags = D3D12_RESOURCE_FLAG_NONE
-				}
+				},
+				.size = data.size_bytes(),
+				.isCPUVisible = false,
 			};
 
-			mAllocation = memoryAllocator->CreateResource(resourceCreationDesc, bufferName);
+			mAllocation = device->GetMemoryAllocator()->CreateResource(resourceCreationDesc, bufferName);
 
+			std::unique_ptr<UploadAllocation> uploadAllocation = device->GetUploadContext()->Allocate(data.size_bytes());
+			uploadAllocation->Update(data);
+			uploadAllocation->CopyResource(mAllocation.get());
+			device->GetUploadContext()->ProcessUploadAllocations(std::move(uploadAllocation));
+			
+			// Data transfer (to Upload allocation -> To GPU only buffer).
+			
 			SRVCreationDesc srvCreationDesc
 			{
 				.srvDesc
@@ -53,7 +63,7 @@ namespace helios::gfx
 				}
 			};
 
-			mSRVIndexInDescriptorHeap = device->CreateSRV(srvCreationDesc);
+			mSRVIndexInDescriptorHeap = device->CreateSRV(srvCreationDesc, mAllocation->resource.Get());
 		}
 
 		uint32_t GetSRVIndex() const {return mSRVIndexInDescriptorHeap;};

@@ -2,6 +2,8 @@
 
 #include "Pch.hpp"
 
+#include "GFXTypes.hpp"
+
 namespace helios::gfx
 {
 	// When custom allocator is used much more data will be stored in the allocation struct.

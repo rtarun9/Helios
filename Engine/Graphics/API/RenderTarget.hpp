@@ -11,20 +11,20 @@
 // TODO : Resizing.
 namespace helios::gfx
 {
-	static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_POSITIONS
+	static constexpr std::array<DirectX::SimpleMath::Vector2, 4> RT_VERTEX_POSITIONS
 	{
-		DirectX::XMFLOAT2(-1.0f, -1.0f),
-		DirectX::XMFLOAT2(-1.0f,   1.0f),
-		DirectX::XMFLOAT2(1.0f, 1.0f),
-		DirectX::XMFLOAT2(1.0f, -1.0f),
+		DirectX::SimpleMath::Vector2(-1.0f, -1.0f),
+		DirectX::SimpleMath::Vector2(-1.0f,   1.0f),
+		DirectX::SimpleMath::Vector2(1.0f, 1.0f),
+		DirectX::SimpleMath::Vector2(1.0f, -1.0f),
 	};
 
-	static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_TEXTURE_COORDS
+	static constexpr std::array<DirectX::SimpleMath::Vector2, 4> RT_VERTEX_TEXTURE_COORDS
 	{
-		DirectX::XMFLOAT2(0.0f, 1.0f),
-		DirectX::XMFLOAT2(0.0f, 0.0f),
-		DirectX::XMFLOAT2(1.0f, 0.0f),
-		DirectX::XMFLOAT2(1.0f, 1.0f),
+		DirectX::SimpleMath::Vector2(0.0f, 1.0f),
+		DirectX::SimpleMath::Vector2(0.0f, 0.0f),
+		DirectX::SimpleMath::Vector2(1.0f, 0.0f),
+		DirectX::SimpleMath::Vector2(1.0f, 1.0f),
 	};
 
 	static constexpr std::array<uint32_t, 6> RT_INDICES
@@ -34,37 +34,37 @@ namespace helios::gfx
 	};
 
 	// Abstraction for render target.
-	// Contains static methods that will init common data (Position and Texture buffers). These static methods need to be called *before* calling other methods.
+	// Contains static methods that will init common data (Position and Texture buffers). These static methods need to be called *before* calling other methods. This will be done by the device class, so the user (sand box application) need not do this.
 	class RenderTarget
 	{
 	public:
 		static constexpr uint32_t RT_INDICES_COUNT = 6u;
 
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, DXGI_FORMAT format, Descriptor& rtvDescriptor, Descriptor& srvDescriptor, uint32_t width, uint32_t height, uint32_t renderTargetCount, std::wstring_view rtvName);
+		RenderTarget(Device* const device, const RenderTargetDesc& renderTargetDesc, std::wstring_view rtvName);
 
-		ID3D12Resource* const GetResource(uint32_t index = 0u) const { return m_Resources.at(index).Get(); }
+		ID3D12Resource* const GetResource(uint32_t index = 0u) const { return mAllocations->resource.Get(); }
 
-		uint32_t GetSRVIndex(uint32_t srvIndex = 0u) const { return m_SRVIndexInDescriptorHeap.at(srvIndex); }
-		uint32_t GetRTVIndex(uint32_t rtvIndex = 0u) const { return m_RTVIndexInDescriptorHeap.at(rtvIndex); };
+		uint32_t GetSRVIndex(uint32_t srvIndex = 0u) const { return mSRVIndexInDescriptorHeap; }
+		uint32_t GetRTVIndex(uint32_t rtvIndex = 0u) const { return mRTVIndexInDescriptorHeap; };
 
-		static uint32_t GetPositionBufferIndex() { return s_PositionBuffer.GetSRVIndex(); };
-		static uint32_t GetTextureCoordsBufferIndex() { return s_TextureCoordsBuffer.GetSRVIndex(); };
+		static uint32_t GetPositionBufferIndex() { return sPositionBuffer->GetSRVIndex(); };
+		static uint32_t GetTextureCoordsBufferIndex() { return sTextureCoordsBuffer->GetSRVIndex(); };
 
-		static void InitBuffers(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, Descriptor& srvDescriptor);
-		static void Bind(ID3D12GraphicsCommandList* const commandList);
+		static void InitBuffers(Device* const device);
+
+	public:
+		static inline std::unique_ptr<IndexBuffer> sIndexBuffer{};
+
+		static inline std::unique_ptr<StructuredBuffer<DirectX::SimpleMath::Vector2>> sPositionBuffer{};
+		static inline std::unique_ptr<StructuredBuffer<DirectX::SimpleMath::Vector2>> sTextureCoordsBuffer{};
 
 	private:
-		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_Resources;
+		std::unique_ptr<Allocation> mAllocations{};
 
-		std::vector<uint32_t> m_SRVIndexInDescriptorHeap{};
-		std::vector<uint32_t> m_RTVIndexInDescriptorHeap{};
+		uint32_t mSRVIndexInDescriptorHeap{};
+		uint32_t mRTVIndexInDescriptorHeap{};
 
-		uint32_t m_Width{};
-		uint32_t m_Height{};
-
-		static inline IndexBuffer s_IndexBuffer{};
-
-		static inline StructuredBuffer<DirectX::XMFLOAT2> s_PositionBuffer{};
-		static inline StructuredBuffer<DirectX::XMFLOAT2> s_TextureCoordsBuffer{};
+		uint32_t mWidth{};
+		uint32_t mHeight{};
 	};
 }

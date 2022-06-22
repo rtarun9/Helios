@@ -27,7 +27,6 @@ namespace helios::gfx
 		{
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 			heapType = D3D12_HEAP_TYPE_UPLOAD;
-
 		}
 
 		D3D12MA::ALLOCATION_DESC allocationDesc
@@ -35,7 +34,8 @@ namespace helios::gfx
 			.HeapType = heapType
 		};
 
-		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+
+		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, resourceCreationDesc.optimizedClearValue.Color ? &resourceCreationDesc.optimizedClearValue : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 		
 		if (resourceCreationDesc.isCPUVisible)
 		{
