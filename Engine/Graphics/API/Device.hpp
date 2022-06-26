@@ -6,8 +6,8 @@
 #include "CommandQueue.hpp"
 #include "DepthStencilBuffer.hpp"
 #include "GraphicsContext.hpp"
-#include "UploadContext.hpp"
 #include "MemoryAllocator.hpp"
+#include "PipelineState.hpp"
 
 namespace helios::gfx
 {
@@ -26,19 +26,18 @@ namespace helios::gfx
 		IDXGIAdapter4* GetAdapter() const { return mAdapter.Get(); }
 		IDXGISwapChain4* GetSwapChain() const { return mSwapChain.Get(); }
 
-		Descriptor* GetRTVDescriptor() const { return mRTVDescriptor.get(); }
-		Descriptor* GetSRVCBVUAVDescriptor() const { return mSRVCBVUAVDescriptor.get(); }
-		Descriptor* GetDSVDescriptor() const { return mDSVDescriptor.get(); }
+		Descriptor* GetRtvDescriptor() const { return mRTVDescriptor.get(); }
+		Descriptor* GetSrvCbvUavDescriptor() const { return mSrvCbvUavDescriptor.get(); }
+		Descriptor* GetDsvDescriptor() const { return mDSVDescriptor.get(); }
 
 		CommandQueue* GetGraphicsCommandQueue() const { return mGraphicsCommandQueue.get(); }
 		CommandQueue* GetComputeCommandQueue() const { return mComputeCommandQueue.get(); }
-		
-		UploadContext* GetUploadContext() const { return mUploadContext.get(); }
 
 		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
 		MemoryAllocator* GetMemoryAllocator() const { return mMemoryAllocator.get(); }
 
-
+		std::unique_ptr<GraphicsContext> GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
+		
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
 		void InitDeviceResources();
@@ -55,10 +54,10 @@ namespace helios::gfx
 		void Present();
 
 		// Helper creation functions.
-		std::unique_ptr<GraphicsContext> CreateGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(mGraphicsCommandQueue->GetCommandList())); }
-	
-		uint32_t CreateSRV(const SRVCreationDesc& srvCreationDesc, ID3D12Resource* resource);
-		uint32_t CreateRTV(const RTVCreationDesc& rtvCreationDesc, ID3D12Resource* resource);
+		uint32_t CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const;
+		uint32_t CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const;
+		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, const void *data) const;
+		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 
 	private:
 		// Number of SwapChain backbuffers.
@@ -84,12 +83,11 @@ namespace helios::gfx
 
 		std::unique_ptr<Descriptor> mRTVDescriptor{};
 		std::unique_ptr<Descriptor> mDSVDescriptor{};
-		std::unique_ptr<Descriptor> mSRVCBVUAVDescriptor{};
+		std::unique_ptr<Descriptor> mSrvCbvUavDescriptor{};
 
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
-		
-		std::unique_ptr<UploadContext> mUploadContext{};
+		std::unique_ptr<CommandQueue> mCopyCommandQueue{};
 
 		std::unique_ptr<DepthStencilBuffer> mDepthStencilBuffer{};
 	};

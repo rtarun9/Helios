@@ -2,7 +2,7 @@
 
 #include "Pch.hpp"
 
-#include "ConstantBuffers.hlsli"
+#include "Common/ConstantBuffers.hlsli"
 
 #include "Graphics/API/ConstantBuffer.hpp"
 #include "Graphics/API/Descriptor.hpp"

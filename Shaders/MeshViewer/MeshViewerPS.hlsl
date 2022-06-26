@@ -1,7 +1,15 @@
-#include "../BindlessRS.hlsli"
+#include "../Common/BindlessRS.hlsli"
+
+ConstantBuffer<MeshViewerRenderResources> renderResource : register(b0);
+
+struct VSOutput
+{
+    float4 position : SV_Position;
+    float4 color : COLOR;
+};
 
 [RootSignature(BindlessRootSignature)]
-float4 PsMain() : SV_Target
+float4 PsMain(VSOutput psInput) : SV_Target
 {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    return float4(psInput.color);
 }

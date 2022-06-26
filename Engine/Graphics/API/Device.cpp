@@ -101,17 +101,17 @@ namespace helios::gfx
 		// Create the command queue's.
 		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
 		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
-		
-		// Create the upload context (creates copy command queue internally).
-		mUploadContext = std::make_unique<UploadContext>(mDevice.Get(), mMemoryAllocator.get());
-
+		mCopyCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
 		// Create the descriptor heaps.
 		mRTVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
 		mDSVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
-		mSRVCBVUAVDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
+		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
 
 		// Create the depth stencil buffer
-		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor.get(), mSRVCBVUAVDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
+		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor.get(), mSrvCbvUavDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
+		
+		// Create bindless root signature.
+		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
 	}
 
 	void Device::InitSwapChainResources()
@@ -201,7 +201,7 @@ namespace helios::gfx
 
 		// Resize the depth buffer.
 		// note (rtarun9) : approach of recreating depth buffer while resizing maybe correct, but have to look into it a bit more.
-		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor.get(), mSRVCBVUAVDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
+		mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDSVDescriptor.get(), mSrvCbvUavDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
 	}
 
 	void Device::BeginFrame()
@@ -230,20 +230,103 @@ namespace helios::gfx
 		mGraphicsCommandQueue->WaitForFenceValue(mFrameFenceValues[mCurrentBackBufferIndex]);
 	}
 
-	// As of now, SRV/RTV CreationDescs are not used, hence why nullptr is passed directly to the device->CreateView function.
-	uint32_t Device::CreateSRV(const SRVCreationDesc& srvCreationDesc, ID3D12Resource* resource)
+	uint32_t Device::CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const
 	{
-		mDevice->CreateShaderResourceView(resource, nullptr, mSRVCBVUAVDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
-		mSRVCBVUAVDescriptor->OffsetCurrentHandle();
+		uint32_t srvIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
+		mDevice->CreateShaderResourceView(resource, &srvCreationDesc.srvDesc, mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		
+		mSrvCbvUavDescriptor->OffsetCurrentHandle();
 
-		return mSRVCBVUAVDescriptor->GetCurrentDescriptorIndex();
+		return srvIndex;
 	}
 
-	uint32_t Device::CreateRTV(const RTVCreationDesc& rtvCreationDesc, ID3D12Resource* resource)
+	uint32_t Device::CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const
 	{
-		mDevice->CreateRenderTargetView(resource, nullptr, mRTVDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		mDevice->CreateRenderTargetView(resource, nullptr,  mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		mRTVDescriptor->OffsetCurrentHandle();
 
 		return mRTVDescriptor->GetCurrentDescriptorIndex();
 	}
+
+	Buffer Device::CreateBuffer(const BufferCreationDesc& bufferCreationDesc, const void *data) const
+	{
+		Buffer buffer{};
+		buffer.sizeInBytes = bufferCreationDesc.size * bufferCreationDesc.stride;
+
+		ResourceCreationDesc resourceCreationDesc
+		{
+			.resourceDesc
+			{
+				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+				.Width = buffer.sizeInBytes,
+				.Height = 1u,
+				.DepthOrArraySize = 1u,
+				.MipLevels = 1u,
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.SampleDesc
+				{
+					.Count = 1u,
+					.Quality = 0u
+				},
+				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+			}
+		};
+
+		buffer.allocation = mMemoryAllocator->CreateResourceAllocation(bufferCreationDesc, resourceCreationDesc);
+
+		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
+		// and then copy data from upload buffer -> GPU only buffer.
+		if (data)
+		{
+			// Create upload buffer.
+			BufferCreationDesc uploadBufferCreationDesc
+			{
+				.usage = BufferUsage::UploadBuffer,
+				.size = bufferCreationDesc.size,
+				.stride = bufferCreationDesc.stride,
+				.name = L"Upload buffer - " + bufferCreationDesc.name,
+			};
+
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+
+			uploadAllocation->Update(data, buffer.sizeInBytes);
+
+			// Get a copy command and list and execute copy resource functions on the command queue.
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+			copyCommandList->CopyResource(buffer.allocation->resource.Get(), uploadAllocation->resource.Get());
+			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
+		}
+
+		if (bufferCreationDesc.usage == BufferUsage::StructuredBuffer || bufferCreationDesc.usage == BufferUsage::IndexBuffer || bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
+		{
+			SrvCreationDesc srvCreationDesc
+			{
+				.srvDesc
+				{
+					.Format = DXGI_FORMAT_UNKNOWN,
+					.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+					.Buffer
+					{
+						.FirstElement = 0u,
+						.NumElements = bufferCreationDesc.size,
+						.StructureByteStride = bufferCreationDesc.stride
+					}
+				}
+			};
+
+			buffer.srvUavCbvIndexInDescriptorHeap = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
+		}
+
+		return buffer;
+	}
+
+	PipelineState Device::CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
+	{
+		PipelineState pipelineState(mDevice.Get(), graphicsPipelineStateCreationDesc);
+
+		return pipelineState;
+	}
+
 }

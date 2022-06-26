@@ -4,6 +4,7 @@
 
 #include "imgui.h"
 
+/*
 namespace helios::gfx
 {
 	void Light::InitLightDataCBuffer(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor)
@@ -120,3 +121,4 @@ namespace helios::gfx
 		s_LightData.Update();
 	}
 }
+*/

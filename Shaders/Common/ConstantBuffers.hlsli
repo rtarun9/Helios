@@ -3,14 +3,14 @@
 
 #ifdef __cplusplus
 
-#define float4 DirectX::XMFLOAT4
-#define float3 DirectX::XMFLOAT3
-#define float2 DirectX::XMFLOAT2
+#define float4 DirectX::SimpleMath::Vector2
+#define float3 DirectX::SimpleMath::Vector3
+#define float2 DirectX::SimpleMath::Vector4
 
 #define uint uint32_t
 
 // Note : using the typedef of matrix (float4x4) and struct (ConstantBufferStruct) to prevent name collision on the cpp code side. 
-#define float4x4 DirectX::XMMATRIX
+#define float4x4 DirectX::SimpleMath::Matrix
 
 #define ConstantBufferStruct struct alignas(256)
 
@@ -27,7 +27,7 @@ static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
 // The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.
 static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
 
-// Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl)
+// Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl).
 
 ConstantBufferStruct LUTCBuffer
 {

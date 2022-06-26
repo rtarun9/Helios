@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 //
 
+#include "Pch.hpp"
+
 #include "D3D12MemAlloc.h"
 
 #include <combaseapi.h>

@@ -56,7 +56,7 @@
 #include <thread>
 
 #include "Core/Helpers.hpp"
-#include "Graphics/API/GFXTypes.hpp"
+#include "Graphics/API/Resources.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pch.hpp"
-
+/*
 #include "StructuredBuffer.hpp"
 #include "IndexBuffer.hpp"
 
@@ -68,3 +68,4 @@ namespace helios::gfx
 		uint32_t mHeight{};
 	};
 }
+*/

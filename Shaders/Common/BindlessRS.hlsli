@@ -38,6 +38,7 @@ SamplerState anisotropicSampler : register(s8);
 struct MeshViewerRenderResources
 {
     uint positionBufferIndex;
+    uint colorBufferIndex;
 };
 
 struct TestRenderResources

@@ -3,6 +3,7 @@
 #include "RenderTarget.hpp"
 #include "Device.hpp"
 
+/*
 namespace helios::gfx
 {
 	RenderTarget::RenderTarget(Device* const device, const RenderTargetDesc& renderTargetDesc, std::wstring_view rtvName)
@@ -59,7 +60,7 @@ namespace helios::gfx
 	{
 		sIndexBuffer = std::make_unique<IndexBuffer>(device, RT_INDICES, L"Render Target Index Buffer");
 
-		sPositionBuffer = std::make_unique<StructuredBuffer<DirectX::SimpleMath::Vector2>>(device, RT_VERTEX_POSITIONS, "Render Target Position Buffer");
+		sPositionBuffer = std::make_unique<StructuredBuffer<DirectX::SimpleMath::Vector2>>(device, RT_VERTEX_POSITIONS, L"Render Target Position Buffer");
 		sTextureCoordsBuffer = std::make_unique<StructuredBuffer<DirectX::SimpleMath::Vector2>>(device, RT_VERTEX_TEXTURE_COORDS, L"Render Target Texture Coord Buffer");
 	}
-}
+}*/

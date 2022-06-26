@@ -32,18 +32,18 @@ namespace helios
 		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown);
 		virtual void OnResize();
 
-		uint32_t GetWidth() const { return m_Width; }
-		uint32_t GetHeight() const { return m_Height; };
-		std::wstring GetTitle() const { return m_Title; };
+		uint32_t GetWidth() const { return mWidth; }
+		uint32_t GetHeight() const { return mHeight; };
+		std::wstring GetTitle() const { return mTitle; };
 
 	public:
-		uint32_t m_Width{};
-		uint32_t m_Height{};
-		std::wstring m_Title{};
+		uint32_t mWidth{};
+		uint32_t mHeight{};
+		std::wstring mTitle{};
 
-		float m_AspectRatio{};
+		float mAspectRatio{};
 
-		uint64_t m_FrameIndex{};
+		uint64_t mFrameIndex{};
 
 		std::unique_ptr<gfx::Device> mDevice{};
 	};

@@ -16,18 +16,32 @@ namespace helios::gfx
 		ThrowIfFailed(D3D12MA::CreateAllocator(&allocatorDesc, &mAllocator));
 	}
 
-	std::unique_ptr<Allocation> MemoryAllocator::CreateResource(const ResourceCreationDesc& resourceCreationDesc, std::wstring_view resourceName)
+	std::unique_ptr<Allocation> MemoryAllocator::CreateResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc)
 	{
 		Allocation allocation{};
 
-		D3D12_RESOURCE_STATES resourceState{D3D12_RESOURCE_STATE_COPY_DEST};
+		D3D12_RESOURCE_STATES resourceState{D3D12_RESOURCE_STATE_COMMON};
 		D3D12_HEAP_TYPE heapType{D3D12_HEAP_TYPE_DEFAULT};
+		bool isCpuVisible{};
 
-		if (resourceCreationDesc.isCPUVisible)
+		switch (bufferCreationDesc.usage)
 		{
-			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-			heapType = D3D12_HEAP_TYPE_UPLOAD;
-		}
+			case BufferUsage::UploadBuffer:
+			case BufferUsage::ConstantBuffer:
+			{
+				resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+				heapType = D3D12_HEAP_TYPE_UPLOAD;
+				isCpuVisible = true;
+			}break;
+
+			case BufferUsage::IndexBuffer:
+			case BufferUsage::StructuredBuffer:
+			{
+				resourceState = D3D12_RESOURCE_STATE_COMMON;
+				heapType = D3D12_HEAP_TYPE_DEFAULT;
+				isCpuVisible = false;
+			}break;
+		};
 
 		D3D12MA::ALLOCATION_DESC allocationDesc
 		{
@@ -35,12 +49,14 @@ namespace helios::gfx
 		};
 
 
-		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, resourceCreationDesc.optimizedClearValue.Color ? &resourceCreationDesc.optimizedClearValue : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 		
-		if (resourceCreationDesc.isCPUVisible)
+		if (isCpuVisible)
 		{
-			ThrowIfFailed(allocation.resource->Map(0u, nullptr, &allocation.mappedPointer.value()));
+			ThrowIfFailed(allocation.resource->Map(0u, nullptr, &allocation.mappedPointer));
 		}
+
+		allocation.resource->SetName(bufferCreationDesc.name.c_str());
 
 		return std::move(std::make_unique<Allocation>(allocation));
 	}

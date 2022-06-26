@@ -5,9 +5,9 @@
 namespace helios
 {
 	Engine::Engine(Config& config)
-		: m_Width{ config.width }, m_Height{ config.height }, m_Title{ config.title }
+		: mWidth{ config.width }, mHeight{ config.height }, mTitle{ config.title }
 	{
-		m_AspectRatio = static_cast<float>(m_Width) / static_cast<float>(m_Height);
+		mAspectRatio = static_cast<float>(mWidth) / static_cast<float>(mHeight);
 	}
 
 	// These two functions are empty for now, might be filled in the future.

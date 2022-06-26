@@ -3,7 +3,7 @@
 #include "Helios.hpp"
 
 // File with all constant buffer structs shared between C++ and HLSL.
-#include "ConstantBuffers.hlsli"
+#include "Common/ConstantBuffers.hlsli"
 
 class SandBox : public helios::Engine
 {
@@ -19,10 +19,9 @@ public:
 	void OnResize() override;
 
 private:
-
-private:
-	D3D12_VIEWPORT mViewport{};
-	D3D12_RECT mScissorRect{ .left = 0, .top = 0, .right = LONG_MAX, .bottom = LONG_MAX };
-
-	helios::Camera mCamera{};
+	// TEST
+	std::unique_ptr<helios::gfx::Buffer> mPositionBuffer{};
+	std::unique_ptr<helios::gfx::Buffer> mColorBuffer{};
+	std::unique_ptr<helios::gfx::Buffer> mIndexBuffer{};
+	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 };
