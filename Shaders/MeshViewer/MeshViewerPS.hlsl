@@ -11,5 +11,5 @@ struct VSOutput
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput psInput) : SV_Target
 {
-    return float4(psInput.color);
+    return psInput.color;
 }

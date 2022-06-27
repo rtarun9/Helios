@@ -81,19 +81,28 @@ static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
 	return static_cast<std::underlying_type<T>::type>(value);
 }
 
-static std::pair<uint32_t, uint32_t> GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
+// Used for window dimensions.
+struct Uint2
+{
+	uint32_t x{};
+	uint32_t y{};
+
+	auto operator<=>(Uint2 const& other) const = default;
+};
+
+static Uint2 GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);
 	uint32_t height = static_cast<uint32_t>(rect.bottom - rect.top);
 
-	return { width, height };
+	return  Uint2{.x =  width, .y = height };
 }
 
-static std::pair<uint32_t, uint32_t> GetMonitorDimensions(MONITORINFOEXW& monitorInfo)
+static Uint2 GetMonitorDimensions(MONITORINFOEXW& monitorInfo)
 {
 	uint32_t width = static_cast<uint32_t>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
 	uint32_t height = static_cast<uint32_t>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);
 
-	return { width, height };
+	return Uint2{ .x = width, .y = height };
 }
 

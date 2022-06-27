@@ -9,8 +9,7 @@ namespace helios
 	struct Config
 	{
 		std::wstring title{};
-		uint32_t width{};
-		uint32_t height{};
+		Uint2 dimensions{};
 	};
 
 	// The Base Engine class is passed into the Application static classe's Run method.
@@ -18,9 +17,6 @@ namespace helios
 	class Engine
 	{
 	public:
-		// Number of 32 bit root constants
-		static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
-
 		Engine(Config& config);
 		virtual ~Engine() = default;
 
@@ -29,16 +25,14 @@ namespace helios
 		virtual void OnRender() = 0;
 		virtual void OnDestroy() = 0;
 
-		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown);
-		virtual void OnResize();
+		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown) = 0;
+		virtual void OnResize() = 0;
 
-		uint32_t GetWidth() const { return mWidth; }
-		uint32_t GetHeight() const { return mHeight; };
+		Uint2 GetDimensions() const { return mDimensions; }
 		std::wstring GetTitle() const { return mTitle; };
 
-	public:
-		uint32_t mWidth{};
-		uint32_t mHeight{};
+	protected:
+		Uint2 mDimensions{};
 		std::wstring mTitle{};
 
 		float mAspectRatio{};

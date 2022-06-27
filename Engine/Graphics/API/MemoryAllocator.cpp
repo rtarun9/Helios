@@ -16,7 +16,7 @@ namespace helios::gfx
 		ThrowIfFailed(D3D12MA::CreateAllocator(&allocatorDesc, &mAllocator));
 	}
 
-	std::unique_ptr<Allocation> MemoryAllocator::CreateResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc)
+	std::unique_ptr<Allocation> MemoryAllocator::CreateBufferResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc)
 	{
 		Allocation allocation{};
 
@@ -48,7 +48,6 @@ namespace helios::gfx
 			.HeapType = heapType
 		};
 
-
 		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 		
 		if (isCpuVisible)
@@ -57,6 +56,75 @@ namespace helios::gfx
 		}
 
 		allocation.resource->SetName(bufferCreationDesc.name.c_str());
+
+		return std::move(std::make_unique<Allocation>(allocation));
+	}
+
+	std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(const TextureCreationDesc& textureCreationDesc)
+	{
+		Allocation allocation{};
+
+		D3D12_RESOURCE_STATES resourceState{ D3D12_RESOURCE_STATE_COMMON };
+		D3D12_HEAP_TYPE heapType{ D3D12_HEAP_TYPE_DEFAULT };
+
+		D3D12MA::ALLOCATION_DESC allocationDesc
+		{
+			.HeapType = heapType
+		};
+
+		DXGI_FORMAT format{};
+		DXGI_FORMAT dsFormat{};
+
+		switch (textureCreationDesc.format)
+		{
+			case DXGI_FORMAT_R32_FLOAT:
+			case DXGI_FORMAT_D32_FLOAT:
+			case DXGI_FORMAT_R32_TYPELESS:
+			{
+				dsFormat = DXGI_FORMAT_D32_FLOAT;
+				format = DXGI_FORMAT_R32_FLOAT;
+			}break;
+		}
+
+		ResourceCreationDesc resourceCreationDesc
+		{
+			.resourceDesc
+			{
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0u,
+				.Width = textureCreationDesc.dimensions.x,
+				.Height = textureCreationDesc.dimensions.y,
+				.DepthOrArraySize = 1u,
+				.MipLevels = 1u,
+				.Format = format,
+				.SampleDesc
+				{
+					.Count = 1u,
+					.Quality = 0u
+				},
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+			}
+		};
+
+		switch (textureCreationDesc.usage)
+		{
+			case TextureUsage::DepthStencil:
+			{
+				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+				resourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+			}break;
+
+			case TextureUsage::RenderTarget:
+			{
+				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+			}break;
+		}
+
+		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+
+		allocation.resource->SetName(textureCreationDesc.name.c_str());
 
 		return std::move(std::make_unique<Allocation>(allocation));
 	}

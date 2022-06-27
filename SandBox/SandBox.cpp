@@ -5,7 +5,13 @@
 
 using namespace helios;
 using namespace DirectX;
-using namespace DirectX::SimpleMath;
+
+struct alignas(256) TransformMatrix
+{
+	math::XMMATRIX modelMatrix{ math::XMMatrixIdentity()};
+	math::XMMATRIX viewMatrix{math::XMMatrixIdentity()};
+	math::XMMATRIX projectionMatrix{math::XMMatrixIdentity()};
+};
 
 SandBox::SandBox(Config& config)
 	: Engine(config)
@@ -16,71 +22,120 @@ void SandBox::OnInit()
 {
 	mDevice = std::make_unique<gfx::Device>();
 
-	std::array<SimpleMath::Vector3, 3> testData
+	std::array<math::XMFLOAT3, 8> cubePositions
 	{
-		Vector3{1.0f, -1.0f, 0.0f},
-		Vector3{-1.0f, -1.0f, 0.0f},
-		Vector3{0.0f, 1.0f, 0.0f}
+		XMFLOAT3(-1.0f, -1.0f, -1.0f), 
+		XMFLOAT3(-1.0f,  1.0f, -1.0f),
+		XMFLOAT3(1.0f,  1.0f, -1.0f),	
+		XMFLOAT3(1.0f, -1.0f, -1.0f),	
+		XMFLOAT3(-1.0f, -1.0f,  1.0f),
+		XMFLOAT3(-1.0f,  1.0f,  1.0f),
+		XMFLOAT3(1.0f,  1.0f,  1.0f),	
+		XMFLOAT3(1.0f, -1.0f,  1.0f),	
 	};
 
-	gfx::BufferCreationDesc testBufferCreationDesc
-	{
-		.usage = gfx::BufferUsage::StructuredBuffer,
-		.size = testData.size(),
-		.stride = sizeof(SimpleMath::Vector3),
-		.name = L"Test Vertex Buffer",
-	};
-
-	mPositionBuffer  = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(testBufferCreationDesc, testData.data()));
-
-	std::array<SimpleMath::Vector3, 3> testColorData
-	{
-		Vector3{1.0f, 0.0f, 0.0f},
-		Vector3{0.0f, 1.0f, 0.0f},
-		Vector3{0.0f, 0.0f, 1.0f}
-	};
-
-	gfx::BufferCreationDesc testBufferCreationDescC
+	gfx::BufferCreationDesc cubePositionBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::StructuredBuffer,
-		.size = testColorData.size(),
-		.stride = sizeof(SimpleMath::Vector3),
-		.name = L"Test Color Buffer",
+		.numComponenets = cubePositions.size(),
+		.stride = sizeof(math::XMFLOAT3),
+		.name = L"Cube Positions Buffer",
 	};
 
+	mPositionBuffer  = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubePositionBufferCreationDesc, cubePositions.data()));
 
-	mColorBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(testBufferCreationDescC, testColorData.data()));
-
-	std::array<uint32_t, 3> testIndices
+	std::array<math::XMFLOAT3, 8> cubeColors
 	{
-		0u, 1u, 2u
+		XMFLOAT3(0.0f, 0.0f, 0.0f), 
+		XMFLOAT3(0.0f, 1.0f, 0.0f), 
+		XMFLOAT3(1.0f, 1.0f, 0.0f), 
+		XMFLOAT3(1.0f, 0.0f, 0.0f), 
+		XMFLOAT3(0.0f, 0.0f, 1.0f), 
+		XMFLOAT3(0.0f, 1.0f, 1.0f), 
+		XMFLOAT3(1.0f, 1.0f, 1.0f), 
+		XMFLOAT3(1.0f, 0.0f, 1.0f)  
 	};
 
-	gfx::BufferCreationDesc testBufferCreationDescD
+	gfx::BufferCreationDesc cubeColorBufferCreationDesc
+	{
+		.usage = gfx::BufferUsage::StructuredBuffer,
+		.numComponenets = cubeColors.size(),
+		.stride = sizeof(math::XMFLOAT3),
+		.name = L"Cube Color Buffer",
+	};
+
+	mColorBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubeColorBufferCreationDesc, cubeColors.data()));
+	
+	std::array<uint32_t, 36> cubeIndices
+	{
+		0, 1, 2, 0, 2, 3,
+		4, 6, 5, 4, 7, 6,
+		4, 5, 1, 4, 1, 0,
+		3, 2, 6, 3, 6, 7,
+		1, 5, 6, 1, 6, 2,
+		4, 0, 3, 4, 3, 7
+	};
+
+	gfx::BufferCreationDesc cubeIndicesBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::IndexBuffer,
-		.size = testIndices.size(),
+		.numComponenets = cubeIndices.size(),
 		.stride = sizeof(uint32_t),
 		.name = L"Test Index Buffer",
 	};
 
-	mIndexBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(testBufferCreationDescD, testIndices.data()));
+	mIndexBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubeIndicesBufferCreationDesc, cubeIndices.data()));
+
+	gfx::BufferCreationDesc transformBufferCreationDesc
+	{
+		.usage = gfx::BufferUsage::ConstantBuffer,
+		.numComponenets = 1u,
+		.stride = sizeof(TransformData),
+		.name = L"Transform Data Buffer",
+	};
+
+	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
+
+	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(transformBufferCreationDesc));
 
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{
 		.vsShaderPath = L"Shaders/MeshViewer/MeshViewerVS.cso",
 		.psShaderPath = L"Shaders/MeshViewer/MeshViewerPS.cso",
 		.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.depthFormat = DXGI_FORMAT_UNKNOWN,
+		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"Mesh Viewer Pipeline"
 	};
 
 	mPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(graphicsPipelineStateCreationDesc));
 	
+	gfx::TextureCreationDesc depthStencilTextureCreationDesc
+	{
+		.usage = gfx::TextureUsage::DepthStencil,
+		.dimensions = mDimensions,
+		.format = DXGI_FORMAT_R32_FLOAT,
+		.name = L"Depth Stencil Texture"
+	};
+
+	mDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(depthStencilTextureCreationDesc));
 }
 
 void SandBox::OnUpdate()
 {
+	const XMVECTOR eyePosition = XMVectorSet(0.0, 0.0, -10.0, 1.0);
+	const XMVECTOR focusPoint = XMVectorSet(0.0, 0.0, 0.0, 1.0);
+	const XMVECTOR upDirection = XMVectorSet(0.0, 1.0, 0.0, 0.0);
+
+	TransformMatrix transfomationMatrix
+	{
+		.modelMatrix = math::XMMatrixRotationY(Application::GetTimer().GetTotalTime() / 10.0f),
+		.viewMatrix = math::XMMatrixLookAtLH(eyePosition, focusPoint, upDirection),
+		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 100.0f)
+	};
+
+	mTransformMatrix->Update(&transfomationMatrix, sizeof(TransformMatrix));
 }
 
 void SandBox::OnRender()
@@ -96,23 +151,25 @@ void SandBox::OnRender()
 
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	
-	graphicsContext->ClearRenderTargetView(backBuffer, SimpleMath::Color(0.1f, 0.1f, 0.1f, 1.0f));
-	graphicsContext->SetRenderTarget(1u, backBuffer);
-	graphicsContext->SetDefaultViewportAndScissor(mWidth, mHeight);
+	graphicsContext->ClearRenderTargetView(backBuffer, std::array{ 0.1f, 0.1f, 0.1f, 1.0f });
+	graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
+
+	graphicsContext->SetRenderTarget(1u, backBuffer, mDepthStencilTexture.get());
+	graphicsContext->SetDefaultViewportAndScissor(mDimensions);
 	graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	graphicsContext->SetIndexBuffer(mIndexBuffer.get());
 
 	MeshViewerRenderResources meshViewerRenderResources
 	{
-		.positionBufferIndex = mPositionBuffer->srvUavCbvIndexInDescriptorHeap,
-		.colorBufferIndex = mColorBuffer->srvUavCbvIndexInDescriptorHeap
+		.positionBufferIndex = mPositionBuffer->srvCbvIndex,
+		.colorBufferIndex = mColorBuffer->srvCbvIndex,
+		.cameraDataBufferIndex = mTransformMatrix->srvCbvIndex
 	};
 
 	graphicsContext->Set32BitGraphicsConstants(&meshViewerRenderResources);
 
-
-	graphicsContext->DrawInstanceIndexed(3u);
+	graphicsContext->DrawInstanceIndexed(36u);
 
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -134,11 +191,10 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 
 void SandBox::OnResize() 
 {
-	if (mWidth != Application::GetClientWidth() || mHeight != Application::GetClientHeight())
+	if (mDimensions != Application::GetClientDimensions())
 	{
 		mDevice->ResizeBuffers();
 	
-		mWidth = Application::GetClientWidth();
-		mHeight = Application::GetClientHeight();
+		mDimensions = Application::GetClientDimensions();
 	}
 }

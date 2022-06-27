@@ -40,19 +40,19 @@ namespace helios
 		{
 			.left = 0,
 			.top = 0,
-			.right = static_cast<LONG>(engine->GetWidth()),
-			.bottom = static_cast<LONG>(engine->GetHeight())
+			.right = static_cast<LONG>(engine->GetDimensions().x),
+			.bottom = static_cast<LONG>(engine->GetDimensions().y)
 		};
 
 		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-		std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect, WS_OVERLAPPEDWINDOW);
+		sClientDimensions = GetClientRegionDimentions(sWindowRect, WS_OVERLAPPEDWINDOW);
 
-		std::pair<uint32_t, uint32_t> windowPosition = CenterWindow();
+		Uint2 windowPosition = CenterWindow();
 
 		// Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc function by reinterpreting the lParam as a LPCREATESTRUCT.
-		sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.first, windowPosition.second,
-			sClientWidth, sClientHeight, 0, 0, instance, engine);
+		sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.x, windowPosition.y,
+			sClientDimensions.x, sClientDimensions.y, 0, 0, instance, engine);
 
 		::GetWindowRect(sWindowHandle, &sWindowRect);
 
@@ -119,11 +119,11 @@ namespace helios
 		{
 			::SetWindowLong(sWindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-			std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect);
+			sClientDimensions = GetClientRegionDimentions(sWindowRect);
 
 			::SetWindowPos(sWindowHandle, HWND_NOTOPMOST,
 				sWindowRect.left, sWindowRect.top,
-				sClientWidth, sClientWidth, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+				sClientDimensions.x, sClientDimensions.y, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 			
 			::ShowWindow(sWindowHandle, SW_NORMAL);
 		}
@@ -131,20 +131,20 @@ namespace helios
 		sIsFullScreen = !sIsFullScreen;
 	}
 
-	std::pair<uint32_t, uint32_t> Application::CenterWindow()
+	Uint2 Application::CenterWindow()
 	{
 		// Get Screen width and height so as to center the window.
 		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
 		int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
 
 		// Clamp value of client region so that it does not exceed the screen width / height.
-		sClientWidth = std::clamp<uint32_t>(sClientWidth, 0, screenWidth);
-		sClientHeight = std::clamp<uint32_t>(sClientHeight, 0, screenHeight);
+		sClientDimensions.x = std::clamp<uint32_t>(sClientDimensions.x, 0, screenWidth);
+		sClientDimensions.y = std::clamp<uint32_t>(sClientDimensions.y, 0, screenHeight);
 
-		uint32_t windowXPos = std::max<uint32_t>(0, (screenWidth - sClientWidth) / 2);
-		uint32_t windowYPos = std::max<uint32_t>(0, (screenHeight - sClientHeight) / 2);
+		uint32_t windowXPos = std::max<uint32_t>(0, (screenWidth - sClientDimensions.x) / 2);
+		uint32_t windowYPos = std::max<uint32_t>(0, (screenHeight - sClientDimensions.y) / 2);
 
-		return { windowXPos, windowYPos };
+		return Uint2{ .x = windowXPos, .y = windowYPos };
 	}
 
 	LRESULT CALLBACK Application::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
@@ -204,7 +204,7 @@ namespace helios
 				{
 					::GetClientRect(sWindowHandle, &sWindowRect);
 
-					std::tie<uint32_t, uint32_t>(sClientWidth, sClientHeight) = GetClientRegionDimentions(sWindowRect);
+					sClientDimensions = GetClientRegionDimentions(sWindowRect);
 				}
 
 				break;

@@ -8,8 +8,11 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prevInstance, [[
 	helios::Config config
 	{
 		.title = L"Helios Engine",
-		.width = 1920,
-		.height = 1080,
+		.dimensions
+		{
+			.x = 1920u,
+			.y = 1080u
+		}
 	};
 
 	SandBox sandBox{ config };

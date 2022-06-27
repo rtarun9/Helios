@@ -4,7 +4,6 @@
 
 #include "Core/Application.hpp"
 #include "Core/Engine.hpp"
-#include "Core/Camera.hpp"
 #include "Core/Timer.hpp"
 #include "Core/UIManager.hpp"
 
@@ -13,7 +12,6 @@
 #include "Graphics/API/CommandQueue.hpp"
 #include "Graphics/API/RenderTarget.hpp"
 #include "Graphics/API/PipelineState.hpp"
-#include "Graphics/API/DepthStencilBuffer.hpp"
 #include "Graphics/API/MemoryAllocator.hpp"
 
 #include "Graphics/Model/Model.hpp"

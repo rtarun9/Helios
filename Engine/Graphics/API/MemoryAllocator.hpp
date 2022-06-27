@@ -13,7 +13,9 @@ namespace helios::gfx
 	public:
 		MemoryAllocator(ID3D12Device* device, IDXGIAdapter* adapter);
 	
-		std::unique_ptr<Allocation> CreateResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc);
+		// While both the CreateXResourceAllocation can be merged, it leads to a bit strange / awkward code, so seperating it for now.
+		std::unique_ptr<Allocation> CreateBufferResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc);
+		std::unique_ptr<Allocation> CreateTextureResourceAllocation(const TextureCreationDesc& textureCreationDesc);
 
 	private:
 		Microsoft::WRL::ComPtr<D3D12MA::Allocator> mAllocator{};

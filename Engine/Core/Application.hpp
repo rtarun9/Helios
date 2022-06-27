@@ -16,8 +16,7 @@ namespace helios
 		static int Run(Engine* engine, HINSTANCE instance);
 		
 		static inline HWND GetWindowHandle() { return sWindowHandle; };
-		static inline uint32_t GetClientWidth() { return sClientWidth; }
-		static inline uint32_t GetClientHeight() { return sClientHeight; }
+		static inline Uint2 GetClientDimensions() { return sClientDimensions; }
 
 		static inline RECT& GetWindowRect() { return sWindowRect; };
 
@@ -29,8 +28,8 @@ namespace helios
 
 		static void ToggleFullScreenMode();
 
-		// Returns a pair (window x coord, window y coord) of coords to place the window's left corner at to center the window.
-		static std::pair<uint32_t, uint32_t> CenterWindow();
+		// Returns the x and y coords of the top left corner of window where if placed the window will be centered.
+		static Uint2 CenterWindow();
 
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -39,8 +38,7 @@ namespace helios
 		
 		static inline HWND sWindowHandle{};
 
-		static inline uint32_t sClientWidth{};
-		static inline uint32_t sClientHeight{};
+		static inline Uint2 sClientDimensions{};
 
 		static inline RECT sWindowRect{};
 		static inline bool sIsFullScreen{ false };

@@ -29,11 +29,11 @@ namespace helios::gfx
 			.PS = CD3DX12_SHADER_BYTECODE(pixelBlob.Get()),
 			.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT),
 			.SampleMask= UINT_MAX,
-			.RasterizerState =CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
+			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT),
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1u,
-			.RTVFormats = pipelineStateCreationDesc.rtvFormat,
+			.RTVFormats= pipelineStateCreationDesc.rtvFormat,
 			.DSVFormat = pipelineStateCreationDesc.depthFormat,
 			.SampleDesc
 			{

@@ -39,6 +39,7 @@ struct MeshViewerRenderResources
 {
     uint positionBufferIndex;
     uint colorBufferIndex;
+    uint cameraDataBufferIndex;
 };
 
 struct TestRenderResources

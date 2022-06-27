@@ -4,7 +4,6 @@
 
 #include "RenderTarget.hpp"
 #include "PipelineState.hpp"
-#include "DepthStencilBuffer.hpp"
 #include "Resources.hpp"
 #include "Descriptor.hpp"
 
@@ -18,34 +17,44 @@ namespace helios::gfx
 	class GraphicsContext
 	{
 	public:
-		GraphicsContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+		GraphicsContext(Device& device);
 		ID3D12GraphicsCommandList* const GetCommandList() { return mCommandList.Get(); }
 
 		// Core functionalities.
-		void ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState);
+
+		// Resource related functions : 
+		void ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const;
 		
-		void ClearRenderTargetView(BackBuffer* const backBuffer, const DirectX::SimpleMath::Color& color);
+		void ClearRenderTargetView(BackBuffer* const backBuffer, std::span<const float, 4> color);
+		void ClearDepthStencilView(Texture* const depthStencilTexture, float depth = 1.0f);
+
 		void SetDescriptorHeaps(Descriptor* const descriptor) const;
 
-		void SetGraphicsPipelineState(PipelineState* pipelineState) const;
-		void SetComputePipelineState(PipelineState* pipelineState) const;
-		void SetGraphicsRootSignature(PipelineState* pipelineState) const;
-		void SetComputeRootSignature(PipelineState* pipelineState) const;
-		void SetPipelineStateObject(PipelineState* pipelineState) const;
+		// COnfigure pipeline / root signature related functions.
+		void SetGraphicsPipelineState(PipelineState* const pipelineState) const;
+		void SetComputePipelineState(PipelineState* const pipelineState) const;
+		void SetGraphicsRootSignature(PipelineState* const pipelineState) const;
+		void SetComputeRootSignature(PipelineState* const pipelineState) const;
+		void SetPipelineStateObject(PipelineState* constpipelineState) const;
 
-		void SetIndexBuffer(Buffer* const buffer);
-		void Set32BitGraphicsConstants(void* renderResources);
-		void Set32BitComputeConstants(void* renderResources);
-		void SetDefaultViewportAndScissor(uint32_t width, uint32_t height) const;
-		void SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology);
-		void SetRenderTarget(uint32_t rtvCount, BackBuffer* renderTarget);
+		void SetIndexBuffer(Buffer* const buffer) const;
+		void Set32BitGraphicsConstants(const void* renderResources) const;
+		void Set32BitComputeConstants(const void* renderResources) const;
+		void SetDefaultViewportAndScissor(Uint2 dimensions) const;
+		void SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
+		void SetRenderTarget(uint32_t rtvCount, BackBuffer* const renderTarget, Texture* const depthStencilTexture) const;
 
-		void DrawInstanceIndexed(uint32_t indicesCount);
+		// Draw functions.
+		void DrawInstanceIndexed(uint32_t indicesCount) const;
 
 	private:
 		static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;
 
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList{};
+
+		// Functions such as SetRenderTargets() need to get the descriptor handle (present in the Device class) from the texture index.
+		// For similar reasons, the GraphicsContext has a reference to the device.
+		Device& mDevice;
 	};
 }
 

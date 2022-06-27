@@ -5,20 +5,27 @@
 
 namespace helios::gfx
 {
-	GraphicsContext::GraphicsContext(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList)
+	GraphicsContext::GraphicsContext(Device& device) : mDevice(device)
 	{
-		mCommandList = commandList;
+		mCommandList = device.GetGraphicsCommandQueue()->GetCommandList();
 	}
 
-	void GraphicsContext::ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState)
+	void GraphicsContext::ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const
 	{
 		CD3DX12_RESOURCE_BARRIER resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, previousState, newState);
 		mCommandList->ResourceBarrier(1u, &resourceBarrier);
 	}
 
-	void GraphicsContext::ClearRenderTargetView(BackBuffer* const backBuffer, const math::Color& color)
+	void GraphicsContext::ClearRenderTargetView(BackBuffer* const backBuffer, std::span<const float, 4> color)
 	{
-		mCommandList->ClearRenderTargetView(backBuffer->backBufferDescriptorHandle.cpuDescriptorHandle, color, 0u, nullptr);
+		mCommandList->ClearRenderTargetView(backBuffer->backBufferDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
+	}
+
+	void GraphicsContext::ClearDepthStencilView(Texture* const depthStencilTexture, float depth)
+	{
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+
+		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0u, nullptr);
 	}
 
 	void GraphicsContext::SetDescriptorHeaps(Descriptor* const descriptor) const
@@ -28,8 +35,7 @@ namespace helios::gfx
 			descriptor->GetDescriptorHeap(),
 		};
 
-
-		mCommandList->SetDescriptorHeaps(descriptorHeaps.size(), descriptorHeaps.data());
+		mCommandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
 	}
 
 	void GraphicsContext::SetGraphicsPipelineState(PipelineState* pipelineState) const
@@ -59,31 +65,31 @@ namespace helios::gfx
 		mCommandList->SetPipelineState(pipelineState->pipelineStateObject.Get());
 	}
 
-	void GraphicsContext::SetIndexBuffer(Buffer* const buffer)
+	void GraphicsContext::SetIndexBuffer(Buffer* const buffer) const
 	{
 		D3D12_INDEX_BUFFER_VIEW indexBufferView
 		{
 			.BufferLocation = buffer->allocation->resource->GetGPUVirtualAddress(),
-			.SizeInBytes = buffer->sizeInBytes,
+			.SizeInBytes = static_cast<UINT>(buffer->sizeInBytes),
 			.Format = DXGI_FORMAT_R32_UINT,
 		};
 
 		mCommandList->IASetIndexBuffer(&indexBufferView);
 	}
 
-	void GraphicsContext::Set32BitGraphicsConstants(void* renderResources)
+	void GraphicsContext::Set32BitGraphicsConstants(const void* renderResources) const
 	{
 		mCommandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
 	}
 
-	void GraphicsContext::SetDefaultViewportAndScissor(uint32_t width, uint32_t height) const
+	void GraphicsContext::SetDefaultViewportAndScissor(Uint2 dimensions) const
 	{
 		D3D12_VIEWPORT viewport
 		{
 			.TopLeftX = 0.0f,
 			.TopLeftY = 0.0f,
-			.Width = static_cast<float>(width),
-			.Height = static_cast<float>(height),
+			.Width = static_cast<float>(dimensions.x),
+			.Height = static_cast<float>(dimensions.y),
 			.MinDepth = 0.0f,
 			.MaxDepth = 1.0f
 		};
@@ -100,27 +106,21 @@ namespace helios::gfx
 		mCommandList->RSSetScissorRects(1u, &scissorRect);
 	}
 
-	void GraphicsContext::SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology)
+	void GraphicsContext::SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const
 	{
 		mCommandList->IASetPrimitiveTopology(primitiveTopology);
 	}
 
-	void GraphicsContext::SetRenderTarget(uint32_t count, BackBuffer* renderTarget)
+	void GraphicsContext::SetRenderTarget(uint32_t count, BackBuffer* renderTarget, Texture* depthStencilTexture) const
 	{
-		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, nullptr);
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+
+		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, TRUE, &dsvDescriptorHandle.cpuDescriptorHandle);
 	}
 
-	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount)
+	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount) const
 	{
 		mCommandList->DrawIndexedInstanced(indicesCount, 1u, 0u, 0u, 0u);
 	}
-
-	//void GraphicsContext::SetRenderTarget(RenderTarget* const renderTarget)
-	//{
-	//	auto rtIndexBufferView = RenderTarget::sIndexBuffer->GetBufferView();
-	//
-	//	mCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	mCommandList->IASetIndexBuffer(&rtIndexBufferView);
-	//}
 }
 

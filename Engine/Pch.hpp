@@ -18,13 +18,12 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
-#include <DirectXMath.h>
 
 // D3D12 extension library.
 #include "Graphics/API/d3dx12.hpp"
 
-// Math wrapper for DirectXMath : Provided by DirectXTK12.
-#include "SimpleMath/SimpleMath.h"
+// SIMD Math library.
+#include <DirectXMath.h>
 
 // D3D12 memory allocator (will be removed eventually in project when custom allocator is used).
 #include "D3D12MemoryAllocator/D3D12MemAlloc.h"
@@ -60,8 +59,7 @@
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;
-namespace dx = DirectX;
-namespace math = DirectX::SimpleMath;
+namespace math = DirectX;
 
 // For setting the Agility SDK paramters.
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u; }
