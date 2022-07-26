@@ -3,8 +3,6 @@
 #include "Pch.hpp"
 
 // Reference : https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloWindow/DXSampleHelper.h.
-
-
 static inline std::string WstringToString(std::wstring_view inputWString)
 {
 	std::string result{};
@@ -55,6 +53,7 @@ static inline void GetBlobMessage(ID3DBlob* blob)
 #define CREATE_LAMBDA_FUNCTION(function) ([&](){function;})
 
 // Deferred execution queue for templated functions.
+// note (rtarun9) : This is added here as currently there is no DX_TYPES / similar file.
 struct DeferredExecutionQueue
 {
 	std::vector<std::function<void()>> functionPointers;

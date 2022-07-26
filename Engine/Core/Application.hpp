@@ -15,13 +15,14 @@ namespace helios
 	public:
 		static int Run(Engine* engine, HINSTANCE instance);
 		
-		static inline HWND GetWindowHandle() { return sWindowHandle; };
+		static inline HWND GetWindowHandle() { return sWindowHandle; }
 		static inline Uint2 GetClientDimensions() { return sClientDimensions; }
 
-		static inline RECT& GetWindowRect() { return sWindowRect; };
+		static inline RECT& GetWindowRect() { return sWindowRect; }
 
-		static inline Timer& GetTimer() { return sTimer; };
+		static inline Timer& GetTimer() { return sTimer; }
 
+		static bool IsFullScreen() { return sIsFullScreen; }
 	private:
 		// The Application class is only accesible via its static member functions.
 		Application() = default;

@@ -16,22 +16,28 @@ namespace helios::gfx
 	};
 
 	// When custom allocator is used much more data will be stored in the allocation struct.
-	// Note that the mapped pointer will only be used by constant buffers.
+	// Note that the mapped pointer will only be used by constant buffers, which is why it is wrapped over std::optional.
 	// The memory allocator class provides methods to create an allocation.
 	struct Allocation
 	{
 		Microsoft::WRL::ComPtr<D3D12MA::Allocation> allocation{};
-		void* mappedPointer{};
+		std::optional<void*> mappedPointer{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> resource{};
 		
 		void Update(const void* data, size_t size)
 		{
-			if (!data || !mappedPointer)
+			if (!data || !mappedPointer.has_value())
 			{
-				throw std::exception("Trying to update resource that is not placed in CPU visible memory.");
+				throw std::exception("Trying to update resource that is not placed in CPU visible memory, or the data is null");
 			}
 
-			memcpy(mappedPointer, data, size);
+			memcpy(mappedPointer.value(), data, size);
+		}
+
+		void Reset()
+		{
+			resource.Reset();
+			allocation.Reset();
 		}
 	};
 
@@ -48,21 +54,20 @@ namespace helios::gfx
 	struct BufferCreationDesc
 	{
 		BufferUsage usage{};
-		size_t numComponenets{};
-		size_t stride{};
 		std::wstring name{};
 	};
 
 	struct Buffer
 	{
 		std::unique_ptr<Allocation> allocation{};
-		uint32_t srvCbvIndex{};
+		uint32_t srbCbvUavIndex{};
 		size_t sizeInBytes{};
 
 		// To be used primarily for constant buffers.
-		void Update(const void* data, uint32_t size)
+		void Update(const void* data)
 		{
-			allocation->Update(data, size);
+			// Allocation's update function will take care if data is null or not.
+			allocation->Update(data, sizeInBytes);
 		}
 	};
 

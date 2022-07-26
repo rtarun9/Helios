@@ -9,32 +9,34 @@
 
 namespace helios
 {
-	void UIManager::Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor) const
+	UIManager::UIManager(gfx::Device* device)
 	{
+		ImGui_ImplWin32_EnableDpiAwareness();
+
 		// Setup ImGui context.
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
-
-		// Setup Style.
-		SetCustomDarkTheme();
+		io.DisplaySize = ImVec2((float)Application::GetClientDimensions().x, (float)Application::GetClientDimensions().y);
 
 		// Setup platform / renderer backends.
-		ImGui_ImplWin32_EnableDpiAwareness();
 
 		ImGui_ImplWin32_Init(Application::GetWindowHandle());
+		gfx::DescriptorHandle srvDescriptorHandle = device->GetSrvCbvUavDescriptor()->GetCurrentDescriptorHandle();
 
-		ImGui_ImplDX12_Init(device, framesInFlight, DXGI_FORMAT_R8G8B8A8_UNORM, srvDescriptor.GetDescriptorHeap(), srvDescriptor.GetCurrentDescriptorHandle().cpuDescriptorHandle, srvDescriptor.GetCurrentDescriptorHandle().gpuDescriptorHandle);
-
-		srvDescriptor.OffsetCurrentHandle();
+		ImGui_ImplDX12_Init(device->GetDevice(), gfx::Device::NUMBER_OF_FRAMES, DXGI_FORMAT_R8G8B8A8_UNORM, device->GetSrvCbvUavDescriptor()->GetDescriptorHeap(), srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
+		device->GetSrvCbvUavDescriptor()->OffsetCurrentHandle();
 	}
 
-	void UIManager::FrameStart() const
+	void UIManager::BeginFrame() const
 	{
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
+		if (mShowUI)
+		{
+			ImGui_ImplDX12_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+		}
 	}
 
 	void UIManager::ShutDown() const
@@ -44,30 +46,37 @@ namespace helios
 		ImGui::DestroyContext();
 	}
 
-	void UIManager::FrameEnd(ID3D12GraphicsCommandList* commandList) const
+	void UIManager::EndFrame(gfx::GraphicsContext* commandList) const
 	{
-		ImGui::Render();
-		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+		if (mShowUI)
+		{
+			ImGui::Render();
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList->GetCommandList());
+		}
 	}
 
 	void UIManager::Begin(std::wstring_view uiComponentName) const
 	{
-		ImGui::Begin(WstringToString(uiComponentName).c_str());
+		if (mShowUI)
+		{
+			ImGui::Begin(WstringToString(uiComponentName).c_str());
+		}
 	}
 
 	void UIManager::End() const
 	{
-		ImGui::End();
-	}
-
-	void UIManager::Image(gfx::DescriptorHandle& descriptorHandle) const
-	{
-		ImGui::Image(ImTextureID(descriptorHandle.gpuDescriptorHandle.ptr), ImVec2(250, 250));
+		if (mShowUI)
+		{
+			ImGui::End();
+		}
 	}
 
 	void UIManager::SetClearColor(std::span<float> clearColor) const
 	{
-		ImGui::ColorEdit3("Clear Color", clearColor.data());
+		if (mShowUI)
+		{
+			ImGui::ColorEdit3("Clear Color", clearColor.data());
+		}
 	}
 
 	void UIManager::SetCustomDarkTheme() const
@@ -134,5 +143,22 @@ namespace helios
 		style->TabBorderSize = 1.0f;
 		style->TabRounding = 0.0f;
 		style->WindowRounding = 4.0f;
+	}
+
+	void UIManager::ShowUI()
+	{
+		mShowUI = true;
+	}
+
+	void UIManager::HideUI()
+	{
+		mShowUI = false;
+	}
+
+	void UIManager::UpdateDisplaySize()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		(void)io;
+		io.DisplaySize = ImVec2((float)Application::GetClientDimensions().x, (float)Application::GetClientDimensions().y);
 	}
 }

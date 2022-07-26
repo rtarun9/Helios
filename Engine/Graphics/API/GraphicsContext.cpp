@@ -3,11 +3,16 @@
 #include "GraphicsContext.hpp"
 #include "Device.hpp"
 
+#include "Core/Application.hpp"
+
 namespace helios::gfx
 {
 	GraphicsContext::GraphicsContext(Device& device) : mDevice(device)
 	{
 		mCommandList = device.GetGraphicsCommandQueue()->GetCommandList();
+
+		// As all graphics context's require to set the descriptor heap before hand, the user has option to set them manually (for explicitness) or just let the constructor take care of this.
+		SetDescriptorHeaps(mDevice.GetSrvCbvUavDescriptor());
 	}
 
 	void GraphicsContext::ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const
@@ -25,7 +30,7 @@ namespace helios::gfx
 	{
 		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
 
-		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0u, nullptr);
+		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0u, nullptr);
 	}
 
 	void GraphicsContext::SetDescriptorHeaps(Descriptor* const descriptor) const
@@ -82,14 +87,14 @@ namespace helios::gfx
 		mCommandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
 	}
 
-	void GraphicsContext::SetDefaultViewportAndScissor(Uint2 dimensions) const
+	void GraphicsContext::SetDefaultViewportAndScissor() const
 	{
 		D3D12_VIEWPORT viewport
 		{
 			.TopLeftX = 0.0f,
 			.TopLeftY = 0.0f,
-			.Width = static_cast<float>(dimensions.x),
-			.Height = static_cast<float>(dimensions.y),
+			.Width = static_cast<float>(Application::GetClientDimensions().x),
+			.Height = static_cast<float>(Application::GetClientDimensions().y),
 			.MinDepth = 0.0f,
 			.MaxDepth = 1.0f
 		};
@@ -106,6 +111,8 @@ namespace helios::gfx
 		mCommandList->RSSetScissorRects(1u, &scissorRect);
 	}
 
+	// Specifies how the pipeline interprets vertex data bound to the input assember stage.
+	// i.e if topology type is POINTLIST, vertex data is interpreted as list of points.
 	void GraphicsContext::SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const
 	{
 		mCommandList->IASetPrimitiveTopology(primitiveTopology);

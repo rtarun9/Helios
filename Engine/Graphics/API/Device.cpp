@@ -19,12 +19,13 @@ namespace helios::gfx
 
 	void Device::InitDeviceResources()
 	{
-		// Enable the debug layer.
+		// Enable the debug layer, so that all errors generated while creating DX12 objects is caught.
 #ifdef _DEBUG
 		ThrowIfFailed(::D3D12GetDebugInterface(IID_PPV_ARGS(&mDebugInterface)));
 		mDebugInterface->EnableDebugLayer();
 		mDebugInterface->SetEnableGPUBasedValidation(TRUE);
 		mDebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
+		mDebugInterface->SetEnableAutoName(TRUE);
 #endif
 
 		// Create DXGI Factory.
@@ -55,7 +56,7 @@ namespace helios::gfx
 		ThrowIfFailed(::D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mDevice)));
 		mDevice->SetName(L"D3D12 Device");
 
-		// Set break points on certain severity levels in debug mode.
+		// Set break points on certain severity levels in debug mode, and enable debug messages in Debug Mode.
 #ifdef _DEBUG
 		wrl::ComPtr<ID3D12InfoQueue> infoQueue;
 		ThrowIfFailed(mDevice.As(&infoQueue));
@@ -92,7 +93,7 @@ namespace helios::gfx
 
 		ThrowIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
 
-		// Get the debug device.
+		// Get the debug device. It represents a graphics device for debugging, while debug interface controls debug settings and validates pipeline state.
 		ThrowIfFailed(mDevice->QueryInterface(IID_PPV_ARGS(&mDebugDevice)));
 #endif
 
@@ -103,14 +104,12 @@ namespace helios::gfx
 		mGraphicsCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Graphics Command Queue");
 		mComputeCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
 		mCopyCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
+		
 		// Create the descriptor heaps.
 		mRtvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
 		mDsvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
 		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
 
-		// Create the depth stencil buffer
-		//mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDsvDescriptor.get(), mSrvCbvUavDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
-		
 		// Create bindless root signature.
 		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
 	}
@@ -163,7 +162,7 @@ namespace helios::gfx
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 		
 		// Create Backbuffer render target views.
-		for (int i = 0; i < NUMBER_OF_FRAMES; ++i)
+		for (int i : std::views::iota(0u, NUMBER_OF_FRAMES))
 		{
 			D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = mRtvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle;
 
@@ -199,10 +198,6 @@ namespace helios::gfx
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 
 		CreateBackBufferRTVs();
-
-		// Resize the depth buffer.
-		// note (rtarun9) : approach of recreating depth buffer while resizing maybe correct, but have to look into it a bit more.
-		//mDepthStencilBuffer = std::make_unique<DepthStencilBuffer>(mDevice.Get(), mDsvDescriptor.get(), mSrvCbvUavDescriptor.get(), DXGI_FORMAT_R24G8_TYPELESS, Application::GetClientWidth(), Application::GetClientHeight(), L"Depth Stencil Buffer");
 	}
 
 	void Device::BeginFrame()
@@ -233,12 +228,12 @@ namespace helios::gfx
 
 	uint32_t Device::CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const
 	{
-		uint32_t srvCbvIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
+		uint32_t srbCbvUavIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
 		mDevice->CreateShaderResourceView(resource, &srvCreationDesc.srvDesc, mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		
 		mSrvCbvUavDescriptor->OffsetCurrentHandle();
 
-		return srvCbvIndex;
+		return srbCbvUavIndex;
 	}
 
 	uint32_t Device::CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const
@@ -270,100 +265,13 @@ namespace helios::gfx
 		return cbvIndex;
 	}
 
-	Buffer Device::CreateBuffer(const BufferCreationDesc& bufferCreationDesc, const void *data) const
-	{
-		Buffer buffer{};
-		buffer.sizeInBytes = bufferCreationDesc.numComponenets * bufferCreationDesc.stride;
-
-		ResourceCreationDesc resourceCreationDesc
-		{
-			.resourceDesc
-			{
-				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-				.Width = buffer.sizeInBytes,
-				.Height = 1u,
-				.DepthOrArraySize = 1u,
-				.MipLevels = 1u,
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.SampleDesc
-				{
-					.Count = 1u,
-					.Quality = 0u
-				},
-				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-				.Flags = D3D12_RESOURCE_FLAG_NONE
-			}
-		};
-
-		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
-
-		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
-		// and then copy data from upload buffer -> GPU only buffer.
-		if (data)
-		{
-			// Create upload buffer.
-			BufferCreationDesc uploadBufferCreationDesc
-			{
-				.usage = BufferUsage::UploadBuffer,
-				.numComponenets = bufferCreationDesc.numComponenets,
-				.stride = bufferCreationDesc.stride,
-				.name = L"Upload buffer - " + bufferCreationDesc.name,
-			};
-
-			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
-
-			uploadAllocation->Update(data, buffer.sizeInBytes);
-
-			// Get a copy command and list and execute copy resource functions on the command queue.
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
-			copyCommandList->CopyResource(buffer.allocation->resource.Get(), uploadAllocation->resource.Get());
-			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
-		}
-
-		if (bufferCreationDesc.usage == BufferUsage::StructuredBuffer)
-		{
-			SrvCreationDesc srvCreationDesc
-			{
-				.srvDesc
-				{
-					.Format = DXGI_FORMAT_UNKNOWN,
-					.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-					.Buffer
-					{
-						.FirstElement = 0u,
-						.NumElements = static_cast<UINT>(bufferCreationDesc.numComponenets),
-						.StructureByteStride = static_cast<UINT>(bufferCreationDesc.stride)
-					}
-				}
-			};
-
-			buffer.srvCbvIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
-		}
-		else if (bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
-		{
-			CbvCreationDesc cbvCreationDesc
-			{
-				.cbvDesc
-				{
-					.BufferLocation = buffer.allocation->resource->GetGPUVirtualAddress(),
-					.SizeInBytes = static_cast<UINT>(buffer.sizeInBytes)
-				}
-			};
-
-			buffer.srvCbvIndex = CreateCbv(cbvCreationDesc);
-		}
-
-		return buffer;
-	}
-
 	Texture Device::CreateTexture(const TextureCreationDesc& textureCreationDesc)
 	{
 		Texture texture{};
 
 		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
-		// Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D24_UNORM_S8_UINT) or formats used by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
+		// Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D32_FLOAT) or formats used by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
 		DXGI_FORMAT format{};
 		DXGI_FORMAT dsFormat{};
 
@@ -376,9 +284,14 @@ namespace helios::gfx
 				dsFormat = DXGI_FORMAT_D32_FLOAT;
 				format = DXGI_FORMAT_R32_FLOAT;
 			}break;
+
+			case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			{
+				throw std::runtime_error("Currently, the renderer does not support depth format of the type D24_S8_UINT. Please use one of the X32 types.");
+			}break;
 		}
 
-		// Create SRV
+		// Create SRV.
 		SrvCreationDesc srvCreationDesc
 		{
 			.srvDesc
@@ -396,6 +309,7 @@ namespace helios::gfx
 
 		texture.srvIndex = CreateSrv(srvCreationDesc, texture.allocation->resource.Get());
 
+		// Create DSV (if applicable).
 		if (textureCreationDesc.usage == TextureUsage::DepthStencil)
 		{
 			DsvCreationDesc dsvCreationDesc
@@ -424,5 +338,5 @@ namespace helios::gfx
 
 		return pipelineState;
 	}
-
 }
+

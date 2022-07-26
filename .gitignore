@@ -4,7 +4,7 @@ VsFiles/
 .vs/
 
 # Shader bytecode
-Shaders/*.cso
+Shaders/**/.cso
 
 # DXC Files copied into the shaders directory.
 Shaders/*.exe

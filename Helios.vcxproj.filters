@@ -25,6 +25,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{EFAC8DF2-5B8C-0C8E-64A4-9764D00273EF}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\Common">
+      <UniqueIdentifier>{47F7BA84-33C5-AE8A-1C59-1FB108C68AEF}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Shaders\MeshViewer">
       <UniqueIdentifier>{3D492636-292D-E78B-928D-E1DE7E90D10D}</UniqueIdentifier>
     </Filter>
@@ -48,9 +51,6 @@
     <ClInclude Include="Engine\Graphics\API\CommandQueue.hpp">
       <Filter>Engine\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\API\ConstantBuffer.hpp">
-      <Filter>Engine\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Graphics\API\Descriptor.hpp">
       <Filter>Engine\Graphics\API</Filter>
     </ClInclude>
@@ -61,6 +61,9 @@
       <Filter>Engine\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\API\MemoryAllocator.hpp">
+      <Filter>Engine\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\API\PipelineState.hpp">
       <Filter>Engine\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\API\Resources.hpp">
@@ -84,8 +87,6 @@
     <ClInclude Include="SandBox\SandBox.hpp">
       <Filter>SandBox</Filter>
     </ClInclude>
-    <ClInclude Include="ThirdParty\D3D12MemoryAllocator\D3D12MemAlloc.h" />
-    <ClInclude Include="Engine\Graphics\API\PipelineState.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp">
@@ -137,10 +138,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Common\BindlessRS.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\Common</Filter>
     </None>
     <None Include="Shaders\Common\ConstantBuffers.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\Common</Filter>
     </None>
     <None Include="Shaders\MeshViewer\MeshViewerPS.hlsl">
       <Filter>Shaders\MeshViewer</Filter>

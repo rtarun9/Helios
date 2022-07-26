@@ -12,6 +12,8 @@ namespace helios
 {
 	int Application::Run(Engine* engine, HINSTANCE instance)
 	{
+		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 		// Initialize Window class.
 
 		// Force window redraw when either width / height of client region changes or if movement adjustment happens.
@@ -44,8 +46,6 @@ namespace helios
 			.bottom = static_cast<LONG>(engine->GetDimensions().y)
 		};
 
-		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
 		sClientDimensions = GetClientRegionDimentions(sWindowRect, WS_OVERLAPPEDWINDOW);
 
 		Uint2 windowPosition = CenterWindow();
@@ -54,7 +54,8 @@ namespace helios
 		sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.x, windowPosition.y,
 			sClientDimensions.x, sClientDimensions.y, 0, 0, instance, engine);
 
-		::GetWindowRect(sWindowHandle, &sWindowRect);
+		::GetClientRect(sWindowHandle, &sWindowRect);
+		sClientDimensions = GetClientRegionDimentions(sWindowRect, WS_OVERLAPPEDWINDOW);
 
 		if (!sWindowHandle)
 		{
@@ -95,7 +96,7 @@ namespace helios
 	{
 		if (!sIsFullScreen)
 		{
-			::GetWindowRect(sWindowHandle, &sWindowRect);
+			::GetClientRect(sWindowHandle, &sWindowRect);
 
 			// Set window style to borderless so entire screen is filled by the client region. The full screen window style is basically 0ed out by these flag's, done here explicitly.
 			UINT fullScreenWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
@@ -119,6 +120,7 @@ namespace helios
 		{
 			::SetWindowLong(sWindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
+			::GetClientRect(sWindowHandle, &sWindowRect);
 			sClientDimensions = GetClientRegionDimentions(sWindowRect);
 
 			::SetWindowPos(sWindowHandle, HWND_NOTOPMOST,
@@ -197,15 +199,18 @@ namespace helios
 				break;
 			}
 
+			// note(rtarun9) : TODO : FIX RESIZE ISSUE WITH IMGUI, CHECK CODE LOGIC FOR RESIZING.
 			case WM_SIZE:
 			{
 				// Dont save current window dimensions while switching from FullScreen -> Normal mode.
 				if (sIsFullScreen)
 				{
 					::GetClientRect(sWindowHandle, &sWindowRect);
-
 					sClientDimensions = GetClientRegionDimentions(sWindowRect);
+
 				}
+
+				engine->OnResize();
 
 				break;
 			}

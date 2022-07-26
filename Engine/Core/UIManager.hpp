@@ -3,28 +3,37 @@
 #include "Pch.hpp"
 
 #include "Graphics/API/Descriptor.hpp"
+#include "Graphics/API/Device.hpp"
+#include "Graphics/API/GraphicsContext.hpp"
 
 #include "imgui.h"
 
 namespace helios
 {
 	// Thin abstraction over ImGui.
+	// Not a part of the device abstraction : so must be created and handled manually in the SandBox files.
 	class UIManager
 	{
 	public:
-		void Init(ID3D12Device* device, uint32_t framesInFlight, gfx::Descriptor& srvDescriptor) const;
+		UIManager(gfx::Device* device);
 		void ShutDown() const;
 
-		void FrameStart() const;
-		void FrameEnd(ID3D12GraphicsCommandList* commandList) const;
+		void BeginFrame() const;
+		void EndFrame(gfx::GraphicsContext* graphicsContext) const;
 
 		void Begin(std::wstring_view uiComponentName) const;
 		void End() const;
 
-		void Image(gfx::DescriptorHandle& descriptorHandle) const;
-
 		void SetClearColor(std::span<float> clearColor) const;
 
 		void SetCustomDarkTheme() const;
+
+		void ShowUI();
+		void HideUI();
+
+		void UpdateDisplaySize();
+
+	private:
+		bool mShowUI{ true };
 	};
 }

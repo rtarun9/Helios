@@ -2,7 +2,6 @@
 
 #include "Pch.hpp"
 
-#include "RenderTarget.hpp"
 #include "PipelineState.hpp"
 #include "Resources.hpp"
 #include "Descriptor.hpp"
@@ -40,7 +39,7 @@ namespace helios::gfx
 		void SetIndexBuffer(Buffer* const buffer) const;
 		void Set32BitGraphicsConstants(const void* renderResources) const;
 		void Set32BitComputeConstants(const void* renderResources) const;
-		void SetDefaultViewportAndScissor(Uint2 dimensions) const;
+		void SetDefaultViewportAndScissor() const;
 		void SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
 		void SetRenderTarget(uint32_t rtvCount, BackBuffer* const renderTarget, Texture* const depthStencilTexture) const;
 

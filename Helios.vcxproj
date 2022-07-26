@@ -70,14 +70,10 @@
       <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /Q /E /Y /I ThirdParty\DirectXShaderCompiler\bin\x64 Shaders
-chdir Shaders
+      <Command>chdir Shaders
 call CompileShaders.bat
 chdir ..</Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>xcopy /Q /E /Y /I ThirdParty\DirectXAgilitySDK\build\native\bin\x64 Bin\Debug\D3D12</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -101,14 +97,10 @@ chdir ..</Command>
       <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /Q /E /Y /I ThirdParty\DirectXShaderCompiler\bin\x64 Shaders
-chdir Shaders
+      <Command>chdir Shaders
 call CompileShaders.bat
 chdir ..</Command>
     </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>xcopy /Q /E /Y /I ThirdParty\DirectXAgilitySDK\build\native\bin\x64 Bin\Release\D3D12</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.hpp" />
@@ -117,7 +109,6 @@ chdir ..</Command>
     <ClInclude Include="Engine\Core\Timer.hpp" />
     <ClInclude Include="Engine\Core\UIManager.hpp" />
     <ClInclude Include="Engine\Graphics\API\CommandQueue.hpp" />
-    <ClInclude Include="Engine\Graphics\API\ConstantBuffer.hpp" />
     <ClInclude Include="Engine\Graphics\API\Descriptor.hpp" />
     <ClInclude Include="Engine\Graphics\API\Device.hpp" />
     <ClInclude Include="Engine\Graphics\API\GraphicsContext.hpp" />
@@ -130,7 +121,6 @@ chdir ..</Command>
     <ClInclude Include="Engine\Helios.hpp" />
     <ClInclude Include="Engine\Pch.hpp" />
     <ClInclude Include="SandBox\SandBox.hpp" />
-    <ClInclude Include="ThirdParty\D3D12MemoryAllocator\D3D12MemAlloc.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp" />

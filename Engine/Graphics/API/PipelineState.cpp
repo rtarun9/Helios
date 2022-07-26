@@ -22,6 +22,8 @@ namespace helios::gfx
 			ErrorMessage(pipelineStateCreationDesc.psShaderPath.data() + std::wstring(L" Not found"));
 		}
 
+
+		// Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
 		{
 			.pRootSignature = PipelineState::rootSignature.Get(),

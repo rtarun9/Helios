@@ -58,17 +58,20 @@ namespace helios::gfx
 		uint32_t CreateDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateCbv(const CbvCreationDesc& cbvCreationDesc) const;
 
-		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, const void *data = nullptr) const;
+		template <typename T>
+		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const;
+		
 		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc);
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 
-	private:
+	public:
 		// Number of SwapChain backbuffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
-
+	
+	private:
 		Microsoft::WRL::ComPtr<ID3D12Device5> mDevice{};
 		Microsoft::WRL::ComPtr<ID3D12DebugDevice2> mDebugDevice{};
-		Microsoft::WRL::ComPtr<ID3D12Debug3> mDebugInterface{};
+		Microsoft::WRL::ComPtr<ID3D12Debug5> mDebugInterface{};
 
 		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory{};
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter{};
@@ -92,4 +95,97 @@ namespace helios::gfx
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
 		std::unique_ptr<CommandQueue> mCopyCommandQueue{};
 	};
+
+	template <typename T>
+	Buffer Device::CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const
+	{
+		Buffer buffer{};
+
+		// If data.size() == 0, it means that the data to fill the buffer will be passed later on (via the Update functions).
+		uint32_t numberComponents = data.size() == 0 ? 1 : static_cast<uint32_t>(data.size());
+
+		buffer.sizeInBytes = numberComponents * sizeof(T);
+
+		ResourceCreationDesc resourceCreationDesc
+		{
+			.resourceDesc
+			{
+				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+				.Width = buffer.sizeInBytes,
+				.Height = 1u,
+				.DepthOrArraySize = 1u,
+				.MipLevels = 1u,
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.SampleDesc
+				{
+					.Count = 1u,
+					.Quality = 0u
+				},
+				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+				.Flags = D3D12_RESOURCE_FLAG_NONE
+			}
+		};
+
+		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
+
+		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
+		// and then copy data from upload buffer -> GPU only buffer.
+		if (data.data())
+		{
+			// Create upload buffer.
+			BufferCreationDesc uploadBufferCreationDesc
+			{
+				.usage = BufferUsage::UploadBuffer,
+				.name = L"Upload buffer - " + bufferCreationDesc.name,
+			};
+
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+
+			uploadAllocation->Update(data.data(), buffer.sizeInBytes);
+
+			// Get a copy command and list and execute copy resource functions on the command queue.
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+			copyCommandList->CopyResource(buffer.allocation->resource.Get(), uploadAllocation->resource.Get());
+			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
+
+			uploadAllocation->Reset();
+		}
+
+		if (bufferCreationDesc.usage == BufferUsage::StructuredBuffer)
+		{
+			SrvCreationDesc srvCreationDesc
+			{
+				.srvDesc
+				{
+					.Format = DXGI_FORMAT_UNKNOWN,
+					.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+					.Buffer
+					{
+						.FirstElement = 0u,
+						.NumElements = static_cast<UINT>(data.size()),
+						.StructureByteStride = static_cast<UINT>(sizeof(T))
+					}
+				}
+			};
+
+			buffer.srbCbvUavIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
+		}
+
+		else if (bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
+		{
+			CbvCreationDesc cbvCreationDesc
+			{
+				.cbvDesc
+				{
+					.BufferLocation = buffer.allocation->resource->GetGPUVirtualAddress(),
+					.SizeInBytes = static_cast<UINT>(buffer.sizeInBytes)
+				}
+			};
+
+			buffer.srbCbvUavIndex = CreateCbv(cbvCreationDesc);
+		}
+
+		return buffer;
+	}
 }

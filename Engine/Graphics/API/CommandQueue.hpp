@@ -4,7 +4,7 @@
 
 namespace helios::gfx
 {
-	// Note : since command allocators cannot be reset until they are no longer 'in flight', we store a fence value along with the command allocator,
+	// note(rtarun9) : since command allocators cannot be reset until they are no longer 'in flight', we store a fence value along with the command allocator,
 	// to keep track if the commands have been executed by a command queue or not.
 	struct CommandAllocator
 	{

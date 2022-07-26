@@ -10,7 +10,6 @@
 #include "Graphics/API/Device.hpp"
 #include "Graphics/API/Descriptor.hpp"
 #include "Graphics/API/CommandQueue.hpp"
-#include "Graphics/API/RenderTarget.hpp"
 #include "Graphics/API/PipelineState.hpp"
 #include "Graphics/API/MemoryAllocator.hpp"
 

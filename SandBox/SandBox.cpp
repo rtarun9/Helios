@@ -6,11 +6,16 @@
 using namespace helios;
 using namespace DirectX;
 
-struct alignas(256) TransformMatrix
+struct alignas(256) TransformMatrix 
 {
 	math::XMMATRIX modelMatrix{ math::XMMatrixIdentity()};
 	math::XMMATRIX viewMatrix{math::XMMatrixIdentity()};
 	math::XMMATRIX projectionMatrix{math::XMMatrixIdentity()};
+};
+
+struct Vertex
+{
+	
 };
 
 SandBox::SandBox(Config& config)
@@ -37,12 +42,10 @@ void SandBox::OnInit()
 	gfx::BufferCreationDesc cubePositionBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::StructuredBuffer,
-		.numComponenets = cubePositions.size(),
-		.stride = sizeof(math::XMFLOAT3),
 		.name = L"Cube Positions Buffer",
 	};
 
-	mPositionBuffer  = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubePositionBufferCreationDesc, cubePositions.data()));
+	mPositionBuffer  = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<math::XMFLOAT3>(cubePositionBufferCreationDesc, cubePositions));
 
 	std::array<math::XMFLOAT3, 8> cubeColors
 	{
@@ -59,12 +62,10 @@ void SandBox::OnInit()
 	gfx::BufferCreationDesc cubeColorBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::StructuredBuffer,
-		.numComponenets = cubeColors.size(),
-		.stride = sizeof(math::XMFLOAT3),
 		.name = L"Cube Color Buffer",
 	};
 
-	mColorBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubeColorBufferCreationDesc, cubeColors.data()));
+	mColorBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<math::XMFLOAT3>(cubeColorBufferCreationDesc, cubeColors));
 	
 	std::array<uint32_t, 36> cubeIndices
 	{
@@ -79,26 +80,18 @@ void SandBox::OnInit()
 	gfx::BufferCreationDesc cubeIndicesBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::IndexBuffer,
-		.numComponenets = cubeIndices.size(),
-		.stride = sizeof(uint32_t),
 		.name = L"Test Index Buffer",
 	};
 
-	mIndexBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(cubeIndicesBufferCreationDesc, cubeIndices.data()));
+	mIndexBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<uint32_t>(cubeIndicesBufferCreationDesc, cubeIndices));
 
 	gfx::BufferCreationDesc transformBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::ConstantBuffer,
-		.numComponenets = 1u,
-		.stride = sizeof(TransformData),
 		.name = L"Transform Data Buffer",
 	};
 
-	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
-	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
-	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-
-	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer(transformBufferCreationDesc));
+	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<TransformData>(transformBufferCreationDesc, std::span<TransformData, 0u>{}));
 
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{
@@ -120,22 +113,24 @@ void SandBox::OnInit()
 	};
 
 	mDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(depthStencilTextureCreationDesc));
+
+	mUIManager = std::make_unique<UIManager>(mDevice.get());
 }
 
 void SandBox::OnUpdate()
 {
-	const XMVECTOR eyePosition = XMVectorSet(0.0, 0.0, -10.0, 1.0);
-	const XMVECTOR focusPoint = XMVectorSet(0.0, 0.0, 0.0, 1.0);
-	const XMVECTOR upDirection = XMVectorSet(0.0, 1.0, 0.0, 0.0);
+	static const XMVECTOR eyePosition = XMVectorSet(0.0, 0.0, -10.0, 1.0);
+	static const XMVECTOR focusPoint = XMVectorSet(0.0, 0.0, 0.0, 1.0);
+	static const XMVECTOR upDirection = XMVectorSet(0.0, 1.0, 0.0, 0.0);
 
 	TransformMatrix transfomationMatrix
 	{
-		.modelMatrix = math::XMMatrixRotationY(Application::GetTimer().GetTotalTime() / 10.0f),
+		.modelMatrix = math::XMMatrixRotationY((float)Application::GetTimer().GetTotalTime() / 10.0f),
 		.viewMatrix = math::XMMatrixLookAtLH(eyePosition, focusPoint, upDirection),
 		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 100.0f)
 	};
 
-	mTransformMatrix->Update(&transfomationMatrix, sizeof(TransformMatrix));
+	mTransformMatrix->Update(&transfomationMatrix);
 }
 
 void SandBox::OnRender()
@@ -143,39 +138,43 @@ void SandBox::OnRender()
 	std::unique_ptr<gfx::GraphicsContext> graphicsContext = mDevice->GetGraphicsContext();
 	gfx::BackBuffer* backBuffer = mDevice->GetCurrentBackBuffer();
 
+
 	mDevice->BeginFrame();
 
-	graphicsContext->SetDescriptorHeaps(mDevice->GetSrvCbvUavDescriptor());
-
+	mUIManager->BeginFrame();
 	graphicsContext->SetGraphicsPipelineState(mPipelineState.get());
 
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	
-	graphicsContext->ClearRenderTargetView(backBuffer, std::array{ 0.1f, 0.1f, 0.1f, 1.0f });
+	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+	mUIManager->SetClearColor(clearColor);
+	graphicsContext->ClearRenderTargetView(backBuffer, clearColor);
 	graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
 	graphicsContext->SetRenderTarget(1u, backBuffer, mDepthStencilTexture.get());
-	graphicsContext->SetDefaultViewportAndScissor(mDimensions);
+	graphicsContext->SetDefaultViewportAndScissor();
 	graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	graphicsContext->SetIndexBuffer(mIndexBuffer.get());
 
 	MeshViewerRenderResources meshViewerRenderResources
 	{
-		.positionBufferIndex = mPositionBuffer->srvCbvIndex,
-		.colorBufferIndex = mColorBuffer->srvCbvIndex,
-		.cameraDataBufferIndex = mTransformMatrix->srvCbvIndex
+		.positionBufferIndex = mPositionBuffer->srbCbvUavIndex,
+		.colorBufferIndex = mColorBuffer->srbCbvUavIndex,
+		.cameraDataBufferIndex = mTransformMatrix->srbCbvUavIndex
 	};
 
 	graphicsContext->Set32BitGraphicsConstants(&meshViewerRenderResources);
 
 	graphicsContext->DrawInstanceIndexed(36u);
 
+	mUIManager->EndFrame(graphicsContext.get());
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+	mDevice->EndFrame();
 
 	mDevice->ExecuteContext(std::move(graphicsContext));
 
-	mDevice->EndFrame();
 	mDevice->Present();
 
 	mFrameIndex++;
@@ -187,14 +186,27 @@ void SandBox::OnDestroy()
 
 void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown) 
 {
+	if (isKeyDown && keycode == VK_SPACE)
+	{
+		mUIManager->HideUI();
+	}
+
+	if (isKeyDown && keycode == VK_SHIFT)
+	{
+		mUIManager->ShowUI();
+	}
 }
 
 void SandBox::OnResize() 
 {
-	if (mDimensions != Application::GetClientDimensions())
+	if (mDimensions != Application::GetClientDimensions() && Application::IsFullScreen())
 	{
 		mDevice->ResizeBuffers();
 	
 		mDimensions = Application::GetClientDimensions();
+
+		mUIManager->UpdateDisplaySize();
 	}
+
+	mUIManager->UpdateDisplaySize();
 }

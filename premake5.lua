@@ -60,6 +60,7 @@ project "Helios"
         "SandBox/**.cpp",
         "Shaders/**.hlsl",
         "Shaders/**.hlsli"
+        "ThirdParty/D3D12MemoryAllocator/D3D12MemAlloc.cpp"
     }
 
     pchsource "Engine/Pch.cpp"

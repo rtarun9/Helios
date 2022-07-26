@@ -2,6 +2,8 @@
 
 #include "MemoryAllocator.hpp"
 
+#include "Resources.hpp"
+
 namespace helios::gfx
 {
 	MemoryAllocator::MemoryAllocator(ID3D12Device* device, IDXGIAdapter* adapter)
@@ -52,7 +54,9 @@ namespace helios::gfx
 		
 		if (isCpuVisible)
 		{
-			ThrowIfFailed(allocation.resource->Map(0u, nullptr, &allocation.mappedPointer));
+			// Give the mapped pointer some value to hold.
+			allocation.mappedPointer = nullptr;
+			ThrowIfFailed(allocation.resource->Map(0u, nullptr, &allocation.mappedPointer.value()));
 		}
 
 		allocation.resource->SetName(bufferCreationDesc.name.c_str());
