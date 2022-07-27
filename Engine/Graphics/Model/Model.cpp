@@ -1,9 +1,8 @@
 #include "Pch.hpp"
-
 /*
+
 #include "Core/UIManager.hpp"
 
-#include "Graphics/API/Texture.hpp"
 #include "Core/Helpers.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
@@ -11,16 +10,28 @@
 
 #include "Model.hpp"
 
+using namespace DirectX;
+
 // Some operator overloads are in the namespace, hence declaring it in global namespace here.
 using namespace DirectX;
 
 namespace helios
 {
-	void Model::Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::wstring_view modelPath, gfx::Descriptor& srvCbDescriptor, std::wstring_view modelName)
+	Model::Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc)
 	{
-		m_ModelName = modelName.data();
+		mModelPath = modelCreationDesc.modelPath;
+		mModelName = modelCreationDesc.modelName;
 
-		std::string modelPathStr = WstringToString(modelPath);
+		// Placed here as it will be used in both braches : either if model is already loaded or not.
+		gfx::BufferCreationDesc transformBufferCreationDesc
+		{
+			.usage = gfx::BufferUsage::ConstantBuffer,
+			.name = mModelName + L" Transform Buffer",
+		};
+
+		mTransform.transformBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<TransformBuffer>(transformBufferCreationDesc, std::span<TransformBuffer, 0u>{}));
+
+		std::string modelPathStr = WstringToString(mModelPath);
 		std::string modelDirectoryPathStr = modelPathStr.substr(0, modelPathStr.find_last_of(L'/') + 1);
 
 		std::string warning{};
@@ -30,23 +41,12 @@ namespace helios
 
 		tinygltf::Model model{};
 
-		if (s_LoadedGLTFModels.find(modelPath.data()) != s_LoadedGLTFModels.end())
+		// If a model with same path has already been loaded previously.
+		if (sLoadedGLTFModels.find(mModelPath) != sLoadedGLTFModels.end())
 		{
-			Model model = s_LoadedGLTFModels[modelPath.data()];
+			Model model = sLoadedGLTFModels[mModelPath];
 
-			m_Meshes = model.GetMeshes();
-
-			m_TransformConstantBuffer.Init(device, commandList, TransformData{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity() },
-				srvCbDescriptor, m_ModelName + L" Transform CBuffer");
-
-			m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
-
-			m_TransformData =
-			{
-				.rotation = dx::XMFLOAT3(0.0f, 0.0f, 0.0f),
-				.scale = dx::XMFLOAT3(1.0f, 1.0f, 1.0f),
-				.translate = dx::XMFLOAT3(0.0f, 0.0f, 0.0f)
-			};
+			mMeshes = model.GetMeshes();
 
 			return;
 		}
@@ -69,25 +69,18 @@ namespace helios
 
 		for (const int& nodeIndex : scene.nodes)
 		{
-			LoadNode(device, commandList, modelDirectoryPathStr, srvCbDescriptor, nodeIndex, model);
+			LoadNode(device, modelCreationDesc, nodeIndex, model);
 		}
 
-		m_TransformConstantBuffer.Init(device, commandList, TransformData{ .modelMatrix = dx::XMMatrixIdentity(), .inverseModelMatrix = dx::XMMatrixIdentity(), .viewMatrix = dx::XMMatrixIdentity(), .projectionMatrix = dx::XMMatrixIdentity()},
-			srvCbDescriptor, m_ModelName + L" Transform CBuffer");
-
-		m_TransformCBufferIndexInDescriptorHeap = m_TransformConstantBuffer.GetBufferIndex();
-
-		m_TransformData =
-		{
-			.rotation = dx::XMFLOAT3(0.0f, 0.0f, 0.0f),
-			.scale = dx::XMFLOAT3(1.0f, 1.0f, 1.0f),
-			.translate = dx::XMFLOAT3(0.0f, 0.0f, 0.0f)
-		};
-
-		s_LoadedGLTFModels[modelPath.data()] = *this;
+		sLoadedGLTFModels.insert(std::pair<std::wstring, Model>(mModelPath, *this));
 	}
 	
-	void Model::LoadNode(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, std::string_view modelDirectoryPathStr, gfx::Descriptor& srvCbDescriptor, uint32_t nodeIndex, tinygltf::Model& model)
+	// The transform buffer is created within Model's parameterized constructor, not in the copy constructor as it needs access to the gfx::Device object.
+	Model::Model(const Model& model) : mModelName(model.mModelName), mModelPath(model.mModelPath), mMeshes(model.mMeshes)
+	{
+	}
+
+	void Model::LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model)
 	{
 		tinygltf::Node& node = model.nodes[nodeIndex];
 		if (node.mesh < 0)
@@ -99,17 +92,18 @@ namespace helios
 		for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 		{
 			Mesh mesh{};
-			const std::wstring meshNumber = std::to_wstring(i);
-			const std::wstring meshName = m_ModelName + L" Mesh " + std::wstring(meshNumber.c_str());
 
-			std::vector<dx::XMFLOAT3> modelPositions{};
-			std::vector<dx::XMFLOAT2> modelTextureCoords{};
-			std::vector<dx::XMFLOAT3> modelNormals{};
-			std::vector<dx::XMFLOAT4> modelTangents{};
+			const std::wstring meshNumber = std::to_wstring(i);
+			const std::wstring meshName = mModelName + L" Mesh " + std::wstring(meshNumber.c_str());
+
+			std::vector<math::XMFLOAT3> modelPositions{};
+			std::vector<math::XMFLOAT2> modelTextureCoords{};
+			std::vector<math::XMFLOAT3> modelNormals{};
+			std::vector<math::XMFLOAT4> modelTangents{};
 
 			std::vector<uint32_t> indices{};
 
-			DeferredExecutionQueue textureInitDeferredQueue{};
+			// Reference used : https://github.com/mateeeeeee/Adria-DX12/blob/fc98468095bf5688a186ca84d94990ccd2f459b0/Adria/Rendering/EntityLoader.cpp.
 
 			// Get Accesor, buffer view and buffer for each attribute (position, textureCoord, normal).
 			tinygltf::Primitive primitive = nodeMesh.primitives[i];
@@ -145,30 +139,41 @@ namespace helios
 			uint8_t  const* const tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
 
 			// Fill in the vertices array.
-			for (size_t i = 0; i < positionAccesor.count; ++i)
+			for (size_t i : std::views::iota(0u, positionAccesor.count))
 			{
-				dx::XMFLOAT3 position{};
-				position.x = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0];
-				position.y = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1];
-				position.z = (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2];
+				math::XMFLOAT3 position
+				{
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0],
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1],
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2]
+				};
+	
+	
+				math::XMFLOAT2 textureCoord
+				{
+					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
+					1.0f - (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
+				};
 
-				dx::XMFLOAT2 textureCoord{};
-				textureCoord.x = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0];
-				textureCoord.y = (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1];
-				textureCoord.y = 1.0f - textureCoord.y;
+				math::XMFLOAT3 normal
+				{
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0],
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1],
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2],
+				};
 
-				dx::XMFLOAT3 normal{};
-				normal.x = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0];
-				normal.y = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1];
-				normal.z = (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2];
-
-				dx::XMFLOAT4 tangent{};
+				math::XMFLOAT4 tangent{};
+				
+				// Required as a model need not have tangents.
 				if (tangentAccesor.bufferView)
 				{
-					tangent.x = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0];
-					tangent.y = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1];
-					tangent.z = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2];
-					tangent.w = (reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3];
+					tangent =
+					{
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3],
+					};
 				}
 
 				modelPositions.emplace_back(position);
@@ -184,7 +189,7 @@ namespace helios
 			uint8_t const* const indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
 			// Fill indices array.
-			for (size_t i = 0; i < indexAccesor.count; ++i)
+			for (size_t i : std::views::iota(0u, indexAccesor.count))
 			{
 				if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 				{
@@ -294,35 +299,19 @@ namespace helios
 		}
 	}
 
-	void Model::UpdateData()
+	void Model::UpdateTransformUI()
 	{
-		if (ImGui::TreeNode(WstringToString(m_ModelName).c_str()))
+		if (ImGui::TreeNode(WstringToString(mModelName).c_str()))
 		{
-			ImGui::SliderFloat("Scale", &m_TransformData.scale.x, 0.1f, 10.0f);
-			m_TransformData.scale.y = m_TransformData.scale.x;
-			m_TransformData.scale.z = m_TransformData.scale.x;
+			// Scale uniformally along all axises.
+			ImGui::SliderFloat("Scale", &mTransform.data.scale.x, 0.1f, 10.0f);
+			mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
 
-			ImGui::SliderFloat3("Translate", &m_TransformData.translate.x, -10.0f, 10.0f);
-			ImGui::SliderFloat3("Rotate", &m_TransformData.rotation.x, -90.0f, 90.0f);
+			ImGui::SliderFloat3("Translate", &mTransform.data.translate.x, -10.0f, 10.0f);
+			ImGui::SliderFloat3("Rotate", &mTransform.data.rotation.x, -90.0f, 90.0f);
 
 			ImGui::TreePop();
 		}
-	}
-
-	void Model::UpdateTransformData(ID3D12GraphicsCommandList* commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix)
-	{
-		UpdateData();
-
-		dx::XMVECTOR scalingVector = dx::XMLoadFloat3(&m_TransformData.scale);
-		dx::XMVECTOR rotationVector = dx::XMLoadFloat3(&m_TransformData.rotation);
-		dx::XMVECTOR translationVector = dx::XMLoadFloat3(&m_TransformData.translate);
-
-		m_TransformConstantBuffer.GetBufferData().modelMatrix = dx::XMMatrixTranspose(dx::XMMatrixScalingFromVector(scalingVector) *  dx::XMMatrixRotationRollPitchYawFromVector(rotationVector) * dx::XMMatrixTranslationFromVector(translationVector));
-		m_TransformConstantBuffer.GetBufferData().inverseModelMatrix = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, m_TransformConstantBuffer.GetBufferData().modelMatrix));
-		m_TransformConstantBuffer.GetBufferData().projectionMatrix = projectionMatrix;
-		m_TransformConstantBuffer.GetBufferData().viewMatrix = viewMatrix;
-
-		m_TransformConstantBuffer.Update();
 	}
 
 	template<typename T>

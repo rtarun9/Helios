@@ -25,9 +25,11 @@ private:
 	std::unique_ptr<helios::gfx::Buffer> mTransformMatrix{};
 
 	std::unique_ptr<helios::gfx::Buffer> mIndexBuffer{};
+		
+	std::unique_ptr<helios::gfx::Texture> mTestTexture{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
-	
+
 	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 
 	std::unique_ptr<helios::UIManager> mUIManager{};

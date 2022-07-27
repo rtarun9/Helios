@@ -60,7 +60,7 @@ namespace helios::gfx
 
 		template <typename T>
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const;
-		
+
 		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc);
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 

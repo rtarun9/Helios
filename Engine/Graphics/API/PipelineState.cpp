@@ -24,6 +24,7 @@ namespace helios::gfx
 
 
 		// Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
+		// Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA Topology type.
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc
 		{
 			.pRootSignature = PipelineState::rootSignature.Get(),

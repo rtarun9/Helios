@@ -34,7 +34,7 @@ ConstantBufferStruct LUTCBuffer
     float lutIndex;
 };
 
-ConstantBufferStruct TransformData
+ConstantBufferStruct TransformBuffer
 {
     float4x4 modelMatrix;
     float4x4 inverseModelMatrix;

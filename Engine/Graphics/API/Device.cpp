@@ -3,6 +3,9 @@
 #include "Device.hpp"
 #include "Core/Application.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 namespace helios::gfx
 {
 	Device::Device()
@@ -269,7 +272,36 @@ namespace helios::gfx
 	{
 		Texture texture{};
 
-		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
+
+		// If texture is to be loaded from file, width and height will not be set up user.
+		// So in that case load the texture using stb image, set the textureLoadFromFileCreationDesc's width and height and procede. (we use this auxilary TextureCreationDesc as the one passed to the function is marked as const T&).
+		TextureCreationDesc textureLoadFromFileCreationDesc = textureCreationDesc;
+		
+		int componentCount{ 4 }, width{}, height{};
+		unsigned char* data{ nullptr };
+
+		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
+		{
+			data = stbi_load(WstringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+			if (!data)
+			{
+				ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
+			}
+			textureLoadFromFileCreationDesc.dimensions =
+			{ 
+				.x = static_cast<uint32_t>(width), 
+				.y = static_cast<uint32_t>(height) 
+			};
+			
+			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureLoadFromFileCreationDesc);
+		}
+		else
+		{
+			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
+		}
+
+
+		uint32_t mipLevels = textureCreationDesc.usage != TextureUsage::TextureFromPath ? 1u : textureCreationDesc.mipLevels;
 
 		// Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D32_FLOAT) or formats used by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
 		DXGI_FORMAT format{};
@@ -302,7 +334,7 @@ namespace helios::gfx
 				.Texture2D
 				{
 					.MostDetailedMip = 0u,
-					.MipLevels = 1u
+					.MipLevels = mipLevels
 				}
 			}
 		};
@@ -327,6 +359,31 @@ namespace helios::gfx
 			};
 
 			texture.dsvIndex = CreateDsv(dsvCreationDesc, texture.allocation->resource.Get());
+		}
+
+		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.
+		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
+		{		
+			// Create upload texture buffer.
+
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateTextureResourceAllocation(textureLoadFromFileCreationDesc);
+
+			// Get a copy command and list and execute copy resource functions on the command queue.
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+
+			// Copy data from intermediate buffer to the upload heap.
+			D3D12_SUBRESOURCE_DATA textureSubresourceData
+			{
+				.pData = data,
+				.RowPitch = static_cast<__int64>(width * componentCount),
+				.SlicePitch = static_cast<__int64>(height * width * componentCount)
+			};
+
+			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
+
+			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
+
+			uploadAllocation->Reset();
 		}
 
 		return texture;

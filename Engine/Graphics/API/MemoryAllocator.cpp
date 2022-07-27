@@ -76,7 +76,7 @@ namespace helios::gfx
 			.HeapType = heapType
 		};
 
-		DXGI_FORMAT format{};
+		DXGI_FORMAT format{textureCreationDesc.format};
 		DXGI_FORMAT dsFormat{};
 
 		switch (textureCreationDesc.format)
@@ -99,7 +99,7 @@ namespace helios::gfx
 				.Width = textureCreationDesc.dimensions.x,
 				.Height = textureCreationDesc.dimensions.y,
 				.DepthOrArraySize = 1u,
-				.MipLevels = 1u,
+				.MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
 				.Format = format,
 				.SampleDesc
 				{
@@ -109,7 +109,7 @@ namespace helios::gfx
 				.Flags = D3D12_RESOURCE_FLAG_NONE
 			}
 		};
-
+	
 		switch (textureCreationDesc.usage)
 		{
 			case TextureUsage::DepthStencil:

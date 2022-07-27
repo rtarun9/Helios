@@ -91,7 +91,17 @@ void SandBox::OnInit()
 		.name = L"Transform Data Buffer",
 	};
 
-	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<TransformData>(transformBufferCreationDesc, std::span<TransformData, 0u>{}));
+	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<TransformBuffer>(transformBufferCreationDesc, std::span<TransformBuffer, 0u>{}));
+
+	gfx::TextureCreationDesc testTextureCreationDesc
+	{
+		.usage = gfx::TextureUsage::TextureFromPath,
+		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.name = L"Test Texture",
+		.path = L"Assets/Textures/TestTexture.png",
+	};
+
+	mTestTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(testTextureCreationDesc));
 
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{

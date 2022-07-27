@@ -77,7 +77,8 @@ namespace helios::gfx
 	enum class TextureUsage
 	{
 		DepthStencil,
-		RenderTarget
+		RenderTarget,
+		TextureFromPath,
 	};
 
 	struct TextureCreationDesc
@@ -85,7 +86,9 @@ namespace helios::gfx
 		TextureUsage usage;
 		Uint2 dimensions{};
 		DXGI_FORMAT format{};
+		uint32_t mipLevels{1u};
 		std::wstring name{};
+		std::wstring path{};
 	};
 	
 	struct Texture
