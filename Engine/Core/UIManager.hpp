@@ -31,7 +31,7 @@ namespace helios
 		void ShowUI();
 		void HideUI();
 
-		void UpdateDisplaySize();
+		void UpdateDisplaySize(Uint2 displaySize);
 
 	private:
 		bool mShowUI{ true };

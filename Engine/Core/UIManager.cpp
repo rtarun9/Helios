@@ -155,10 +155,10 @@ namespace helios
 		mShowUI = false;
 	}
 
-	void UIManager::UpdateDisplaySize()
+	void UIManager::UpdateDisplaySize(Uint2 displaySize)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
-		io.DisplaySize = ImVec2((float)Application::GetClientDimensions().x, (float)Application::GetClientDimensions().y);
+		io.DisplaySize = ImVec2((float)displaySize.x, (float)displaySize.y);
 	}
 }

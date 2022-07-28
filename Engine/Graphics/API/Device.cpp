@@ -364,22 +364,32 @@ namespace helios::gfx
 		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.
 		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
 		{		
-			// Create upload texture buffer.
-
-			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateTextureResourceAllocation(textureLoadFromFileCreationDesc);
-
-			// Get a copy command and list and execute copy resource functions on the command queue.
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
-
-			// Copy data from intermediate buffer to the upload heap.
-			D3D12_SUBRESOURCE_DATA textureSubresourceData
+			// Create upload buffer.
+			BufferCreationDesc uploadBufferCreationDesc
 			{
-				.pData = data,
-				.RowPitch = static_cast<__int64>(width * componentCount),
-				.SlicePitch = static_cast<__int64>(height * width * componentCount)
+				.usage = BufferUsage::UploadBuffer,
+				.name = L"Upload buffer - " + textureCreationDesc.name,
 			};
 
-			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.allocation->resource.Get(), 0, 1);
+			
+			ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(uploadBufferSize);
+
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+
+			// Specify data to copy.
+			D3D12_SUBRESOURCE_DATA textureData
+			{
+				.pData = data,
+				.RowPitch = width * componentCount,
+				.SlicePitch = width * height * componentCount
+			};
+
+			
+			// Get a copy command and list and execute UpdateSubresources functions on the command queue.
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+
+			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureData);
 
 			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
 

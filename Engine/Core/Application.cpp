@@ -64,8 +64,16 @@ namespace helios
 
 		engine->OnInit();
 
+
 		if (sWindowHandle)
 		{
+			Application::ToggleFullScreenMode();
+
+			RECT fullScreenWindowRect{};
+			::GetClientRect(sWindowHandle, &fullScreenWindowRect);
+
+			sFullScreenClientDimensions = GetClientRegionDimentions(fullScreenWindowRect, WS_OVERLAPPEDWINDOW);
+
 			::ShowWindow(sWindowHandle, SW_SHOW);
 		}
 
@@ -207,7 +215,6 @@ namespace helios
 				{
 					::GetClientRect(sWindowHandle, &sWindowRect);
 					sClientDimensions = GetClientRegionDimentions(sWindowRect);
-
 				}
 
 				engine->OnResize();

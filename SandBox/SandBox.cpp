@@ -148,7 +148,6 @@ void SandBox::OnRender()
 	std::unique_ptr<gfx::GraphicsContext> graphicsContext = mDevice->GetGraphicsContext();
 	gfx::BackBuffer* backBuffer = mDevice->GetCurrentBackBuffer();
 
-
 	mDevice->BeginFrame();
 
 	mUIManager->BeginFrame();
@@ -209,14 +208,12 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 
 void SandBox::OnResize() 
 {
-	if (mDimensions != Application::GetClientDimensions() && Application::IsFullScreen())
+	if (mDimensions != Application::GetClientDimensions())
 	{
 		mDevice->ResizeBuffers();
 	
 		mDimensions = Application::GetClientDimensions();
 
-		mUIManager->UpdateDisplaySize();
+		mUIManager->UpdateDisplaySize(Application::GetClientDimensions());
 	}
-
-	mUIManager->UpdateDisplaySize();
 }

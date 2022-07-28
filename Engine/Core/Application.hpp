@@ -16,9 +16,13 @@ namespace helios
 		static int Run(Engine* engine, HINSTANCE instance);
 		
 		static inline HWND GetWindowHandle() { return sWindowHandle; }
+
 		static inline Uint2 GetClientDimensions() { return sClientDimensions; }
 
+		static inline Uint2 GetFullScreenDimensions() { return sFullScreenClientDimensions; }
+
 		static inline RECT& GetWindowRect() { return sWindowRect; }
+
 
 		static inline Timer& GetTimer() { return sTimer; }
 
@@ -41,7 +45,12 @@ namespace helios
 
 		static inline Uint2 sClientDimensions{};
 
+		// Required to tell the UI manager the display region if window is full screen.
+		static inline Uint2 sFullScreenClientDimensions{};
+
 		static inline RECT sWindowRect{};
+	
+
 		static inline bool sIsFullScreen{ false };
 
 		static inline Timer sTimer{};

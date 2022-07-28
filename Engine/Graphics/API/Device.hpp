@@ -106,25 +106,7 @@ namespace helios::gfx
 
 		buffer.sizeInBytes = numberComponents * sizeof(T);
 
-		ResourceCreationDesc resourceCreationDesc
-		{
-			.resourceDesc
-			{
-				.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-				.Width = buffer.sizeInBytes,
-				.Height = 1u,
-				.DepthOrArraySize = 1u,
-				.MipLevels = 1u,
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.SampleDesc
-				{
-					.Count = 1u,
-					.Quality = 0u
-				},
-				.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-				.Flags = D3D12_RESOURCE_FLAG_NONE
-			}
-		};
+		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
 
 		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 
