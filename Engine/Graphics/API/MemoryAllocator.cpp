@@ -4,6 +4,9 @@
 
 #include "Resources.hpp"
 
+// Some operator overloads are in the namespace, hence declaring it in global namespace here.
+using namespace Microsoft::WRL;
+
 namespace helios::gfx
 {
 	MemoryAllocator::MemoryAllocator(ID3D12Device* device, IDXGIAdapter* adapter)
@@ -131,5 +134,10 @@ namespace helios::gfx
 		allocation.resource->SetName(textureCreationDesc.name.c_str());
 
 		return std::move(std::make_unique<Allocation>(allocation));
+	}
+
+	void MemoryAllocator::Release()
+	{
+		mAllocator->Release();
 	}
 }

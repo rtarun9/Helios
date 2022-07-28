@@ -1,11 +1,11 @@
 #pragma once
 
-/*
 #include "Pch.hpp"
 
 #include "Graphics/API/Resources.hpp"
 #include "Graphics/API/Device.hpp"
 
+#include "Common/BindlessRS.hlsli"
 #include "Common/ConstantBuffers.hlsli"
 
 #define TINYGLTF_USE_CPP14
@@ -29,7 +29,7 @@ namespace helios
 		std::unique_ptr<gfx::Buffer> transformBuffer{};
 
 		// note(rtarun9) : Making an exception here where view and projection matrix are not wrapped into a struct, for code simplicity.
-		void Update(const gfx::GraphicsContext* graphicsContext, DirectX::XMMATRIX& viewMatrix, DirectX::XMMATRIX& projectionMatrix)
+		void Update()
 		{
 			DirectX::XMVECTOR scalingVector = DirectX::XMLoadFloat3(&data.scale);
 			DirectX::XMVECTOR rotationVector = DirectX::XMLoadFloat3(&data.rotation);
@@ -40,34 +40,36 @@ namespace helios
 			{
 				.modelMatrix = modelMatrix,
 				.inverseModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix),
-				.viewMatrix = viewMatrix,
-				.projectionMatrix = projectionMatrix
 			};
 			
 			transformBuffer->Update(&updatedTransformBuffer);
 		}
+
+		Transform() = default;
+		Transform(const Transform& other) : data(other.data)
+		{
+		}
 	};
 
-	// This struct stores the indices of various textures (index is used to view / index into the descriptor heap, as the renderer using Bindless Rendering).
-	// If a particular GLTF mesh does not have one of the textures, index is simply -1.
+	// This struct stores the texture's required for a PBR material. If a texture does not exist, it will be null, in which case the index (used to index into descriptor heap) will be zero.
+	// The shader will accordingly set a null view and not use that particular texture.
 	struct PBRMaterial
 	{
-		uint32_t albedoTextureIndex{};
-		uint32_t normalTextureIndex{};
-		uint32_t metalRoughnessTextureIndex{};
-		uint32_t aoTextureIndex{};
-		uint32_t emissiveTextureIndex{};
+		std::shared_ptr<gfx::Texture> albedoTexture{};
+		std::shared_ptr<gfx::Texture> normalTexture{};
+		std::shared_ptr<gfx::Texture> metalRoughnessTexture{};
+		std::shared_ptr<gfx::Texture> aoTexture{};
+		std::shared_ptr<gfx::Texture> emissiveTexture{};
 	};
 
 	// Stores all data required by a mesh (necessary buffer's and material).
 	struct Mesh
 	{
-		gfx::Buffer positionBuffer{};
-		gfx::Buffer textureCoordsBuffer{};
-		gfx::Buffer normalBuffer{};
-		gfx::Buffer tangentBuffer{};
-
-		gfx::Buffer indexBuffer{};
+		std::shared_ptr<gfx::Buffer> positionBuffer{};
+		std::shared_ptr<gfx::Buffer> textureCoordsBuffer{};
+		std::shared_ptr<gfx::Buffer> normalBuffer{};
+		std::shared_ptr<gfx::Buffer> tangentBuffer{};
+		std::shared_ptr<gfx::Buffer> indexBuffer{};
 		uint32_t indicesCount{};
 
 		PBRMaterial pbrMaterial{};
@@ -81,20 +83,18 @@ namespace helios
 
 	// Model class uses tinygltf for loading GLTF models.
 	// Currently, only GLTF model loading is supported. This is mostly because of the much faster load times of this mesh type compared to .obj, .fbx, etc.
+	// Most smart pointers are shared since multiple model's may have been created from the same path, so they refer / point to same texture / mesh etc.
+	// note(rtarun9) : CURRENTLY THIS CLASS DOES NOT HANDLE CHECKING OF MODEL IS ALREADY LOADED : THERE SEEMS TO BE SOME PROBLEM WITH THE USE OF UNIQUE_PTR's.
 	class Model
 	{
 	public:
 		Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc);
-		Model(const Model& model);
-
-		std::vector<Mesh> GetMeshes() const { return mMeshes; }
 
 		Transform& GetTransform() { return mTransform; };
 
-		void UpdateTransformUI();
+		void UpdateTransformUI(const UIManager* uiManager);
 
-		template <typename T>
-		void Draw(ID3D12GraphicsCommandList* const commandList, T& renderResources);
+		void Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
@@ -107,10 +107,9 @@ namespace helios
 		// Used to prevent unnecessary loading of already loaded models.
 		std::wstring mModelPath{};
 		std::wstring mModelName{};
+		std::wstring mModelDirectory{};
 
 		// Holds all the models loaded in (key : model path) format. If model has already been loaded, it need not go through loading process again.
 		static inline std::map<std::wstring, Model> sLoadedGLTFModels{};
 	};
 }
-
-*/

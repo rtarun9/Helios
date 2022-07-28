@@ -145,6 +145,41 @@ namespace helios
 		style->WindowRounding = 4.0f;
 	}
 
+	void UIManager::SliderFloat(std::wstring_view name, float& data, float minExtent, float maxExtent) const
+	{
+		if (mShowUI)
+		{
+			ImGui::SliderFloat(WstringToString(name).c_str(), &data, minExtent, maxExtent);
+
+		}
+	}
+
+	void UIManager::SliderFloat3(std::wstring_view name, float& data, float minExtent, float maxExtent) const
+	{
+		if (mShowUI)
+		{
+			ImGui::SliderFloat3(WstringToString(name).c_str(), &data, minExtent, maxExtent);
+		}
+	}
+
+	bool UIManager::TreeNode(std::wstring_view name) const
+	{
+		if (mShowUI)
+		{
+			return ImGui::TreeNode(WstringToString(name).c_str());
+		}
+
+		return false;
+	}
+
+	void UIManager::TreePop() const
+	{
+		if (mShowUI)
+		{
+			ImGui::TreePop();
+		}
+	}
+
 	void UIManager::ShowUI()
 	{
 		mShowUI = true;

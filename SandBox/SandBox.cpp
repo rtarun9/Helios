@@ -2,21 +2,11 @@
 #include "SandBox.hpp"
 
 #include "Common/BindlessRS.hlsli" 
+#include "Common/ConstantBuffers.hlsli"
 
 using namespace helios;
 using namespace DirectX;
 
-struct alignas(256) TransformMatrix 
-{
-	math::XMMATRIX modelMatrix{ math::XMMatrixIdentity()};
-	math::XMMATRIX viewMatrix{math::XMMatrixIdentity()};
-	math::XMMATRIX projectionMatrix{math::XMMatrixIdentity()};
-};
-
-struct Vertex
-{
-	
-};
 
 SandBox::SandBox(Config& config)
 	: Engine(config)
@@ -27,81 +17,22 @@ void SandBox::OnInit()
 {
 	mDevice = std::make_unique<gfx::Device>();
 
-	std::array<math::XMFLOAT3, 8> cubePositions
+	ModelCreationDesc sciFiHelmetCreationDesc
 	{
-		XMFLOAT3(-1.0f, -1.0f, -1.0f), 
-		XMFLOAT3(-1.0f,  1.0f, -1.0f),
-		XMFLOAT3(1.0f,  1.0f, -1.0f),	
-		XMFLOAT3(1.0f, -1.0f, -1.0f),	
-		XMFLOAT3(-1.0f, -1.0f,  1.0f),
-		XMFLOAT3(-1.0f,  1.0f,  1.0f),
-		XMFLOAT3(1.0f,  1.0f,  1.0f),	
-		XMFLOAT3(1.0f, -1.0f,  1.0f),	
+		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
+		.modelName = L"SciFi Helmet",
 	};
 
-	gfx::BufferCreationDesc cubePositionBufferCreationDesc
-	{
-		.usage = gfx::BufferUsage::StructuredBuffer,
-		.name = L"Cube Positions Buffer",
-	};
+	mSciFiHelmet = std::make_unique<Model>(mDevice.get(), sciFiHelmetCreationDesc);
 
-	mPositionBuffer  = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<math::XMFLOAT3>(cubePositionBufferCreationDesc, cubePositions));
-
-	std::array<math::XMFLOAT3, 8> cubeColors
-	{
-		XMFLOAT3(0.0f, 0.0f, 0.0f), 
-		XMFLOAT3(0.0f, 1.0f, 0.0f), 
-		XMFLOAT3(1.0f, 1.0f, 0.0f), 
-		XMFLOAT3(1.0f, 0.0f, 0.0f), 
-		XMFLOAT3(0.0f, 0.0f, 1.0f), 
-		XMFLOAT3(0.0f, 1.0f, 1.0f), 
-		XMFLOAT3(1.0f, 1.0f, 1.0f), 
-		XMFLOAT3(1.0f, 0.0f, 1.0f)  
-	};
-
-	gfx::BufferCreationDesc cubeColorBufferCreationDesc
-	{
-		.usage = gfx::BufferUsage::StructuredBuffer,
-		.name = L"Cube Color Buffer",
-	};
-
-	mColorBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<math::XMFLOAT3>(cubeColorBufferCreationDesc, cubeColors));
-	
-	std::array<uint32_t, 36> cubeIndices
-	{
-		0, 1, 2, 0, 2, 3,
-		4, 6, 5, 4, 7, 6,
-		4, 5, 1, 4, 1, 0,
-		3, 2, 6, 3, 6, 7,
-		1, 5, 6, 1, 6, 2,
-		4, 0, 3, 4, 3, 7
-	};
-
-	gfx::BufferCreationDesc cubeIndicesBufferCreationDesc
-	{
-		.usage = gfx::BufferUsage::IndexBuffer,
-		.name = L"Test Index Buffer",
-	};
-
-	mIndexBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<uint32_t>(cubeIndicesBufferCreationDesc, cubeIndices));
-
-	gfx::BufferCreationDesc transformBufferCreationDesc
+	gfx::BufferCreationDesc sceneBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::ConstantBuffer,
-		.name = L"Transform Data Buffer",
+		.name = L"Scene Buffer",
 	};
 
-	mTransformMatrix = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<TransformBuffer>(transformBufferCreationDesc, std::span<TransformBuffer, 0u>{}));
+	mSceneBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<SceneBuffer>(sceneBufferCreationDesc, std::span<SceneBuffer, 0u>{}));
 
-	gfx::TextureCreationDesc testTextureCreationDesc
-	{
-		.usage = gfx::TextureUsage::TextureFromPath,
-		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.name = L"Test Texture",
-		.path = L"Assets/Textures/TestTexture.png",
-	};
-
-	mTestTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(testTextureCreationDesc));
 
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{
@@ -133,14 +64,15 @@ void SandBox::OnUpdate()
 	static const XMVECTOR focusPoint = XMVectorSet(0.0, 0.0, 0.0, 1.0);
 	static const XMVECTOR upDirection = XMVectorSet(0.0, 1.0, 0.0, 0.0);
 
-	TransformMatrix transfomationMatrix
+	mSceneBufferData = 
 	{
-		.modelMatrix = math::XMMatrixRotationY((float)Application::GetTimer().GetTotalTime() / 10.0f),
 		.viewMatrix = math::XMMatrixLookAtLH(eyePosition, focusPoint, upDirection),
 		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 100.0f)
 	};
 
-	mTransformMatrix->Update(&transfomationMatrix);
+	mSceneBuffer->Update(&mSceneBufferData);
+
+	mSciFiHelmet->GetTransform().Update();
 }
 
 void SandBox::OnRender()
@@ -155,6 +87,8 @@ void SandBox::OnRender()
 
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	
+	mSciFiHelmet->UpdateTransformUI(mUIManager.get());
+
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	mUIManager->SetClearColor(clearColor);
 	graphicsContext->ClearRenderTargetView(backBuffer, clearColor);
@@ -164,18 +98,12 @@ void SandBox::OnRender()
 	graphicsContext->SetDefaultViewportAndScissor();
 	graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
-	graphicsContext->SetIndexBuffer(mIndexBuffer.get());
-
-	MeshViewerRenderResources meshViewerRenderResources
+	SceneRenderResources sceneRenderResources
 	{
-		.positionBufferIndex = mPositionBuffer->srbCbvUavIndex,
-		.colorBufferIndex = mColorBuffer->srbCbvUavIndex,
-		.cameraDataBufferIndex = mTransformMatrix->srbCbvUavIndex
+		.sceneBufferIndex = mSceneBuffer->srvCbvUavIndex
 	};
 
-	graphicsContext->Set32BitGraphicsConstants(&meshViewerRenderResources);
-
-	graphicsContext->DrawInstanceIndexed(36u);
+	mSciFiHelmet->Draw(graphicsContext.get(), sceneRenderResources);
 
 	mUIManager->EndFrame(graphicsContext.get());
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

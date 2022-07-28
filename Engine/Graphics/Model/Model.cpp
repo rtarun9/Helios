@@ -1,18 +1,19 @@
 #include "Pch.hpp"
-/*
 
 #include "Core/UIManager.hpp"
 
 #include "Core/Helpers.hpp"
+
+#include "Common/BindlessRS.hlsli"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "Model.hpp"
 
-using namespace DirectX;
 
 // Some operator overloads are in the namespace, hence declaring it in global namespace here.
+using namespace Microsoft::WRL;
 using namespace DirectX;
 
 namespace helios
@@ -33,6 +34,8 @@ namespace helios
 
 		std::string modelPathStr = WstringToString(mModelPath);
 		std::string modelDirectoryPathStr = modelPathStr.substr(0, modelPathStr.find_last_of(L'/') + 1);
+		
+		mModelDirectory = StringToWString(modelDirectoryPathStr);
 
 		std::string warning{};
 		std::string error{};
@@ -42,11 +45,11 @@ namespace helios
 		tinygltf::Model model{};
 
 		// If a model with same path has already been loaded previously.
-		if (sLoadedGLTFModels.find(mModelPath) != sLoadedGLTFModels.end())
-		{
-			Model model = sLoadedGLTFModels[mModelPath];
+		auto loadedModel = sLoadedGLTFModels.find(mModelPath);
 
-			mMeshes = model.GetMeshes();
+		if (loadedModel != sLoadedGLTFModels.end())
+		{ 
+			mMeshes = loadedModel->second.mMeshes;
 
 			return;
 		}
@@ -72,12 +75,7 @@ namespace helios
 			LoadNode(device, modelCreationDesc, nodeIndex, model);
 		}
 
-		sLoadedGLTFModels.insert(std::pair<std::wstring, Model>(mModelPath, *this));
-	}
-	
-	// The transform buffer is created within Model's parameterized constructor, not in the copy constructor as it needs access to the gfx::Device object.
-	Model::Model(const Model& model) : mModelName(model.mModelName), mModelPath(model.mModelPath), mMeshes(model.mMeshes)
-	{
+		//sLoadedGLTFModels[mModelPath] = *this;
 	}
 
 	void Model::LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model)
@@ -93,7 +91,7 @@ namespace helios
 		{
 			Mesh mesh{};
 
-			const std::wstring meshNumber = std::to_wstring(i);
+			const std::wstring meshNumber = std::to_wstring(nodeIndex);
 			const std::wstring meshName = mModelName + L" Mesh " + std::wstring(meshNumber.c_str());
 
 			std::vector<math::XMFLOAT3> modelPositions{};
@@ -201,24 +199,74 @@ namespace helios
 				}
 			}
 
-			// Load material. (NOTE : Not complete implementation, but basic framework).
-			tinygltf::Material gltfPBRMaterial = model.materials[primitive.material];
+			// Create all the buffers.
 
-			gfx::Texture meshAlbedoTexture{};
-			gfx::Texture meshNormalTexture{};
-			gfx::Texture meshMetalRoughnessTexture{};
-			gfx::Texture meshAoTexture{};
-			gfx::Texture meshEmissiveTexture{};
+			gfx::BufferCreationDesc positionBufferCreationDesc
+			{
+				.usage = gfx::BufferUsage::StructuredBuffer,
+				.name = meshName + L" position buffer",
+			};
+
+			mesh.positionBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT3>(positionBufferCreationDesc, modelPositions));
+
+			gfx::BufferCreationDesc textureCoordsBufferCreationDesc
+			{
+				.usage = gfx::BufferUsage::StructuredBuffer,
+				.name = meshName + L" texture coords buffer",
+			};
+
+			mesh.textureCoordsBuffer  = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT2>(textureCoordsBufferCreationDesc, modelTextureCoords));
+
+			gfx::BufferCreationDesc normalBufferCreationDesc
+			{
+				.usage = gfx::BufferUsage::StructuredBuffer,
+				.name = meshName + L" normal buffer",
+			};
+
+			mesh.normalBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT3>(normalBufferCreationDesc, modelNormals));
+
+			if (tangentAccesor.bufferView)
+			{
+				gfx::BufferCreationDesc tangentBufferCreationDesc
+				{
+					.usage = gfx::BufferUsage::StructuredBuffer,
+					.name = meshName + L" tangent buffer",
+				};
+
+				mesh.tangentBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT4>(tangentBufferCreationDesc, modelTangents));
+			}
+
+			gfx::BufferCreationDesc indexBufferCreationDesc
+			{
+				.usage = gfx::BufferUsage::IndexBuffer,
+				.name = meshName + L" index buffer",
+			};
+
+			mesh.indexBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<uint32_t>(indexBufferCreationDesc, indices));
+
+			mesh.indicesCount = static_cast<uint32_t>(indices.size());
+
+
+			// Load material textures. 
+			// note(rtarun9) : Not complete implementation, but basic framework).
+			tinygltf::Material gltfPBRMaterial = model.materials[primitive.material];
 
 			if (gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{
 				tinygltf::Texture& albedoTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index];
 				tinygltf::Image& albedoImage = model.images[albedoTexture.source];
 
-				std::wstring albedoTexturePath = StringToWString(modelDirectoryPathStr.data() + albedoImage.uri);
+				std::wstring albedoTexturePath = mModelDirectory + StringToWString(albedoImage.uri);
 				if (!albedoTexturePath.empty())
 				{
-					textureInitDeferredQueue.PushFunction([&, albedoTexturePath]() {meshAlbedoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = albedoTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Albedo Texture"); });
+					gfx::TextureCreationDesc albedoTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromPath,
+						.name = meshName + L" albedo texture",
+						.path = albedoTexturePath,
+					};
+
+					mesh.pbrMaterial.albedoTexture = std::make_shared<gfx::Texture>(device->CreateTexture(albedoTextureCreationDesc));
 				}
 			}
 
@@ -227,10 +275,17 @@ namespace helios
 				tinygltf::Texture& normalTexture = model.textures[gltfPBRMaterial.normalTexture.index];
 				tinygltf::Image& normalImage = model.images[normalTexture.source];
 
-				std::wstring normalTexturePath = StringToWString(modelDirectoryPathStr.data() + normalImage.uri);
+				std::wstring normalTexturePath = mModelDirectory + StringToWString(normalImage.uri);
 				if (!normalTexturePath.empty())
 				{
-					textureInitDeferredQueue.PushFunction([&, normalTexturePath]() {meshNormalTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = normalTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Normal Texture"); });
+					gfx::TextureCreationDesc normalTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromPath,
+						.name = meshName + L" normal texture",
+						.path = normalTexturePath,
+					};
+
+					mesh.pbrMaterial.normalTexture = std::make_shared<gfx::Texture>(device->CreateTexture(normalTextureCreationDesc));
 				}
 			}
 
@@ -239,10 +294,17 @@ namespace helios
 				tinygltf::Texture& metalRoughnessTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index];
 				tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
 
-				std::wstring metalRoughnessTexturePath = StringToWString(modelDirectoryPathStr.data() + metalRoughnessImage.uri);
-				if (!metalRoughnessTexturePath.empty())
+				std::wstring metallicRoughnessTexturePath = mModelDirectory + StringToWString(metalRoughnessImage.uri);
+				if (!metallicRoughnessTexturePath.empty())
 				{
-					textureInitDeferredQueue.PushFunction([&, metalRoughnessTexturePath](){meshMetalRoughnessTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = metalRoughnessTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" Metal Roughness Texture");});
+					gfx::TextureCreationDesc metalRoughnessTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromPath,
+						.name = meshName + L" metal roughness texture",
+						.path = metallicRoughnessTexturePath,
+					};
+
+					mesh.pbrMaterial.metalRoughnessTexture = std::make_shared<gfx::Texture>(device->CreateTexture(metalRoughnessTextureCreationDesc));
 				}
 			}
 
@@ -251,10 +313,17 @@ namespace helios
 				tinygltf::Texture& aoTexture = model.textures[gltfPBRMaterial.occlusionTexture.index];
 				tinygltf::Image& aoImage = model.images[aoTexture.source];
 
-				std::wstring aoTexturePath = StringToWString(modelDirectoryPathStr.data() + aoImage.uri);
-				if (!aoTexturePath.empty())
+				std::wstring occlusionTexturePath = mModelDirectory + StringToWString(aoImage.uri);
+				if (!occlusionTexturePath.empty())
 				{
-					textureInitDeferredQueue.PushFunction([&, aoTexturePath]() {meshAoTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = aoTexturePath, .mipLevels = 1u, .isSRGB = false }, m_ModelName + L" Mesh" + meshNumber + L" AO Texture"); });
+					gfx::TextureCreationDesc occlusionTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromPath,
+						.name = meshName + L" occlusion texture",
+						.path = occlusionTexturePath,
+					};
+
+					mesh.pbrMaterial.aoTexture = std::make_shared<gfx::Texture>(device->CreateTexture(occlusionTextureCreationDesc));
 				}
 			}
 
@@ -263,172 +332,72 @@ namespace helios
 				tinygltf::Texture& emissiveTexture = model.textures[gltfPBRMaterial.emissiveTexture.index];
 				tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
 
-				std::wstring emissiveTexturePath = StringToWString(modelDirectoryPathStr.data() + emissiveImage.uri);
+				std::wstring emissiveTexturePath = mModelDirectory + StringToWString(emissiveImage.uri);
 				if (!emissiveTexturePath.empty())
 				{
-					textureInitDeferredQueue.PushFunction([&, emissiveTexturePath]() {meshEmissiveTexture.Init(device, commandList, srvCbDescriptor, gfx::NonHDRTextureData{ .texturePath = emissiveTexturePath, .mipLevels = 1u, .isSRGB = true }, m_ModelName + L" Mesh" + meshNumber + L" Emissive Texture"); });
+					gfx::TextureCreationDesc emissiveTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromPath,
+						.name = meshName + L" emissive texture",
+						.path = emissiveTexturePath ,
+					};
+
+					mesh.pbrMaterial.emissiveTexture = std::make_shared<gfx::Texture>(device->CreateTexture(emissiveTextureCreationDesc));
 				}
 			}
 
-			textureInitDeferredQueue.Execute();
-
-			mesh.pbrMaterial.albedoTextureIndex = meshAlbedoTexture.GetTextureIndex();
-			mesh.pbrMaterial.normalTextureIndex = meshNormalTexture.GetTextureIndex();
-			mesh.pbrMaterial.metalRoughnessTextureIndex = meshMetalRoughnessTexture.GetTextureIndex();
-			mesh.pbrMaterial.aoTextureIndex = meshAoTexture.GetTextureIndex();
-			mesh.pbrMaterial.emissiveTextureIndex = meshEmissiveTexture.GetTextureIndex();
-
-			mesh.positionBuffer.Init(device, commandList, srvCbDescriptor, modelPositions, D3D12_RESOURCE_FLAG_NONE, meshName + L" Position Buffer");
-			mesh.textureCoordsBuffer.Init(device, commandList, srvCbDescriptor, modelTextureCoords, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Texture Coords Buffer");
-			mesh.normalBuffer.Init(device, commandList, srvCbDescriptor, modelNormals, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Normal Buffer");
-			
-			if (tangentAccesor.bufferView)
-			{
-				mesh.tangentBuffer.Init(device, commandList, srvCbDescriptor, modelTangents, D3D12_RESOURCE_FLAG_NONE, m_ModelName + L" Mesh " + meshNumber + L" Tanget Buffer");
-			}
-
-			mesh.indexBuffer.Init(device, commandList, indices, m_ModelName + L" Mesh " + meshNumber + L"Index Buffer");
-			mesh.indicesCount = static_cast<uint32_t>(indices.size());
-
-			m_Meshes.push_back(mesh);
+			mMeshes.push_back(mesh);
 		}
 
 		for (const int& childrenNodeIndex : node.children)
 		{
-			LoadNode(device, commandList, modelDirectoryPathStr, srvCbDescriptor, childrenNodeIndex, model);
+			LoadNode(device, modelCreationDesc, childrenNodeIndex, model);
 		}
 	}
 
-	void Model::UpdateTransformUI()
+	void Model::UpdateTransformUI(const UIManager* uiManager)
 	{
-		if (ImGui::TreeNode(WstringToString(mModelName).c_str()))
+		if (uiManager->TreeNode(mModelName))
 		{
 			// Scale uniformally along all axises.
-			ImGui::SliderFloat("Scale", &mTransform.data.scale.x, 0.1f, 10.0f);
+			uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
+
 			mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
 
-			ImGui::SliderFloat3("Translate", &mTransform.data.translate.x, -10.0f, 10.0f);
-			ImGui::SliderFloat3("Rotate", &mTransform.data.rotation.x, -90.0f, 90.0f);
+			uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
+			uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
 
-			ImGui::TreePop();
+			uiManager->TreePop();
 		}
 	}
 
-	template<typename T>
-	void Model::Draw(ID3D12GraphicsCommandList* const commandList, T& renderResources)
+	void Model::Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
 	{
-		throw std::exception("Invalid Templatized Draw function. Use one of the template specializations.");
-	}
-
-	template <>
-	void Model::Draw<PBRRenderResources>(ID3D12GraphicsCommandList* const commandList, PBRRenderResources& renderResources)
-	{
-		for (const Mesh& mesh : m_Meshes)
+		for (const Mesh& mesh : mMeshes)
 		{
-			auto indexBufferView = mesh.indexBuffer.GetBufferView();
+			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
 
-			commandList->IASetIndexBuffer(&indexBufferView);
+			MeshViewerRenderResources pbrRenderResources
+			{
+				.positionBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.positionBuffer.get()),
+				.textureBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.textureCoordsBuffer.get()),
+				.normalBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.normalBuffer.get()),
+				.tangetBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.tangentBuffer.get()),
 
-			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
-			renderResources.normalBufferIndex = mesh.normalBuffer.GetSRVIndex();
-			renderResources.textureBufferIndex = mesh.textureCoordsBuffer.GetSRVIndex();
-			renderResources.tangetBufferIndex = mesh.tangentBuffer.GetSRVIndex();
-			
-			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
+				.transformBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mTransform.transformBuffer.get()),
+				.sceneBufferIndex = sceneRenderResources.sceneBufferIndex,
+				
+				.albedoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.albedoTexture.get()),
+				.metalRoughnessTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.metalRoughnessTexture.get()),
+				.normalTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.normalTexture.get()),
+				.aoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.aoTexture.get()),
+				.emissiveTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.emissiveTexture.get()),
+			};
 
-			renderResources.albedoTextureIndex = mesh.pbrMaterial.albedoTextureIndex;
-			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTextureIndex;
-			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTextureIndex;
-			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTextureIndex;
-			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTextureIndex;
 
-			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
+			graphicsContext->Set32BitGraphicsConstants(&pbrRenderResources);
 
-			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
-		}
-	}
-
-	template <>
-	void Model::Draw<GPassRenderResources>(ID3D12GraphicsCommandList* const commandList, GPassRenderResources& renderResources)
-	{
-		for (const Mesh& mesh : m_Meshes)
-		{
-			auto indexBufferView = mesh.indexBuffer.GetBufferView();
-
-			commandList->IASetIndexBuffer(&indexBufferView);
-
-			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
-			renderResources.normalBufferIndex = mesh.normalBuffer.GetSRVIndex();
-			renderResources.textureBufferIndex = mesh.textureCoordsBuffer.GetSRVIndex();
-			renderResources.tangetBufferIndex = mesh.tangentBuffer.GetSRVIndex();
-
-			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
-
-			renderResources.albedoTextureIndex = mesh.pbrMaterial.albedoTextureIndex;
-			renderResources.normalTextureIndex = mesh.pbrMaterial.normalTextureIndex;
-			renderResources.metalRoughnessTextureIndex = mesh.pbrMaterial.metalRoughnessTextureIndex;
-			renderResources.aoTextureIndex = mesh.pbrMaterial.aoTextureIndex;
-			renderResources.emissiveTextureIndex = mesh.pbrMaterial.emissiveTextureIndex;
-
-			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
-
-			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
-		}
-
-	}
-
-	template<>
-	void Model::Draw<LightRenderResources>(ID3D12GraphicsCommandList* const commandList, LightRenderResources& renderResources)
-	{
-		for (const Mesh& mesh : m_Meshes)
-		{
-			auto indexBufferView = mesh.indexBuffer.GetBufferView();
-
-			commandList->IASetIndexBuffer(&indexBufferView);
-
-			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
-			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
-
-			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
-
-			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
-		}
-	}
-
-	template<>
-	void Model::Draw<ShadowPassRenderResources>(ID3D12GraphicsCommandList* const commandList, ShadowPassRenderResources& renderResources)
-	{
-		for (const Mesh& mesh : m_Meshes)
-		{
-			auto indexBufferView = mesh.indexBuffer.GetBufferView();
-
-			commandList->IASetIndexBuffer(&indexBufferView);
-
-			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
-			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
-
-			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
-
-			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
-		}
-
-	}
-	template<>
-	void Model::Draw<SkyBoxRenderResources>(ID3D12GraphicsCommandList* const commandList, SkyBoxRenderResources& renderResources)
-	{
-		for (const Mesh& mesh : m_Meshes)
-		{
-			auto indexBufferView = mesh.indexBuffer.GetBufferView();
-
-			commandList->IASetIndexBuffer(&indexBufferView);
-
-			renderResources.positionBufferIndex = mesh.positionBuffer.GetSRVIndex();
-			renderResources.mvpCBufferIndex = m_TransformCBufferIndexInDescriptorHeap;
-
-			commandList->SetGraphicsRoot32BitConstants(0u, 64, &renderResources, 0u);
-
-			commandList->DrawIndexedInstanced(mesh.indicesCount, 1u, 0u, 0u, 0u);
+			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
 		}
 	}
 }
-*/

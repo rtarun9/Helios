@@ -6,6 +6,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+// Some operator overloads are in the namespace, hence declaring it in global namespace here.
+using namespace Microsoft::WRL;
+
 namespace helios::gfx
 {
 	Device::Device()
@@ -231,12 +234,12 @@ namespace helios::gfx
 
 	uint32_t Device::CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const
 	{
-		uint32_t srbCbvUavIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
+		uint32_t srvCbvUavIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
 		mDevice->CreateShaderResourceView(resource, &srvCreationDesc.srvDesc, mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		
 		mSrvCbvUavDescriptor->OffsetCurrentHandle();
 
-		return srbCbvUavIndex;
+		return srvCbvUavIndex;
 	}
 
 	uint32_t Device::CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const
@@ -268,7 +271,7 @@ namespace helios::gfx
 		return cbvIndex;
 	}
 
-	Texture Device::CreateTexture(const TextureCreationDesc& textureCreationDesc)
+	Texture Device::CreateTexture(const TextureCreationDesc& textureCreationDesc) const
 	{
 		Texture texture{};
 

@@ -60,7 +60,7 @@ namespace helios::gfx
 	struct Buffer
 	{
 		std::unique_ptr<Allocation> allocation{};
-		uint32_t srbCbvUavIndex{};
+		uint32_t srvCbvUavIndex{};
 		size_t sizeInBytes{};
 
 		// To be used primarily for constant buffers.
@@ -68,6 +68,19 @@ namespace helios::gfx
 		{
 			// Allocation's update function will take care if data is null or not.
 			allocation->Update(data, sizeInBytes);
+		}
+
+		// In the model abstraction, the buffers are wrapped in unique pointers.
+		// Due to this, we cant access any of the indices if the buffer is nullptr.
+		// So, upon passing the buffer to this function, it will return 0 is buffer is null, or the srvCbvUavIndex otherwise.
+		static uint32_t GetSrvCbvUavIndex(const Buffer* buffer)
+		{
+			if (buffer == nullptr)
+			{
+				return 0;
+			}
+
+			return buffer->srvCbvUavIndex;
 		}
 	};
 
@@ -86,7 +99,7 @@ namespace helios::gfx
 	{
 		TextureUsage usage;
 		Uint2 dimensions{};
-		DXGI_FORMAT format{};
+		DXGI_FORMAT format{DXGI_FORMAT_R8G8B8A8_UNORM};
 		uint32_t mipLevels{1u};
 		std::wstring name{};
 		std::wstring path{};
@@ -97,6 +110,19 @@ namespace helios::gfx
 		std::unique_ptr<Allocation> allocation{};
 		uint32_t srvIndex{};
 		uint32_t dsvIndex{};
+
+		// In the model abstraction, the textures are wrapped in unique pointers.
+		// Due to this, we cant access any of the indices if the pointer is nullptr.
+		// So, upon passing the texture to this function, it will return 0 is texture is null, or the srvIndex otherwise.
+		static uint32_t GetSrvIndex(const Texture* texture)
+		{
+			if (texture == nullptr)
+			{
+				return 0;
+			}
+
+			return texture->srvIndex;
+		}
 	};
 
 	// Needs to passed to the memory allocator's create buffer function along with a buffer creation desc struct.

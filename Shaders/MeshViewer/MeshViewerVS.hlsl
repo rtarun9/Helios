@@ -4,14 +4,7 @@
 struct VSOutput
 {
     float4 position : SV_Position;
-    float4 color : COLOR;
-};
-
-struct CameraDataTest
-{
-    float4x4 modelMatrix;
-    float4x4 viewMatrix;
-    float4x4 projectionMatrix;
+    float2 textureCoord : TEXTURE_COORD;
 };
 
 ConstantBuffer<MeshViewerRenderResources> renderResource : register(b0);
@@ -20,14 +13,16 @@ ConstantBuffer<MeshViewerRenderResources> renderResource : register(b0);
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
     StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
-    StructuredBuffer<float3> colorBuffer = ResourceDescriptorHeap[renderResource.colorBufferIndex];
+    StructuredBuffer<float2> textureCoordBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
 
-    ConstantBuffer<CameraDataTest> cameraBuffer = ResourceDescriptorHeap[renderResource.cameraDataBufferIndex];
+    ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
+    ConstantBuffer<TransformBuffer> transformBuffer = ResourceDescriptorHeap[renderResource.transformBufferIndex];
 
-    matrix mvpMatrix = mul(mul(cameraBuffer.modelMatrix, cameraBuffer.viewMatrix), cameraBuffer.projectionMatrix);
+    matrix mvpMatrix = mul(mul(transformBuffer.modelMatrix, sceneBuffer.viewMatrix), sceneBuffer.projectionMatrix);
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-    output.color = float4(colorBuffer[vertexID], 1.0f);
+    output.textureCoord = textureCoordBuffer[vertexID];
+
     return output;
 }

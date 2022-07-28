@@ -19,14 +19,10 @@ public:
 	void OnResize() override;
 
 private:
-	// TEST
-	std::unique_ptr<helios::gfx::Buffer> mPositionBuffer{};
-	std::unique_ptr<helios::gfx::Buffer> mColorBuffer{};
-	std::unique_ptr<helios::gfx::Buffer> mTransformMatrix{};
+	std::unique_ptr<helios::Model> mSciFiHelmet{};
 
-	std::unique_ptr<helios::gfx::Buffer> mIndexBuffer{};
-		
-	std::unique_ptr<helios::gfx::Texture> mTestTexture{};
+	std::unique_ptr<helios::gfx::Buffer> mSceneBuffer{};
+	SceneBuffer mSceneBufferData{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
 

@@ -17,6 +17,8 @@ namespace helios::gfx
 		std::unique_ptr<Allocation> CreateBufferResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc);
 		std::unique_ptr<Allocation> CreateTextureResourceAllocation(const TextureCreationDesc& textureCreationDesc);
 
+		void Release();
+
 	private:
 		Microsoft::WRL::ComPtr<D3D12MA::Allocator> mAllocator{};
 	};

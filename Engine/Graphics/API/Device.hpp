@@ -61,7 +61,7 @@ namespace helios::gfx
 		template <typename T>
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const;
 
-		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc);
+		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc) const;
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 
 	public:
@@ -151,7 +151,7 @@ namespace helios::gfx
 				}
 			};
 
-			buffer.srbCbvUavIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
+			buffer.srvCbvUavIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
 		}
 
 		else if (bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
@@ -165,7 +165,7 @@ namespace helios::gfx
 				}
 			};
 
-			buffer.srbCbvUavIndex = CreateCbv(cbvCreationDesc);
+			buffer.srvCbvUavIndex = CreateCbv(cbvCreationDesc);
 		}
 
 		return buffer;

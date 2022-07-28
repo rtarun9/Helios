@@ -6,8 +6,6 @@
 #include "Graphics/API/Device.hpp"
 #include "Graphics/API/GraphicsContext.hpp"
 
-#include "imgui.h"
-
 namespace helios
 {
 	// Thin abstraction over ImGui.
@@ -27,6 +25,13 @@ namespace helios
 		void SetClearColor(std::span<float> clearColor) const;
 
 		void SetCustomDarkTheme() const;
+
+		void SliderFloat(std::wstring_view name, float& data, float minExtent = -10.0f, float maxExtent = 10.0f) const;
+		void SliderFloat3(std::wstring_view name, float& data, float minExtent = -10.0f, float maxExtent = 10.0f) const;
+
+		// Return true if the node is open (i.e to be shown) or false otherwise.
+		bool TreeNode(std::wstring_view name) const;
+		void TreePop() const;
 
 		void ShowUI();
 		void HideUI();

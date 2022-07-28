@@ -38,8 +38,24 @@ SamplerState anisotropicSampler : register(s8);
 struct MeshViewerRenderResources
 {
     uint positionBufferIndex;
-    uint colorBufferIndex;
-    uint cameraDataBufferIndex;
+    uint textureBufferIndex;
+    uint normalBufferIndex;
+    uint tangetBufferIndex;
+    
+    uint transformBufferIndex;
+    
+    uint sceneBufferIndex;
+
+    uint albedoTextureIndex;
+    uint metalRoughnessTextureIndex;
+    uint normalTextureIndex;
+    uint aoTextureIndex;
+    uint emissiveTextureIndex;
+};
+
+struct SceneRenderResources
+{
+    uint sceneBufferIndex;
 };
 
 struct TestRenderResources
@@ -69,9 +85,9 @@ struct PBRRenderResources
 
     uint albedoTextureIndex;
     uint metalRoughnessTextureIndex;
-    uint emissiveTextureIndex;
     uint normalTextureIndex;
     uint aoTextureIndex;
+    uint emissiveTextureIndex;
     
     // For debugging purposes.
     uint enableIBL;

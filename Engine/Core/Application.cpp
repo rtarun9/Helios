@@ -67,7 +67,7 @@ namespace helios
 
 		if (sWindowHandle)
 		{
-			Application::ToggleFullScreenMode();
+			// note(rtarun9 : TODO : FIX UI PROBLEM IN FULLSCREEN MODE : Application::ToggleFullScreenMode();
 
 			RECT fullScreenWindowRect{};
 			::GetClientRect(sWindowHandle, &fullScreenWindowRect);
