@@ -30,7 +30,7 @@ namespace helios::gfx
 	{
 		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
 
-		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0u, nullptr);
+		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 1, 0u, nullptr);
 	}
 
 	void GraphicsContext::SetDescriptorHeaps(Descriptor* const descriptor) const
@@ -122,7 +122,7 @@ namespace helios::gfx
 	{
 		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
 
-		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, TRUE, &dsvDescriptorHandle.cpuDescriptorHandle);
+		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
 	}
 
 	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount) const

@@ -21,8 +21,9 @@ public:
 private:
 	std::unique_ptr<helios::Model> mSciFiHelmet{};
 
+	std::unique_ptr<helios::Camera> mCamera{};
+
 	std::unique_ptr<helios::gfx::Buffer> mSceneBuffer{};
-	SceneBuffer mSceneBufferData{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
 

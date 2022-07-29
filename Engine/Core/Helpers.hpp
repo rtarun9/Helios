@@ -89,7 +89,7 @@ struct Uint2
 	auto operator<=>(Uint2 const& other) const = default;
 };
 
-static Uint2 GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
+static Uint2 GetDimensionFromRect(const RECT& rect)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);
 	uint32_t height = static_cast<uint32_t>(rect.bottom - rect.top);
@@ -97,7 +97,7 @@ static Uint2 GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWIN
 	return  Uint2{.x =  width, .y = height };
 }
 
-static Uint2 GetMonitorDimensions(MONITORINFOEXW& monitorInfo)
+static Uint2 GetMonitorDimensions(const MONITORINFOEXW& monitorInfo)
 {
 	uint32_t width = static_cast<uint32_t>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
 	uint32_t height = static_cast<uint32_t>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);

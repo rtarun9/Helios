@@ -19,8 +19,6 @@ namespace helios
 
 		static inline Uint2 GetClientDimensions() { return sClientDimensions; }
 
-		static inline Uint2 GetFullScreenDimensions() { return sFullScreenClientDimensions; }
-
 		static inline RECT& GetWindowRect() { return sWindowRect; }
 
 
@@ -44,9 +42,10 @@ namespace helios
 		static inline HWND sWindowHandle{};
 
 		static inline Uint2 sClientDimensions{};
-
-		// Required to tell the UI manager the display region if window is full screen.
-		static inline Uint2 sFullScreenClientDimensions{};
+		
+		// When toggling to fullscreen mode, we keep track of the current window dimension, so that when toggling back to non full screen mode
+		// we can revert to the previous window dimension.
+		static inline RECT sPreviousWindowRect{};
 
 		static inline RECT sWindowRect{};
 	

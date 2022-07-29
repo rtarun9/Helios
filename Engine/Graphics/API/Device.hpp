@@ -80,6 +80,8 @@ namespace helios::gfx
 		bool mVSync{true};
 		bool mTearingSupported{};
 
+		bool mIsInitialized{ false };
+
 		uint32_t mCurrentBackBufferIndex{};
 		std::array<BackBuffer, NUMBER_OF_FRAMES> mBackBuffers{};
 

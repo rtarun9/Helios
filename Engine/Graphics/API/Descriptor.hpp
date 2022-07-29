@@ -28,7 +28,7 @@ namespace helios::gfx
 		ID3D12DescriptorHeap* const GetDescriptorHeap() const { return mDescriptorHeap.Get(); }
 		uint32_t GetDescriptorSize() const { return mDescriptorSize; };
 
-		DescriptorHandle GetDescriptorHandleForStart() const { return mDescriptorHandleFromStart; };
+		DescriptorHandle GetDescriptorHandleFromStart() const { return mDescriptorHandleFromStart; };
 		DescriptorHandle GetCurrentDescriptorHandle() const { return mCurrentDescriptorHandle; };
 
 		DescriptorHandle GetDescriptorHandleFromIndex(uint32_t index) const;

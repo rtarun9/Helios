@@ -6,6 +6,7 @@
 
 namespace helios::gfx
 {
+	// This design choice of having a common Texture / Buffer struct for all various types is inspired from SanityEngine : https://github.com/DethRaid/SanityEngine.
 	// Struct with back buffer data.
 	struct BackBuffer
 	{

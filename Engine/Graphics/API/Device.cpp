@@ -15,6 +15,8 @@ namespace helios::gfx
 	{
 		InitDeviceResources();
 		InitSwapChainResources();
+
+		mIsInitialized = true;
 	}
 
 	Device::~Device()
@@ -112,9 +114,9 @@ namespace helios::gfx
 		mCopyCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
 		
 		// Create the descriptor heaps.
-		mRtvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"RTV Descriptor");
+		mRtvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 50u, L"RTV Descriptor");
 		mDsvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
-		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1020u, L"SRV_CBV_UAV Descriptor");
+		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1024u, L"SRV_CBV_UAV Descriptor");
 
 		// Create bindless root signature.
 		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
@@ -167,28 +169,37 @@ namespace helios::gfx
 	{
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 		
+		// The first NUMBER_OF_FRAMES's rtv descriptor handles are reserved for the swapchain buffers.
+		gfx::DescriptorHandle rtvHandle = mRtvDescriptor->GetDescriptorHandleFromStart();
+		
 		// Create Backbuffer render target views.
 		for (int i : std::views::iota(0u, NUMBER_OF_FRAMES))
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = mRtvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle;
 
 			wrl::ComPtr<ID3D12Resource> backBuffer;
 			ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-			mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+			mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle.cpuDescriptorHandle);
 
 			mBackBuffers[i].backBufferResource = backBuffer;
 			mBackBuffers[i].backBufferResource->SetName(L"SwapChain BackBuffer");
 
-			mBackBuffers[i].backBufferDescriptorHandle = mRtvDescriptor->GetCurrentDescriptorHandle();
+			mBackBuffers[i].backBufferDescriptorHandle = rtvHandle;
 
-			mRtvDescriptor->OffsetCurrentHandle();
+			mRtvDescriptor->Offset(rtvHandle);
+		}
+
+		if (!mIsInitialized)
+		{
+			mRtvDescriptor->OffsetCurrentHandle(NUMBER_OF_FRAMES);
 		}
 	}
 
 	void Device::ResizeBuffers()
 	{
 		mGraphicsCommandQueue->FlushQueue();
+		mCopyCommandQueue->FlushQueue();
+		mComputeCommandQueue->FlushQueue();
 
 		// Resize the swap chain's back buffer.
 		for (int i = 0; i < NUMBER_OF_FRAMES; i++)

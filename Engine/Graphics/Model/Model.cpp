@@ -45,14 +45,14 @@ namespace helios
 		tinygltf::Model model{};
 
 		// If a model with same path has already been loaded previously.
-		auto loadedModel = sLoadedGLTFModels.find(mModelPath);
+		//auto loadedModel = sLoadedGLTFModels.find(mModelPath);
 
-		if (loadedModel != sLoadedGLTFModels.end())
-		{ 
-			mMeshes = loadedModel->second.mMeshes;
-
-			return;
-		}
+		//if (loadedModel != sLoadedGLTFModels.end())
+		//{ 
+		//	mMeshes = loadedModel->second.mMeshes;
+		//
+		//	return;
+		//}
 
 		if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
 		{
@@ -80,10 +80,15 @@ namespace helios
 
 	void Model::LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model)
 	{
+		if (nodeIndex < 0)
+		{
+			return;
+		}
+
 		tinygltf::Node& node = model.nodes[nodeIndex];
 		if (node.mesh < 0)
 		{
-			node.mesh = 0;
+			return;
 		}
 
 		tinygltf::Mesh& nodeMesh = model.meshes[node.mesh];

@@ -6,6 +6,7 @@
 #include "Core/Engine.hpp"
 #include "Core/Timer.hpp"
 #include "Core/UIManager.hpp"
+#include "Core/Camera.hpp"
 
 #include "Graphics/API/Device.hpp"
 #include "Graphics/API/Descriptor.hpp"

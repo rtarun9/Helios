@@ -33,7 +33,7 @@ namespace helios::gfx
 
 	DescriptorHandle Descriptor::GetDescriptorHandleFromIndex(uint32_t index) const
 	{
-		DescriptorHandle handle = GetDescriptorHandleForStart();
+		DescriptorHandle handle = GetDescriptorHandleFromStart();
 		Offset(handle, index);
 
 		return handle;

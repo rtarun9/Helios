@@ -56,21 +56,21 @@ void SandBox::OnInit()
 	mDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(depthStencilTextureCreationDesc));
 
 	mUIManager = std::make_unique<UIManager>(mDevice.get());
+
+	mCamera = std::make_unique<Camera>();
 }
 
 void SandBox::OnUpdate()
 {
-	static const XMVECTOR eyePosition = XMVectorSet(0.0, 0.0, -10.0, 1.0);
-	static const XMVECTOR focusPoint = XMVectorSet(0.0, 0.0, 0.0, 1.0);
-	static const XMVECTOR upDirection = XMVectorSet(0.0, 1.0, 0.0, 0.0);
+	mCamera->Update(static_cast<float>(Application::GetTimer().GetDeltaTime()));
 
-	mSceneBufferData = 
+	SceneBuffer sceneBufferData = 
 	{
-		.viewMatrix = math::XMMatrixLookAtLH(eyePosition, focusPoint, upDirection),
+		.viewMatrix = mCamera->GetViewMatrix(),
 		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 100.0f)
 	};
 
-	mSceneBuffer->Update(&mSceneBufferData);
+	mSceneBuffer->Update(&sceneBufferData);
 
 	mSciFiHelmet->GetTransform().Update();
 }
@@ -83,11 +83,14 @@ void SandBox::OnRender()
 	mDevice->BeginFrame();
 
 	mUIManager->BeginFrame();
+	mUIManager->Begin(L"Menu");
+
 	graphicsContext->SetGraphicsPipelineState(mPipelineState.get());
 
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	
 	mSciFiHelmet->UpdateTransformUI(mUIManager.get());
+	mCamera->UpdateUI(mUIManager.get());
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 	mUIManager->SetClearColor(clearColor);
@@ -105,6 +108,7 @@ void SandBox::OnRender()
 
 	mSciFiHelmet->Draw(graphicsContext.get(), sceneRenderResources);
 
+	mUIManager->End();
 	mUIManager->EndFrame(graphicsContext.get());
 	graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -132,6 +136,8 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 	{
 		mUIManager->ShowUI();
 	}
+
+	mCamera->HandleInput(keycode, isKeyDown);
 }
 
 void SandBox::OnResize() 
@@ -139,9 +145,11 @@ void SandBox::OnResize()
 	if (mDimensions != Application::GetClientDimensions())
 	{
 		mDevice->ResizeBuffers();
-	
+
 		mDimensions = Application::GetClientDimensions();
 
 		mUIManager->UpdateDisplaySize(Application::GetClientDimensions());
+
+		mAspectRatio = static_cast<float>(mDimensions.x) / static_cast<float>(mDimensions.y);
 	}
 }

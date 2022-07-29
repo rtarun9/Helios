@@ -12,5 +12,5 @@ struct VSOutput
 float4 PsMain(VSOutput psInput) : SV_Target
 {
     Texture2D albedoTexture = ResourceDescriptorHeap[renderResource.albedoTextureIndex];
-    return albedoTexture.Sample(linearWrapSampler, psInput.textureCoord);
+    return albedoTexture.Sample(anisotropicSampler, psInput.textureCoord);
 }
