@@ -1,6 +1,6 @@
 #include "Pch.hpp"
 
-#include "Core/UIManager.hpp"
+#include "UI/UIManager.hpp"
 
 #include "Core/Helpers.hpp"
 
@@ -16,7 +16,7 @@
 using namespace Microsoft::WRL;
 using namespace DirectX;
 
-namespace helios
+namespace helios::scene
 {
 	Model::Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc)
 	{
@@ -155,7 +155,7 @@ namespace helios
 				math::XMFLOAT2 textureCoord
 				{
 					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
-					1.0f - (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
+					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
 				};
 
 				math::XMFLOAT3 normal
@@ -360,20 +360,19 @@ namespace helios
 		}
 	}
 
-	void Model::UpdateTransformUI(const UIManager* uiManager)
+	void Model::UpdateTransformUI(const ui::UIManager* uiManager)
 	{
-		if (uiManager->TreeNode(mModelName))
-		{
-			// Scale uniformally along all axises.
-			uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
+		uiManager->BeginPanel(mModelName);
+		
+		// Scale uniformally along all axises.
+		uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
 
-			mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
+		mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
 
-			uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
-			uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
+		uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
+		uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
 
-			uiManager->TreePop();
-		}
+		uiManager->EndPanel();
 	}
 
 	void Model::Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
@@ -384,12 +383,12 @@ namespace helios
 
 			MeshViewerRenderResources pbrRenderResources
 			{
-				.positionBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.positionBuffer.get()),
-				.textureBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.textureCoordsBuffer.get()),
-				.normalBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.normalBuffer.get()),
-				.tangetBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mesh.tangentBuffer.get()),
+				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
+				.textureBufferIndex = gfx::Buffer::GetSrvIndex(mesh.textureCoordsBuffer.get()),
+				.normalBufferIndex = gfx::Buffer::GetSrvIndex(mesh.normalBuffer.get()),
+				.tangetBufferIndex = gfx::Buffer::GetSrvIndex(mesh.tangentBuffer.get()),
 
-				.transformBufferIndex = gfx::Buffer::GetSrvCbvUavIndex(mTransform.transformBuffer.get()),
+				.transformBufferIndex = gfx::Buffer::GetCbvIndex(mTransform.transformBuffer.get()),
 				.sceneBufferIndex = sceneRenderResources.sceneBufferIndex,
 				
 				.albedoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.albedoTexture.get()),

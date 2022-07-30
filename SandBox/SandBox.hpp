@@ -5,10 +5,10 @@
 // File with all constant buffer structs shared between C++ and HLSL.
 #include "Common/ConstantBuffers.hlsli"
 
-class SandBox : public helios::Engine
+class SandBox : public helios::core::Engine
 {
 public:
-	SandBox(helios::Config& config);
+	SandBox(helios::core::Config& config);
 
 	virtual void OnInit() override;
 	virtual void OnUpdate() override;
@@ -19,15 +19,21 @@ public:
 	void OnResize() override;
 
 private:
-	std::unique_ptr<helios::Model> mSciFiHelmet{};
+	std::unique_ptr<helios::scene::Model> mSciFiHelmet{};
 
-	std::unique_ptr<helios::Camera> mCamera{};
+	std::unique_ptr<helios::scene::Camera> mCamera{};
+
+	std::unique_ptr<helios::gfx::Buffer> sIndexBuffer;
+	std::unique_ptr<helios::gfx::Buffer> sPositionBuffer;
+	std::unique_ptr<helios::gfx::Buffer> sTextureCoordsBuffer;
 
 	std::unique_ptr<helios::gfx::Buffer> mSceneBuffer{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
+	std::unique_ptr<helios::gfx::RenderTarget> mOffscreenRT{};
 
+	std::unique_ptr<helios::gfx::PipelineState> mOffscreenPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 
-	std::unique_ptr<helios::UIManager> mUIManager{};
+	std::unique_ptr<helios::ui::UIManager> mUIManager{};
 };

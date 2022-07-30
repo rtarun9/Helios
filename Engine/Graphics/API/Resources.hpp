@@ -4,6 +4,8 @@
 
 #include "Descriptor.hpp"
 
+#include "Common/BindlessRS.hlsli"
+
 namespace helios::gfx
 {
 	// This design choice of having a common Texture / Buffer struct for all various types is inspired from SanityEngine : https://github.com/DethRaid/SanityEngine.
@@ -61,7 +63,9 @@ namespace helios::gfx
 	struct Buffer
 	{
 		std::unique_ptr<Allocation> allocation{};
-		uint32_t srvCbvUavIndex{};
+		uint32_t srvIndex{};
+		uint32_t uavIndex{};
+		uint32_t cbvIndex{};
 		size_t sizeInBytes{};
 
 		// To be used primarily for constant buffers.
@@ -73,16 +77,37 @@ namespace helios::gfx
 
 		// In the model abstraction, the buffers are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the buffer is nullptr.
-		// So, upon passing the buffer to this function, it will return 0 is buffer is null, or the srvCbvUavIndex otherwise.
-		static uint32_t GetSrvCbvUavIndex(const Buffer* buffer)
+		// So, upon passing the buffer to this function, it will return 0 is buffer is null, or the index otherwise.
+		static uint32_t GetSrvIndex(const Buffer* buffer)
 		{
 			if (buffer == nullptr)
 			{
 				return 0;
 			}
 
-			return buffer->srvCbvUavIndex;
+			return buffer->srvIndex;
 		}
+
+		static uint32_t GetCbvIndex(const Buffer* buffer)
+		{
+			if (buffer == nullptr)
+			{
+				return 0;
+			}
+
+			return buffer->cbvIndex;
+		}
+
+		static uint32_t GetUavIndex(const Buffer* buffer)
+		{
+			if (buffer == nullptr)
+			{
+				return 0;
+			}
+
+			return buffer->uavIndex;
+		}
+
 	};
 
 	// Texture related functions / enums.
@@ -111,7 +136,8 @@ namespace helios::gfx
 		std::unique_ptr<Allocation> allocation{};
 		uint32_t srvIndex{};
 		uint32_t dsvIndex{};
-
+		uint32_t rtvIndex{};
+ 
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
 		// So, upon passing the texture to this function, it will return 0 is texture is null, or the srvIndex otherwise.
@@ -206,5 +232,32 @@ namespace helios::gfx
 		DXGI_FORMAT format{};
 		Uint2 dimensions{};
 		std::wstring bufferName{};
+	};
+
+	// Render target abstraction is created so that all offscreen render targets can share the same index buffer / texture coords etc.
+	// Note : the destroy function has to be called from the device so that the D3D12MA::Allocation objects(s) can be cleared properly.
+	class Device;
+	class GraphicsContext;
+	struct RenderTarget
+	{
+		RenderTarget(const Device* device, const TextureCreationDesc& textureCreationDesc);
+
+		// Create all buffers.
+		static void CreateRenderTargetResources(const Device* device);
+		
+		// Destroy all buffers (as they have D3D12MA::Allocation objects).
+		static void DestroyResources();
+
+		// Getters.
+		static uint32_t GetPositionBufferIndex()  {return sPositionBuffer->srvIndex; }
+		static uint32_t GetTextureCoordsBufferIndex() { return sTextureCoordsBuffer->srvIndex; }
+
+		void Draw(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
+
+		std::unique_ptr<Texture> renderTexture{};
+
+		static inline std::unique_ptr<Buffer> sIndexBuffer;
+		static inline std::unique_ptr<Buffer> sPositionBuffer;
+		static inline std::unique_ptr<Buffer> sTextureCoordsBuffer;
 	};
 }

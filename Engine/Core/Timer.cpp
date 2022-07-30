@@ -2,14 +2,14 @@
 
 #include "Timer.hpp"
 
-namespace helios
+namespace helios::core
 {
 	void Timer::Tick()
 	{
-		m_CurrentFrameTime = m_Clock.now();
-		m_DeltaTime = (m_CurrentFrameTime - m_PreviousFrameTime).count();
-		m_TotalTime += m_DeltaTime;
+		mCurrentFrameTime = mClock.now();
+		mDeltaTime = (mCurrentFrameTime - mPreviousFrameTime).count();
+		mTotalTime += mDeltaTime;
 
-		m_PreviousFrameTime = m_CurrentFrameTime;
+		mPreviousFrameTime = mCurrentFrameTime;
 	}
 }

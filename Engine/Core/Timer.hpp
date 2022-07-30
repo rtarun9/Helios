@@ -2,23 +2,23 @@
 
 #include "Pch.hpp"
 
-namespace helios
+namespace helios::core
 {
 	class Timer
 	{
 	public:
 		void Tick();
 
-		inline double GetDeltaTime() const { return m_DeltaTime; };
-		inline double GetTotalTime() const { return m_TotalTime; };
+		inline double GetDeltaTime() const { return mDeltaTime; };
+		inline double GetTotalTime() const { return mTotalTime; };
 
 	private:
-		std::chrono::high_resolution_clock m_Clock{};
+		std::chrono::high_resolution_clock mClock{};
 
-		std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::duration<double>> m_CurrentFrameTime{};
-		std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::duration<double>> m_PreviousFrameTime{};
+		std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::duration<double>> mCurrentFrameTime{};
+		std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::duration<double>> mPreviousFrameTime{};
 
-		double m_DeltaTime{};
-		double m_TotalTime{};
+		double mDeltaTime{};
+		double mTotalTime{};
 	};
 }

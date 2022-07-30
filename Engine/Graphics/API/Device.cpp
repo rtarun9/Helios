@@ -23,6 +23,8 @@ namespace helios::gfx
 	{
 		mGraphicsCommandQueue->FlushQueue();
 		mComputeCommandQueue->FlushQueue();
+
+		RenderTarget::DestroyResources();
 	}
 
 	void Device::InitDeviceResources()
@@ -34,6 +36,11 @@ namespace helios::gfx
 		mDebugInterface->SetEnableGPUBasedValidation(TRUE);
 		mDebugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
 		mDebugInterface->SetEnableAutoName(TRUE);
+
+		// Setup DRED.
+		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&mDredSettings)));
+		mDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);	
+		mDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 #endif
 
 		// Create DXGI Factory.
@@ -120,6 +127,9 @@ namespace helios::gfx
 
 		// Create bindless root signature.
 		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
+
+		// Create render target resources.
+		RenderTarget::CreateRenderTargetResources(this);
 	}
 
 	void Device::InitSwapChainResources()
@@ -135,8 +145,8 @@ namespace helios::gfx
 
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc
 		{
-			.Width = Application::GetClientDimensions().x,
-			.Height = Application::GetClientDimensions().y,
+			.Width = core::Application::GetClientDimensions().x,
+			.Height = core::Application::GetClientDimensions().y,
 			.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
 			.Stereo = FALSE,
 			.SampleDesc
@@ -153,10 +163,10 @@ namespace helios::gfx
 		};
 
 		wrl::ComPtr<IDXGISwapChain1> swapChain1;
-		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(mGraphicsCommandQueue->GetCommandQueue().Get(), Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
+		ThrowIfFailed(mFactory->CreateSwapChainForHwnd(mGraphicsCommandQueue->GetCommandQueue().Get(), core::Application::GetWindowHandle(), &swapChainDesc, nullptr, nullptr, &swapChain1));
 
 		// Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-		ThrowIfFailed(mFactory->MakeWindowAssociation(Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
+		ThrowIfFailed(mFactory->MakeWindowAssociation(core::Application::GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER));
 
 		ThrowIfFailed(swapChain1.As(&mSwapChain));
 
@@ -210,7 +220,7 @@ namespace helios::gfx
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
 		ThrowIfFailed(mSwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(mSwapChain->ResizeBuffers(NUMBER_OF_FRAMES, Application::GetClientDimensions().x, Application::GetClientDimensions().y, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+		ThrowIfFailed(mSwapChain->ResizeBuffers(NUMBER_OF_FRAMES, core::Application::GetClientDimensions().x, core::Application::GetClientDimensions().y, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
 
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 
@@ -245,20 +255,22 @@ namespace helios::gfx
 
 	uint32_t Device::CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const
 	{
-		uint32_t srvCbvUavIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
+		uint32_t srvIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
 		mDevice->CreateShaderResourceView(resource, &srvCreationDesc.srvDesc, mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
 		
 		mSrvCbvUavDescriptor->OffsetCurrentHandle();
 
-		return srvCbvUavIndex;
+		return srvIndex;
 	}
 
 	uint32_t Device::CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const
 	{
-		mDevice->CreateRenderTargetView(resource, nullptr,  mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		uint32_t rtvIndex = mRtvDescriptor->GetCurrentDescriptorIndex();
+		mDevice->CreateRenderTargetView(resource, nullptr,  mRtvDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+		
 		mRtvDescriptor->OffsetCurrentHandle();
 
-		return mRtvDescriptor->GetCurrentDescriptorIndex();
+		return rtvIndex;
 	}
 
 	uint32_t Device::CreateDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* resource) const
@@ -373,6 +385,48 @@ namespace helios::gfx
 			};
 
 			texture.dsvIndex = CreateDsv(dsvCreationDesc, texture.allocation->resource.Get());
+		}
+
+		// Create RTV (if applicable).
+		if (textureCreationDesc.usage == TextureUsage::RenderTarget)
+		{
+			RtvCreationDesc rtvCreationDesc
+			{
+				.rtvDesc
+				{
+					.Format = format,
+					.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+					.Texture2D
+					{
+						.MipSlice = 0u
+					},
+				}
+			};
+
+			texture.rtvIndex = CreateRtv(rtvCreationDesc, texture.allocation->resource.Get());
+
+			// Create srv's and index buffers.
+			static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_POSITIONS
+			{
+				DirectX::XMFLOAT2(-1.0f, -1.0f),
+				DirectX::XMFLOAT2(-1.0f,   1.0f),
+				DirectX::XMFLOAT2(1.0f, 1.0f),
+				DirectX::XMFLOAT2(1.0f, -1.0f),
+			};
+
+			static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_TEXTURE_COORDS
+			{
+				DirectX::XMFLOAT2(0.0f, 1.0f),
+				DirectX::XMFLOAT2(0.0f, 0.0f),
+				DirectX::XMFLOAT2(1.0f, 0.0f),
+				DirectX::XMFLOAT2(1.0f, 1.0f),
+			};
+
+			static constexpr std::array<uint32_t, 6> RT_INDICES
+			{
+				0u, 1u, 2u,
+				0u, 2u, 3u
+			};
 		}
 
 		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.

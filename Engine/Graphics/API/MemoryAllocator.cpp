@@ -15,7 +15,7 @@ namespace helios::gfx
 		D3D12MA::ALLOCATOR_DESC allocatorDesc
 		{
 			.pDevice = device,
-			.pAdapter = adapter
+			.pAdapter = adapter,
 		};
 
 		ThrowIfFailed(D3D12MA::CreateAllocator(&allocatorDesc, &mAllocator));
@@ -71,6 +71,7 @@ namespace helios::gfx
 	{
 		Allocation allocation{};
 
+
 		D3D12_RESOURCE_STATES resourceState{ D3D12_RESOURCE_STATE_COMMON };
 		D3D12_HEAP_TYPE heapType{ D3D12_HEAP_TYPE_DEFAULT };
 
@@ -125,7 +126,9 @@ namespace helios::gfx
 			case TextureUsage::RenderTarget:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+				resourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			}break;
 		}
 
@@ -134,10 +137,5 @@ namespace helios::gfx
 		allocation.resource->SetName(textureCreationDesc.name.c_str());
 
 		return std::move(std::make_unique<Allocation>(allocation));
-	}
-
-	void MemoryAllocator::Release()
-	{
-		mAllocator->Release();
 	}
 }

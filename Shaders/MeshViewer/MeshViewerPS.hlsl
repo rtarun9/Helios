@@ -1,4 +1,5 @@
 #include "../Common/BindlessRS.hlsli"
+#include "../Utils.hlsli"
 
 ConstantBuffer<MeshViewerRenderResources> renderResource : register(b0);
 
@@ -11,6 +12,5 @@ struct VSOutput
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput psInput) : SV_Target
 {
-    Texture2D albedoTexture = ResourceDescriptorHeap[renderResource.albedoTextureIndex];
-    return albedoTexture.Sample(anisotropicSampler, psInput.textureCoord);
+    return GetAlbedo(psInput.textureCoord, renderResource.albedoTextureIndex);    
 }

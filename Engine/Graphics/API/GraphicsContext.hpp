@@ -23,8 +23,11 @@ namespace helios::gfx
 
 		// Resource related functions : 
 		void ResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const;
-		
+		void ResourceBarrier(std::span<const RenderTarget*> renderTargets, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const;
+
 		void ClearRenderTargetView(BackBuffer* const backBuffer, std::span<const float, 4> color);
+		void ClearRenderTargetView(std::span<const RenderTarget*> renderTargets, std::span<const float, 4> color);
+
 		void ClearDepthStencilView(Texture* const depthStencilTexture, float depth = 1.0f);
 
 		void SetDescriptorHeaps(Descriptor* const descriptor) const;
@@ -39,9 +42,13 @@ namespace helios::gfx
 		void SetIndexBuffer(Buffer* const buffer) const;
 		void Set32BitGraphicsConstants(const void* renderResources) const;
 		void Set32BitComputeConstants(const void* renderResources) const;
+		
 		void SetDefaultViewportAndScissor() const;
+		
 		void SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
-		void SetRenderTarget(uint32_t rtvCount, BackBuffer* const renderTarget, Texture* const depthStencilTexture) const;
+
+		void SetRenderTarget(BackBuffer* const renderTarget, const Texture* depthStencilTexture) const;
+		void SetRenderTarget(std::span<const RenderTarget*> renderTargets, const Texture* depthStencilTexture) const;
 
 		// Draw functions.
 		void DrawInstanceIndexed(uint32_t indicesCount) const;

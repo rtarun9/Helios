@@ -48,8 +48,8 @@ project "Helios"
     {
         "Engine",
         "SandBox",
-        "Shaders",
-        "ThirdParty"
+        "ThirdParty",
+        "Shaders"
     }
 
     files
@@ -59,7 +59,7 @@ project "Helios"
         "SandBox/**.hpp",   
         "SandBox/**.cpp",
         "Shaders/**.hlsl",
-        "Shaders/**.hlsli"
+        "Shaders/**.hlsli",
         "ThirdParty/D3D12MemoryAllocator/D3D12MemAlloc.cpp"
     }
 

@@ -12,7 +12,7 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #include "tiny_gltf.h"
 
-namespace helios
+namespace helios::scene
 {
 	// note(rtarun9) : Currently there is a bit of confusion between the name of structs involved in transformation (Transform, TransformComponent, and TransformBuffer).
 	// In the future, a standard naming scheme must be introduced.
@@ -92,7 +92,7 @@ namespace helios
 
 		Transform& GetTransform() { return mTransform; };
 
-		void UpdateTransformUI(const UIManager* uiManager);
+		void UpdateTransformUI(const ui::UIManager* uiManager);
 
 		void Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 

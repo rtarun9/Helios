@@ -3,6 +3,8 @@
 .vcxproj.filters
 .vcxproj.user
 
+*.sln
+
 .vs/
 
 # Shader bytecode

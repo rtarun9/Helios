@@ -20,10 +20,29 @@ namespace helios::gfx
 		CD3DX12_RESOURCE_BARRIER resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, previousState, newState);
 		mCommandList->ResourceBarrier(1u, &resourceBarrier);
 	}
+	
+	void GraphicsContext::ResourceBarrier(std::span<const RenderTarget*> renderTargets, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) const
+	{
+		std::vector<CD3DX12_RESOURCE_BARRIER> resourceBarriers{};
+		for (const auto& rt : renderTargets)
+		{
+			resourceBarriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(rt->renderTexture->allocation->resource.Get(), previousState, newState));
+		}
+		
+		mCommandList->ResourceBarrier(static_cast<UINT>(renderTargets.size()), resourceBarriers.data());
+	}
 
 	void GraphicsContext::ClearRenderTargetView(BackBuffer* const backBuffer, std::span<const float, 4> color)
 	{
 		mCommandList->ClearRenderTargetView(backBuffer->backBufferDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
+	}
+
+	void GraphicsContext::ClearRenderTargetView(std::span<const RenderTarget*> renderTargets, std::span<const float, 4> color)
+	{
+		for (const auto& rt : renderTargets)
+		{
+			mCommandList->ClearRenderTargetView(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(rt->renderTexture->rtvIndex).cpuDescriptorHandle, color.data(), 0u, nullptr);
+		}
 	}
 
 	void GraphicsContext::ClearDepthStencilView(Texture* const depthStencilTexture, float depth)
@@ -93,8 +112,8 @@ namespace helios::gfx
 		{
 			.TopLeftX = 0.0f,
 			.TopLeftY = 0.0f,
-			.Width = static_cast<float>(Application::GetClientDimensions().x),
-			.Height = static_cast<float>(Application::GetClientDimensions().y),
+			.Width = static_cast<float>(core::Application::GetClientDimensions().x),
+			.Height = static_cast<float>(core::Application::GetClientDimensions().y),
 			.MinDepth = 0.0f,
 			.MaxDepth = 1.0f
 		};
@@ -118,11 +137,24 @@ namespace helios::gfx
 		mCommandList->IASetPrimitiveTopology(primitiveTopology);
 	}
 
-	void GraphicsContext::SetRenderTarget(uint32_t count, BackBuffer* renderTarget, Texture* depthStencilTexture) const
+	void GraphicsContext::SetRenderTarget(BackBuffer* renderTarget, const Texture* depthStencilTexture) const
 	{
 		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
 
 		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
+	}
+
+	void GraphicsContext::SetRenderTarget(std::span<const RenderTarget*> renderTargets, const Texture* depthStencilTexture) const
+	{
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles{};
+		for (const auto& rt : renderTargets)
+		{
+			rtvHandles.emplace_back(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(rt->renderTexture->rtvIndex).cpuDescriptorHandle);
+		}
+
+		mCommandList->OMSetRenderTargets(static_cast<UINT>(renderTargets.size()), rtvHandles.data(), FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
 	}
 
 	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount) const

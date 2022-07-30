@@ -5,7 +5,7 @@
 // Some of the operator overloads are in this namespace, hence needed to include the namespace here.
 using namespace DirectX;
 
-namespace helios
+namespace helios::scene
 {
 	Camera::Camera(float movementSpeed, float rotationSpeed)
 		: mMovementSpeed(movementSpeed), mRotationSpeed(rotationSpeed)
@@ -126,20 +126,19 @@ namespace helios
 		math::XMStoreFloat3(&mCameraRight, cameraRight);
 	}
 
-	void Camera::UpdateUI(const UIManager* uiManager)
+	void Camera::UpdateUI(const ui::UIManager* uiManager)
 	{
-		if (uiManager->TreeNode(L"Camera Settings"))
-		{
-			// Scale uniformally along all axises.
-			uiManager->SliderFloat(L"Movement Speed", mMovementSpeed, 0.1f, 250.0f);
-			uiManager->SliderFloat(L"Rotation Speed", mRotationSpeed, 0.1f, 250.0f);
-			uiManager->SliderFloat(L"Smoothness Factor", mSmoothnessFactor, 0.0f, 1.0f);
-			
-			uiManager->SliderFloat(L"mSmoothness Multiplier", mMovementSmoothnessMultipler, 0.0f, 5.0f);
-			uiManager->SliderFloat(L"rSmoothness Multiplier", mRotationSmoothnessMultipler, 0.0f, 5.0f);
+		uiManager->BeginPanel(L"Camera Settings");
 
-			uiManager->TreePop();
-		}
+		// Scale uniformally along all axises.
+		uiManager->SliderFloat(L"Movement Speed", mMovementSpeed, 0.1f, 250.0f);
+		uiManager->SliderFloat(L"Rotation Speed", mRotationSpeed, 0.1f, 250.0f);
+		uiManager->SliderFloat(L"Smoothness Factor", mSmoothnessFactor, 0.0f, 1.0f);
+		
+		uiManager->SliderFloat(L"Movment Multiplier", mMovementSmoothnessMultipler, 0.0f, 5.0f);
+		uiManager->SliderFloat(L"Rotation Multiplier", mRotationSmoothnessMultipler, 0.0f, 5.0f);
+
+		uiManager->EndPanel();
 	}
 
 	math::XMMATRIX Camera::GetViewMatrix() const

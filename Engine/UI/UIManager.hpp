@@ -6,7 +6,7 @@
 #include "Graphics/API/Device.hpp"
 #include "Graphics/API/GraphicsContext.hpp"
 
-namespace helios
+namespace helios::ui
 {
 	// Thin abstraction over ImGui.
 	// Not a part of the device abstraction : so must be created and handled manually in the SandBox files.
@@ -14,13 +14,14 @@ namespace helios
 	{
 	public:
 		UIManager(gfx::Device* device);
-		void ShutDown() const;
+		~UIManager();
 
 		void BeginFrame() const;
-		void EndFrame(gfx::GraphicsContext* graphicsContext) const;
+		void Render(gfx::GraphicsContext* graphicsContext) const;
+		void EndFrame() const;
 
-		void Begin(std::wstring_view uiComponentName) const;
-		void End() const;
+		void BeginPanel(std::wstring_view uiComponentName) const;
+		void EndPanel() const;
 
 		void SetClearColor(std::span<float> clearColor) const;
 

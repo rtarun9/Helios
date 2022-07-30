@@ -4,9 +4,9 @@
 
 #include "Graphics/API/Resources.hpp"
 #include "Graphics/API/Device.hpp"
-#include "UIManager.hpp"
+#include "UI/UIManager.hpp"
 
-namespace helios
+namespace helios::scene
 {
 	// WASD used for camera position, Arrow keys used to change camera orientation.
 	enum class Keys : uint8_t
@@ -44,7 +44,7 @@ namespace helios
 		void HandleInput(uint8_t keycode, bool isKeyDown);
 
 		void Update(float deltaTime);
-		void UpdateUI(const UIManager* uiManager);
+		void UpdateUI(const ui::UIManager* uiManager);
 
 		DirectX::XMMATRIX GetViewMatrix() const;
 
@@ -71,7 +71,7 @@ namespace helios
 
 		// Used to control how fast or slow to lerp to rest position. For camera rotation / movement, the smoothness factor is multiplied by the corresponding SmoothnessMultiplier.
 		float mSmoothnessFactor{ 0.032f };
-		float mRotationSmoothnessMultipler{0.5f};
+		float mRotationSmoothnessMultipler{2.1f};
 		float mMovementSmoothnessMultipler{ 1.0f };
 
 		float mYaw{ 0.0f };

@@ -4,7 +4,7 @@
 
 #include "Timer.hpp"
 
-namespace helios
+namespace helios::core
 {
 	class Engine;
 

@@ -2,7 +2,7 @@
 
 #include "Engine.hpp"
 
-namespace helios
+namespace helios::core
 {
 	Engine::Engine(Config& config)
 		:  mTitle{ config.title }, mDimensions{config.dimensions}

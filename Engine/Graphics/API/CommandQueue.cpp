@@ -91,6 +91,7 @@ namespace helios::gfx
 		};
 
 		mCommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), commandLists.data());
+	
 		uint64_t fenceValue = Signal();
 
 		mCommandAllocatorQueue.emplace(CommandAllocator{ .fenceValue = fenceValue, .commandAllocator = commandAllocator });

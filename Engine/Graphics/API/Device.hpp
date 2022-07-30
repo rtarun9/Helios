@@ -59,7 +59,7 @@ namespace helios::gfx
 		uint32_t CreateCbv(const CbvCreationDesc& cbvCreationDesc) const;
 
 		template <typename T>
-		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const;
+		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
 
 		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc) const;
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
@@ -72,6 +72,8 @@ namespace helios::gfx
 		Microsoft::WRL::ComPtr<ID3D12Device5> mDevice{};
 		Microsoft::WRL::ComPtr<ID3D12DebugDevice2> mDebugDevice{};
 		Microsoft::WRL::ComPtr<ID3D12Debug5> mDebugInterface{};
+
+		Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> mDredSettings{};
 
 		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory{};
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter{};
@@ -99,7 +101,7 @@ namespace helios::gfx
 	};
 
 	template <typename T>
-	Buffer Device::CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<T> data) const
+	Buffer Device::CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const
 	{
 		Buffer buffer{};
 
@@ -153,7 +155,7 @@ namespace helios::gfx
 				}
 			};
 
-			buffer.srvCbvUavIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
+			buffer.srvIndex = CreateSrv(srvCreationDesc, buffer.allocation->resource.Get());
 		}
 
 		else if (bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
@@ -167,7 +169,7 @@ namespace helios::gfx
 				}
 			};
 
-			buffer.srvCbvUavIndex = CreateCbv(cbvCreationDesc);
+			buffer.cbvIndex = CreateCbv(cbvCreationDesc);
 		}
 
 		return buffer;

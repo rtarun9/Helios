@@ -4,7 +4,7 @@
 
 #include "Graphics/API/Device.hpp"
 
-namespace helios
+namespace helios::core
 {
 	struct Config
 	{

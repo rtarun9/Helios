@@ -1,13 +1,15 @@
 #include "Pch.hpp"
 
 #include "UIManager.hpp"
-#include "Application.hpp"
+#include "Core/Application.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
-namespace helios
+// note(rtarun9) : TODO : ImGui Docking and viewport support.
+
+namespace helios::ui
 {
 	UIManager::UIManager(gfx::Device* device)
 	{
@@ -16,15 +18,26 @@ namespace helios
 		// Setup ImGui context.
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		
-		io.DisplaySize = ImVec2((float)Application::GetClientDimensions().x, (float)Application::GetClientDimensions().y);
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		// Reference : https://github.com/ocornut/imgui/blob/docking/examples/example_win32_directx12/main.cpp
+
+		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
+		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+		//ImGuiStyle& style = ImGui::GetStyle();
+		//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		//{
+		//	style.WindowRounding = 0.0f;
+		//	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		//}
 
 		SetCustomDarkTheme();
 		// Setup platform / renderer backends.
 
-		ImGui_ImplWin32_Init(Application::GetWindowHandle());
+		ImGui_ImplWin32_Init(core::Application::GetWindowHandle());
 		gfx::DescriptorHandle srvDescriptorHandle = device->GetSrvCbvUavDescriptor()->GetCurrentDescriptorHandle();
 
 		ImGui_ImplDX12_Init(device->GetDevice(), gfx::Device::NUMBER_OF_FRAMES, DXGI_FORMAT_R8G8B8A8_UNORM, device->GetSrvCbvUavDescriptor()->GetDescriptorHeap(), srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
@@ -38,17 +51,19 @@ namespace helios
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
+			
+			ImGui::DockSpaceOverViewport(ImGui::GetWindowViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 		}
 	}
 
-	void UIManager::ShutDown() const
+	UIManager::~UIManager()
 	{
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
 	}
 
-	void UIManager::EndFrame(gfx::GraphicsContext* commandList) const
+	void UIManager::Render(gfx::GraphicsContext* commandList) const
 	{
 		if (mShowUI)
 		{
@@ -57,7 +72,7 @@ namespace helios
 		}
 	}
 
-	void UIManager::Begin(std::wstring_view uiComponentName) const
+	void UIManager::BeginPanel(std::wstring_view uiComponentName) const
 	{
 		if (mShowUI)
 		{
@@ -65,11 +80,21 @@ namespace helios
 		}
 	}
 
-	void UIManager::End() const
+	void UIManager::EndPanel() const
+	{
+		ImGui::End();
+	}
+
+	void UIManager::EndFrame() const
 	{
 		if (mShowUI)
 		{
-			ImGui::End();
+			ImGuiIO& io = ImGui::GetIO(); (void)io;
+			//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			//{
+				//ImGui::UpdatePlatformWindows();
+				//ImGui::RenderPlatformWindowsDefault(NULL, (void*)nullptr);
+			//}
 		}
 	}
 
