@@ -3,6 +3,8 @@
 #include "UIManager.hpp"
 #include "Core/Application.hpp"
 
+#include "Graphics/API/GraphicsContext.hpp"
+
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
@@ -23,18 +25,27 @@ namespace helios::ui
 		// Reference : https://github.com/ocornut/imgui/blob/docking/examples/example_win32_directx12/main.cpp
 
 		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
-		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		
+		// note(rtarun9 : Uncommenting this line causes some issues (because of the HWND being null, and ImGui internally creates a new window for this).
+		// Currently, multiple viewports is not being used so commenting this out.
+		// Error we recieve upon shutdown (closing window) : 
+		// Line: 850
+		//Expression: hwnd != 0
+		
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-		//ImGuiStyle& style = ImGui::GetStyle();
-		//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		//{
-		//	style.WindowRounding = 0.0f;
-		//	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-		//}
+		ImGuiStyle& style = ImGui::GetStyle();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		}
 
+		// Set up cinder dark theme (from : https://github.com/GraphicsProgramming/dear-imgui-styles)
 		SetCustomDarkTheme();
+
 		// Setup platform / renderer backends.
 
 		ImGui_ImplWin32_Init(core::Application::GetWindowHandle());
@@ -63,7 +74,7 @@ namespace helios::ui
 		ImGui::DestroyContext();
 	}
 
-	void UIManager::Render(gfx::GraphicsContext* commandList) const
+	void UIManager::Render(const gfx::GraphicsContext* commandList) const
 	{
 		if (mShowUI)
 		{
@@ -82,19 +93,22 @@ namespace helios::ui
 
 	void UIManager::EndPanel() const
 	{
-		ImGui::End();
+		if (mShowUI)
+		{
+			ImGui::End();
+		}
 	}
 
-	void UIManager::EndFrame() const
+	void UIManager::EndFrame(const gfx::GraphicsContext* graphicsContext) const
 	{
 		if (mShowUI)
 		{
 			ImGuiIO& io = ImGui::GetIO(); (void)io;
-			//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			//{
-				//ImGui::UpdatePlatformWindows();
-				//ImGui::RenderPlatformWindowsDefault(NULL, (void*)nullptr);
-			//}
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault(core::Application::GetWindowHandle(), graphicsContext->GetCommandList());
+			}
 		}
 	}
 
@@ -102,7 +116,7 @@ namespace helios::ui
 	{
 		if (mShowUI)
 		{
-			ImGui::ColorEdit3("Clear Color", clearColor.data());
+			ImGui::ColorPicker3 ("Clear Color", clearColor.data(), ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
 		}
 	}
 
@@ -176,6 +190,62 @@ namespace helios::ui
 		if (mShowUI)
 		{
 			ImGui::SliderFloat3(WstringToString(name).c_str(), &data, minExtent, maxExtent);
+		}
+	}
+
+	void UIManager::ShowImage(std::wstring_view name, gfx::DescriptorHandle descriptorHandle, Uint2 dimensions) const
+	{
+		if (mShowUI)
+		{
+			ImGui::Begin(WstringToString(name).c_str());
+			ImGui::Image((ImTextureID)descriptorHandle.cpuDescriptorHandle.ptr, ImVec2(float(dimensions.x), float(dimensions.y)));
+			ImGui::End();
+		}
+	}
+
+	bool UIManager::CollapsingHeader(std::wstring_view name) const
+	{
+		if (mShowUI)
+		{
+			return ImGui::CollapsingHeader(WstringToString(name).c_str());
+		}
+
+		return false;
+	}
+
+	bool UIManager::BeginMainMenuBar() const
+	{
+		if (mShowUI)
+		{
+			return ImGui::BeginMainMenuBar();
+		}
+
+		return false;
+	}
+
+	void UIManager::EndMainMenuBar() const
+	{
+		if (mShowUI)
+		{
+			ImGui::EndMainMenuBar();
+		}
+	}
+
+	bool UIManager::BeginMenu(std::wstring_view name) const
+	{
+		if (mShowUI)
+		{
+			return ImGui::BeginMenu(WstringToString(name).c_str());
+		}
+
+		return false;
+	}
+
+	void UIManager::EndMenu() const
+	{
+		if (mShowUI)
+		{
+			ImGui::EndMenu();
 		}
 	}
 

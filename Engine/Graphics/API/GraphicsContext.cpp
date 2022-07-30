@@ -139,9 +139,16 @@ namespace helios::gfx
 
 	void GraphicsContext::SetRenderTarget(BackBuffer* renderTarget, const Texture* depthStencilTexture) const
 	{
-		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
-
-		mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
+		
+		if (!depthStencilTexture)
+		{
+			mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, nullptr);
+		}
+		else
+		{
+			DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+			mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
+		}
 	}
 
 	void GraphicsContext::SetRenderTarget(std::span<const RenderTarget*> renderTargets, const Texture* depthStencilTexture) const

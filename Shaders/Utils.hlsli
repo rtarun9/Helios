@@ -3,7 +3,7 @@
 
 float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex)
 {
-    if (albedoTextureIndex == 0)
+    if (albedoTextureIndex == -1)
     {
         return float4(1.0f, 1.0f, 1.0f, 1.0f);
     }

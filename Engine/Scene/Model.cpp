@@ -54,6 +54,7 @@ namespace helios::scene
 		//	return;
 		//}
 
+
 		if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
 		{
 			if (!error.empty())
@@ -267,6 +268,7 @@ namespace helios::scene
 					gfx::TextureCreationDesc albedoTextureCreationDesc
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
 						.name = meshName + L" albedo texture",
 						.path = albedoTexturePath,
 					};
@@ -286,6 +288,7 @@ namespace helios::scene
 					gfx::TextureCreationDesc normalTextureCreationDesc
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
 						.name = meshName + L" normal texture",
 						.path = normalTexturePath,
 					};
@@ -305,6 +308,7 @@ namespace helios::scene
 					gfx::TextureCreationDesc metalRoughnessTextureCreationDesc
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
 						.name = meshName + L" metal roughness texture",
 						.path = metallicRoughnessTexturePath,
 					};
@@ -324,6 +328,7 @@ namespace helios::scene
 					gfx::TextureCreationDesc occlusionTextureCreationDesc
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
 						.name = meshName + L" occlusion texture",
 						.path = occlusionTexturePath,
 					};
@@ -343,6 +348,7 @@ namespace helios::scene
 					gfx::TextureCreationDesc emissiveTextureCreationDesc
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
 						.name = meshName + L" emissive texture",
 						.path = emissiveTexturePath ,
 					};
@@ -362,20 +368,21 @@ namespace helios::scene
 
 	void Model::UpdateTransformUI(const ui::UIManager* uiManager)
 	{
-		uiManager->BeginPanel(mModelName);
-		
-		// Scale uniformally along all axises.
-		uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
+		if (uiManager->TreeNode(mModelName))
+		{
+			// Scale uniformally along all axises.
+			uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
 
-		mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
+			mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
 
-		uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
-		uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
+			uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
+			uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
 
-		uiManager->EndPanel();
+			uiManager->TreePop();
+		}
 	}
 
-	void Model::Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
+	void Model::Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
 	{
 		for (const Mesh& mesh : mMeshes)
 		{

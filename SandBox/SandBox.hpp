@@ -19,17 +19,14 @@ public:
 	void OnResize() override;
 
 private:
-	std::unique_ptr<helios::scene::Model> mSciFiHelmet{};
+	std::unique_ptr<helios::scene::Model> mSponza{};
 
 	std::unique_ptr<helios::scene::Camera> mCamera{};
-
-	std::unique_ptr<helios::gfx::Buffer> sIndexBuffer;
-	std::unique_ptr<helios::gfx::Buffer> sPositionBuffer;
-	std::unique_ptr<helios::gfx::Buffer> sTextureCoordsBuffer;
 
 	std::unique_ptr<helios::gfx::Buffer> mSceneBuffer{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
+	
 	std::unique_ptr<helios::gfx::RenderTarget> mOffscreenRT{};
 
 	std::unique_ptr<helios::gfx::PipelineState> mOffscreenPipelineState{};

@@ -89,6 +89,12 @@ struct Uint2
 	auto operator<=>(Uint2 const& other) const = default;
 };
 
+struct Float2
+{
+	float x{};
+	float y{};
+};
+
 static Uint2 GetDimensionFromRect(const RECT& rect)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);

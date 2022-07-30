@@ -293,16 +293,11 @@ namespace helios::gfx
 
 		return cbvIndex;
 	}
-
-	Texture Device::CreateTexture(const TextureCreationDesc& textureCreationDesc) const
+	
+	Texture Device::CreateTexture(TextureCreationDesc& textureCreationDesc) const
 	{
 		Texture texture{};
 
-
-		// If texture is to be loaded from file, width and height will not be set up user.
-		// So in that case load the texture using stb image, set the textureLoadFromFileCreationDesc's width and height and procede. (we use this auxilary TextureCreationDesc as the one passed to the function is marked as const T&).
-		TextureCreationDesc textureLoadFromFileCreationDesc = textureCreationDesc;
-		
 		int componentCount{ 4 }, width{}, height{};
 		unsigned char* data{ nullptr };
 
@@ -313,19 +308,21 @@ namespace helios::gfx
 			{
 				ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
 			}
-			textureLoadFromFileCreationDesc.dimensions =
-			{ 
-				.x = static_cast<uint32_t>(width), 
-				.y = static_cast<uint32_t>(height) 
+
+			textureCreationDesc.dimensions =
+			{
+				.x = static_cast<uint32_t>(width),
+				.y = static_cast<uint32_t>(height)
 			};
-			
-			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureLoadFromFileCreationDesc);
+
+			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 		}
 		else
 		{
 			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 		}
 
+		texture.dimensions = textureCreationDesc.dimensions;
 
 		uint32_t mipLevels = textureCreationDesc.usage != TextureUsage::TextureFromPath ? 1u : textureCreationDesc.mipLevels;
 
@@ -398,35 +395,13 @@ namespace helios::gfx
 					.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
 					.Texture2D
 					{
-						.MipSlice = 0u
+						.MipSlice = 0u,
+						.PlaneSlice = 0u
 					},
 				}
 			};
 
 			texture.rtvIndex = CreateRtv(rtvCreationDesc, texture.allocation->resource.Get());
-
-			// Create srv's and index buffers.
-			static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_POSITIONS
-			{
-				DirectX::XMFLOAT2(-1.0f, -1.0f),
-				DirectX::XMFLOAT2(-1.0f,   1.0f),
-				DirectX::XMFLOAT2(1.0f, 1.0f),
-				DirectX::XMFLOAT2(1.0f, -1.0f),
-			};
-
-			static constexpr std::array<DirectX::XMFLOAT2, 4> RT_VERTEX_TEXTURE_COORDS
-			{
-				DirectX::XMFLOAT2(0.0f, 1.0f),
-				DirectX::XMFLOAT2(0.0f, 0.0f),
-				DirectX::XMFLOAT2(1.0f, 0.0f),
-				DirectX::XMFLOAT2(1.0f, 1.0f),
-			};
-
-			static constexpr std::array<uint32_t, 6> RT_INDICES
-			{
-				0u, 1u, 2u,
-				0u, 2u, 3u
-			};
 		}
 
 		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.
@@ -465,6 +440,15 @@ namespace helios::gfx
 		}
 
 		return texture;
+	}
+
+	RenderTarget Device::CreateRenderTarget(TextureCreationDesc& textureCreationDesc) const
+	{
+		RenderTarget renderTarget{};
+
+		renderTarget.renderTexture = std::make_unique<gfx::Texture>(CreateTexture(textureCreationDesc));
+
+		return renderTarget;
 	}
 
 	PipelineState Device::CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const

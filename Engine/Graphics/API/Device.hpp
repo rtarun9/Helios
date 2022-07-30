@@ -37,6 +37,9 @@ namespace helios::gfx
 
 		std::unique_ptr<GraphicsContext> GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(*this)); }
 		
+		// Misc getters for resources and thier contents.
+		DescriptorHandle GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
+
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
 		void InitDeviceResources();
@@ -61,8 +64,13 @@ namespace helios::gfx
 		template <typename T>
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
 
-		Texture CreateTexture(const TextureCreationDesc& textureCreationDesc) const;
+		// note(rtarun9) : The creation descs are not passed as const T&, as the contents (the dimensions) are not set by user if the texture is being loaded from file.
+		// Because of this, its passed as reference and not const reference.
+		Texture CreateTexture(TextureCreationDesc& textureCreationDesc) const;
+		RenderTarget CreateRenderTarget(TextureCreationDesc& textureCreationDesc) const;
+
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
+
 
 	public:
 		// Number of SwapChain backbuffers.

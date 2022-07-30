@@ -51,7 +51,7 @@ namespace helios::scene
 		}
 	};
 
-	// This struct stores the texture's required for a PBR material. If a texture does not exist, it will be null, in which case the index (used to index into descriptor heap) will be zero.
+	// This struct stores the texture's required for a PBR material. If a texture does not exist, it will be null, in which case the index (used to index into descriptor heap) will be -1.
 	// The shader will accordingly set a null view and not use that particular texture.
 	struct PBRMaterial
 	{
@@ -94,7 +94,7 @@ namespace helios::scene
 
 		void UpdateTransformUI(const ui::UIManager* uiManager);
 
-		void Draw(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
+		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
@@ -110,6 +110,6 @@ namespace helios::scene
 		std::wstring mModelDirectory{};
 
 		// Holds all the models loaded in (key : model path) format. If model has already been loaded, it need not go through loading process again.
-		static inline std::map<std::wstring, Model> sLoadedGLTFModels{};
+		//static inline std::map<std::wstring, Model> sLoadedGLTFModels{};
 	};
 }

@@ -77,12 +77,12 @@ namespace helios::gfx
 
 		// In the model abstraction, the buffers are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the buffer is nullptr.
-		// So, upon passing the buffer to this function, it will return 0 is buffer is null, or the index otherwise.
+		// So, upon passing the buffer to this function, it will return -1 is buffer is null, or the index otherwise.
 		static uint32_t GetSrvIndex(const Buffer* buffer)
 		{
 			if (buffer == nullptr)
 			{
-				return 0;
+				return -1;
 			}
 
 			return buffer->srvIndex;
@@ -92,7 +92,7 @@ namespace helios::gfx
 		{
 			if (buffer == nullptr)
 			{
-				return 0;
+				return -1;
 			}
 
 			return buffer->cbvIndex;
@@ -102,7 +102,7 @@ namespace helios::gfx
 		{
 			if (buffer == nullptr)
 			{
-				return 0;
+				return -1;
 			}
 
 			return buffer->uavIndex;
@@ -137,7 +137,9 @@ namespace helios::gfx
 		uint32_t srvIndex{};
 		uint32_t dsvIndex{};
 		uint32_t rtvIndex{};
- 
+		
+		Uint2 dimensions{};
+
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
 		// So, upon passing the texture to this function, it will return 0 is texture is null, or the srvIndex otherwise.
@@ -149,6 +151,16 @@ namespace helios::gfx
 			}
 
 			return texture->srvIndex;
+		}
+
+		ID3D12Resource* const GetResource() const
+		{
+			if (allocation)
+			{
+				return allocation->resource.Get();
+			}
+
+			return nullptr;
 		}
 	};
 
@@ -238,10 +250,9 @@ namespace helios::gfx
 	// Note : the destroy function has to be called from the device so that the D3D12MA::Allocation objects(s) can be cleared properly.
 	class Device;
 	class GraphicsContext;
+
 	struct RenderTarget
 	{
-		RenderTarget(const Device* device, const TextureCreationDesc& textureCreationDesc);
-
 		// Create all buffers.
 		static void CreateRenderTargetResources(const Device* device);
 		
@@ -252,12 +263,14 @@ namespace helios::gfx
 		static uint32_t GetPositionBufferIndex()  {return sPositionBuffer->srvIndex; }
 		static uint32_t GetTextureCoordsBufferIndex() { return sTextureCoordsBuffer->srvIndex; }
 
-		void Draw(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
-
-		std::unique_ptr<Texture> renderTexture{};
+		static void Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
 
 		static inline std::unique_ptr<Buffer> sIndexBuffer;
 		static inline std::unique_ptr<Buffer> sPositionBuffer;
 		static inline std::unique_ptr<Buffer> sTextureCoordsBuffer;
+		
+		ID3D12Resource* const GetResource() const { return renderTexture->GetResource(); }
+
+		std::unique_ptr<Texture> renderTexture{};
 	};
 }

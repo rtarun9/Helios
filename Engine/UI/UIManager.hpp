@@ -17,8 +17,8 @@ namespace helios::ui
 		~UIManager();
 
 		void BeginFrame() const;
-		void Render(gfx::GraphicsContext* graphicsContext) const;
-		void EndFrame() const;
+		void Render(const gfx::GraphicsContext* graphicsContext) const;
+		void EndFrame(const gfx::GraphicsContext* graphicsContext) const;
 
 		void BeginPanel(std::wstring_view uiComponentName) const;
 		void EndPanel() const;
@@ -29,6 +29,16 @@ namespace helios::ui
 
 		void SliderFloat(std::wstring_view name, float& data, float minExtent = -10.0f, float maxExtent = 10.0f) const;
 		void SliderFloat3(std::wstring_view name, float& data, float minExtent = -10.0f, float maxExtent = 10.0f) const;
+		
+		void ShowImage(std::wstring_view name, gfx::DescriptorHandle descriptorHandle, Uint2 dimensions) const;
+
+		bool CollapsingHeader(std::wstring_view name) const;
+
+		bool BeginMainMenuBar() const;
+		void EndMainMenuBar() const;
+
+		bool BeginMenu(std::wstring_view name) const;
+		void EndMenu() const;
 
 		// Return true if the node is open (i.e to be shown) or false otherwise.
 		bool TreeNode(std::wstring_view name) const;

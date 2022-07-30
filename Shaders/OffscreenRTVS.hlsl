@@ -1,4 +1,5 @@
 #include "Common/BindlessRS.hlsli"
+#include "Common/ConstantBuffers.hlsli"
 
 struct VSOutput
 {

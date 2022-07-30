@@ -9,12 +9,15 @@ struct VSOutput
 
 ConstantBuffer<RenderTargetRenderResources> renderResource : register(b0);
 
+static const float GAMMA_CORRECTION = 0.454545455f;
+
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
-
     Texture2D<float4> rtvTexture = ResourceDescriptorHeap[renderResource.textureIndex];
 
-    return rtvTexture.Sample(pointWrapSampler, input.textureCoord);
+    float4 color = rtvTexture.Sample(pointWrapSampler, input.textureCoord);
+    color.rgb = pow(color.rgb, GAMMA_CORRECTION);
+
+    return color;
 }

@@ -17,7 +17,7 @@ namespace helios::gfx
 	{
 	public:
 		GraphicsContext(Device& device);
-		ID3D12GraphicsCommandList* const GetCommandList() { return mCommandList.Get(); }
+		ID3D12GraphicsCommandList* const GetCommandList() const { return mCommandList.Get(); }
 
 		// Core functionalities.
 

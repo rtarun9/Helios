@@ -5,13 +5,6 @@
 
 namespace helios::gfx
 {
-	// Unlike other resources the device will not be in control of creating rendertargets.
-	// Done because render target is a collection of various resources.
-	RenderTarget::RenderTarget(const Device* device, const TextureCreationDesc& textureCreationDesc)
-	{
-		renderTexture = std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc));
-	}
-
 	void RenderTarget::CreateRenderTargetResources(const Device* device)
 	{
 		// Buffer data.
@@ -38,31 +31,31 @@ namespace helios::gfx
 		};
 
 		// Create index buffer.
-		gfx::BufferCreationDesc indexBufferCreationDesc
+		static const gfx::BufferCreationDesc INDEX_BUFFER_CREATION_DESC
 		{
 			.usage = gfx::BufferUsage::IndexBuffer,
 			.name = L"Render Target Index Buffer",
 		};
 
-		sIndexBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<uint32_t>(indexBufferCreationDesc, RT_INDICES));
+		sIndexBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<uint32_t>(INDEX_BUFFER_CREATION_DESC, RT_INDICES));
 
 		// Create vertex buffer.
-		gfx::BufferCreationDesc positionBufferCreationDesc
+		static const gfx::BufferCreationDesc POSITION_BUFFER_CREATION_DESC
 		{
 			.usage = gfx::BufferUsage::StructuredBuffer,
 			.name = L"Render Target Position Buffer",
 		};
 
-		sPositionBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT2>(positionBufferCreationDesc, RT_VERTEX_POSITIONS));
+		sPositionBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT2>(POSITION_BUFFER_CREATION_DESC, RT_VERTEX_POSITIONS));
 
 		// Create Texture coords buffer.
-		gfx::BufferCreationDesc textureCoordsBufferCreationDesc
+		gfx::BufferCreationDesc TEXTURE_COORDS_BUFFER_CREATION_DESC
 		{
 			.usage = gfx::BufferUsage::StructuredBuffer,
 			.name = L"Render Target Texture Coords Buffer",
 		};
 
-		sTextureCoordsBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT2>(textureCoordsBufferCreationDesc, RT_VERTEX_TEXTURE_COORDS));
+		sTextureCoordsBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT2>(TEXTURE_COORDS_BUFFER_CREATION_DESC, RT_VERTEX_TEXTURE_COORDS));
 	}
 
 	// Destroy all buffers (as they have D3D12MA::Allocation objects). 
@@ -74,7 +67,7 @@ namespace helios::gfx
 		sTextureCoordsBuffer->allocation->Reset();
 	}
 
-	void RenderTarget::Draw(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources)
+	void RenderTarget::Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources)
 	{
 		renderTargetRenderResources.positionBufferIndex = sPositionBuffer->srvIndex;
 		renderTargetRenderResources.textureBufferIndex = sTextureCoordsBuffer->srvIndex;

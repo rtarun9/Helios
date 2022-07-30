@@ -16,13 +16,14 @@ void SandBox::OnInit()
 {
 	mDevice = std::make_unique<gfx::Device>();
 
-	scene::ModelCreationDesc sciFiHelmetCreationDesc
+	scene::ModelCreationDesc sponzaCreationDesc
 	{
-		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
-		.modelName = L"SciFi Helmet",
+		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+		.modelName = L"Sponza",
 	};
 
-	mSciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
+	mSponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
+	mSponza->GetTransform().data.scale = { 0.2f, 0.2f, 0.2f };
 
 	gfx::BufferCreationDesc sceneBufferCreationDesc
 	{
@@ -34,8 +35,8 @@ void SandBox::OnInit()
 
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/MeshViewer/MeshViewerVS.cso",
-		.psShaderPath = L"Shaders/MeshViewer/MeshViewerPS.cso",
+		.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
+		.psShaderPath = L"Shaders/OffscreenRTPS.cso",
 		.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"Mesh Viewer Pipeline"
@@ -45,8 +46,8 @@ void SandBox::OnInit()
 	
 	gfx::GraphicsPipelineStateCreationDesc offscreenPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
-		.psShaderPath = L"Shaders/OffscreenRTPS.cso",
+		.vsShaderPath = L"Shaders/MeshViewer/MeshViewerVS.cso",
+		.psShaderPath = L"Shaders/MeshViewer/MeshViewerPS.cso",
 		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"Offscreen Render Target Pipeline"
@@ -72,7 +73,7 @@ void SandBox::OnInit()
 		.name = L"Offscreen Render Texture"
 	};
 
-	mOffscreenRT = std::make_unique<gfx::RenderTarget>(mDevice.get(), offscreenRenderTargetTextureCreationDesc);
+	mOffscreenRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(offscreenRenderTargetTextureCreationDesc));
 
 	mUIManager = std::make_unique<ui::UIManager>(mDevice.get());
 
@@ -91,7 +92,7 @@ void SandBox::OnUpdate()
 
 	mSceneBuffer->Update(&sceneBufferData);
 
-	mSciFiHelmet->GetTransform().Update();
+	mSponza->GetTransform().Update();
 }
 
 void SandBox::OnRender()
@@ -108,7 +109,7 @@ void SandBox::OnRender()
 		mOffscreenRT.get()
 	};
 
-	// RenderPass 1 : Draw the model's to the offscreen render target.
+	// RenderPass 1 : Render the model's to the offscreen render target.
 	{
 		graphicsContext->ResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -118,10 +119,25 @@ void SandBox::OnRender()
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-		mUIManager->SetClearColor(clearColor);
 		
-		mSciFiHelmet->UpdateTransformUI(mUIManager.get());
+		if (mUIManager->BeginMainMenuBar())
+		{
+			if (mUIManager->BeginMenu(L"Helios Editor"))
+			{
+				mUIManager->EndMenu();
+			}
+
+			mUIManager->EndMainMenuBar();
+		}
+
+		mUIManager->BeginPanel(L"Scene Settings");
+		mUIManager->SetClearColor(clearColor);
+		mUIManager->EndPanel();
+
+		mUIManager->BeginPanel(L"Scene Hierarchy");
 		mCamera->UpdateUI(mUIManager.get());
+		mSponza->UpdateTransformUI(mUIManager.get());
+		mUIManager->EndPanel();
 
 		graphicsContext->ClearRenderTargetView(renderTargets, clearColor);
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
@@ -131,13 +147,13 @@ void SandBox::OnRender()
 			.sceneBufferIndex = mSceneBuffer->cbvIndex
 		};
 
-		mSciFiHelmet->Draw(graphicsContext.get(), sceneRenderResources);
+		mSponza->Render(graphicsContext.get(), sceneRenderResources);
 
 		graphicsContext->ResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	
 	// Render pass 2 : Render offscreen rt to swapchain's backbuffer and present.
-	// The UI is directly drawn on swapchain's backbuffer rather than render target.
+	// The UI is directly rendered on swapchain's backbuffer rather than render target.
 	{
 		graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -149,14 +165,15 @@ void SandBox::OnRender()
 		graphicsContext->ClearRenderTargetView(backBuffer, std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
-		// Note : buffer indices can be set here or in the RenderTarget::Draw function. Begin done there for now.
+		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
 		RenderTargetRenderResources rtvRenderResources
 		{
 			.textureIndex = mOffscreenRT->renderTexture->srvIndex,
 		};
 		
-		mOffscreenRT->Draw(graphicsContext.get(), rtvRenderResources);
+		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 		mUIManager->Render(graphicsContext.get());
+		mUIManager->EndFrame(graphicsContext.get());
 
 		graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
@@ -164,7 +181,6 @@ void SandBox::OnRender()
 	mDevice->EndFrame();
 
 	mDevice->ExecuteContext(std::move(graphicsContext));
-	mUIManager->EndFrame();
 
 	mDevice->Present();
 
