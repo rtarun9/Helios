@@ -46,8 +46,10 @@
 #include <array>
 #include <utility>
 #include <span>
+#include <fstream>
 #include <functional>
 #include <queue>
+#include <filesystem>
 #include <map>
 #include <type_traits>
 #include <stdexcept>

@@ -69,15 +69,27 @@ namespace helios::core
 		}
 
 		// Main game loop
+		bool quitLoop{ false };
+
 		MSG message{};
-		while (message.message != WM_QUIT)
+		while (!quitLoop)
 		{
 			sTimer.Tick();
 
-			if (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
+			while (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
 			{
 				::TranslateMessage(&message);
 				::DispatchMessageW(&message);
+			
+				if (message.message == WM_QUIT)
+				{
+					quitLoop = true;
+				}
+			}
+
+			if (quitLoop)
+			{
+				break;
 			}
 
 			engine->OnUpdate();
@@ -215,6 +227,7 @@ namespace helios::core
 			case WM_DESTROY:
 			{
 				::PostQuitMessage(0);
+				return 0;
 			}break;
 
 			case WM_SIZE:
@@ -222,7 +235,7 @@ namespace helios::core
 				if (engine && !resizingWindow)
 				{
 					::GetClientRect(sWindowHandle, &sWindowRect);
-					sClientDimensions = GetDimensionFromRect(sWindowRect);
+					sClientDimensions = { (UINT)LOWORD(lParam), (UINT)HIWORD(lParam) };
 
 					engine->OnResize();
 				}

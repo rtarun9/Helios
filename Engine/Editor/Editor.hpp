@@ -20,7 +20,7 @@ namespace helios::editor
 		// Goal is to call this single function from the engine which does all the UI internally, helps make the engine clean as well.
 		// When ECS is setup, it should be enough to pass a single object to this function.
 		// This function is heavy WIP and not given as much importance as other abstractions.
-		void Render(std::span<std::unique_ptr<helios::scene::Model>> models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext) const;
+		void Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
 
 		void OnResize(Uint2 dimensions) const;
 
@@ -28,13 +28,23 @@ namespace helios::editor
 
 	private:
 		void SetCustomDarkTheme() const;
-		
-		void RenderModelProperties(std::span<std::unique_ptr<helios::scene::Model>> models) const;
+
+		void RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const;
 		void RenderCameraProperties(scene::Camera* camera) const;
 		void RenderSceneProperties(std::span<float, 4> clearColor) const;
-		void RenderSceneViewport(gfx::DescriptorHandle rtDescriptorHandle) const;
+
+		// Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads the model (if path belongs to a .gltf file).
+		void RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, std::vector<std::unique_ptr<helios::scene::Model>>& models) const;
+
+		// Handle drag and drop of models into viewport at run time.
+		void RenderContentBrowser();
 
 	private:
-		bool mShowUI{true};
+		bool mShowUI{ true };
+
+		// Member variables for content browser.
+		static inline const std::filesystem::path ASSETS_PATH = { L"Assets" };
+
+		std::filesystem::path mContentBrowserCurrentPath{ ASSETS_PATH };
 	};
 }

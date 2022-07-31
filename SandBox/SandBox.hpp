@@ -27,11 +27,9 @@ private:
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
 	
-	std::unique_ptr<helios::gfx::RenderTarget> mOffscreenRT{};
-
 	// All post processing effects are processed and stored in here (final result of the main scene).
 	std::unique_ptr<helios::gfx::RenderTarget> mPostProcessingRT{};
-
+	std::unique_ptr<helios::gfx::RenderTarget> mOffscreenRT{};
 	// Contains the final image that is to be rendered to the swapchain.
 	std::unique_ptr<helios::gfx::RenderTarget> mFinalRT{};
 

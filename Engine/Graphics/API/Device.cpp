@@ -220,7 +220,7 @@ namespace helios::gfx
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
 		ThrowIfFailed(mSwapChain->GetDesc(&swapChainDesc));
-		ThrowIfFailed(mSwapChain->ResizeBuffers(NUMBER_OF_FRAMES, core::Application::GetClientDimensions().x, core::Application::GetClientDimensions().y, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+		ThrowIfFailed(mSwapChain->ResizeBuffers(NUMBER_OF_FRAMES, core::Application::GetClientDimensions().x, core::Application::GetClientDimensions().y, DXGI_FORMAT_UNKNOWN, swapChainDesc.Flags));
 
 		mCurrentBackBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 
@@ -439,6 +439,7 @@ namespace helios::gfx
 			uploadAllocation->Reset();
 		}
 
+		texture.textureName = textureCreationDesc.name;
 		return texture;
 	}
 
@@ -447,8 +448,52 @@ namespace helios::gfx
 		RenderTarget renderTarget{};
 
 		renderTarget.renderTexture = std::make_unique<gfx::Texture>(CreateTexture(textureCreationDesc));
+		renderTarget.renderTargetName = textureCreationDesc.name;
 
 		return renderTarget;
+	}
+
+	void Device::ResizeRenderTarget(RenderTarget* renderTarget)
+	{
+		D3D12_RESOURCE_DESC resourceDesc = renderTarget->renderTexture->GetResource()->GetDesc();
+		resourceDesc.Width = core::Application::GetClientDimensions().x;
+		resourceDesc.Height = core::Application::GetClientDimensions().y;
+
+		// Recreate RTV.
+		TextureCreationDesc textureCreationDesc
+		{
+			.usage = gfx::TextureUsage::RenderTarget,
+			.dimensions = core::Application::GetClientDimensions(),
+			.format = resourceDesc.Format,
+			.name = renderTarget->renderTargetName
+		};
+
+		renderTarget->renderTexture->allocation->Reset();
+
+		// Recreate allocation.
+		renderTarget->renderTexture->allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
+
+		DescriptorHandle rtvHandle = mRtvDescriptor->GetDescriptorHandleFromIndex(renderTarget->renderTexture->rtvIndex);
+		mDevice->CreateRenderTargetView(renderTarget->renderTexture->GetResource(), nullptr, rtvHandle.cpuDescriptorHandle);
+
+		// ReCreate SRV.
+		SrvCreationDesc srvCreationDesc
+		{
+			.srvDesc
+			{
+				.Format = resourceDesc.Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D
+				{
+					.MostDetailedMip = 0u,
+					.MipLevels = resourceDesc.MipLevels
+				}
+			}
+		};
+		
+		DescriptorHandle srvHandle = mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(renderTarget->renderTexture->srvIndex);
+		mDevice->CreateShaderResourceView(renderTarget->renderTexture->GetResource(), &srvCreationDesc.srvDesc, srvHandle.cpuDescriptorHandle);
 	}
 
 	PipelineState Device::CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const

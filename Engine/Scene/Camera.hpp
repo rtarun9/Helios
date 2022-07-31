@@ -69,9 +69,7 @@ namespace helios::scene
 		float mRotationSpeed{ 5.0f };
 
 		// Used to control how fast or slow to lerp to rest position. For camera rotation / movement, the smoothness factor is multiplied by the corresponding SmoothnessMultiplier.
-		float mSmoothnessFactor{ 0.032f };
-		float mRotationSmoothnessMultipler{2.1f};
-		float mMovementSmoothnessMultipler{ 1.0f };
+		float mFrictionFactor{ 0.032f };
 
 		float mYaw{ 0.0f };
 		float mPitch{ 0.0f };

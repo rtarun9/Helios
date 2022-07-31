@@ -19,7 +19,7 @@ void SandBox::OnInit()
 	// Load all the scene models.
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
-		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.glTF",
 		.modelName = L"DamagedHelmet",
 	};
 	
@@ -44,20 +44,20 @@ void SandBox::OnInit()
 	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
 	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
 
-	scene::ModelCreationDesc cubeCreationDesc
-	{
-		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
-		.modelName = L"Cube",
-	};
+	//scene::ModelCreationDesc sponzaCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+	//	.modelName = L"Sponza",
+	//};
+	//
+	//auto sponza  = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
+	//sponza->GetTransform().data.scale = { 0.2f, 0.2f, 0.2f };
+	//sponza->GetTransform().data.translate = { 0.0f, -10.0f, 0.0f };
 
-	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
-	cube->GetTransform().data.translate = { 10.0f, 0.0f, 0.0f };
-
-	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
 	mModels.push_back(std::move(damagedHelmet));
 	mModels.push_back(std::move(sciFiHelmet));
 	mModels.push_back(std::move(metalRoughSpheres));
-	mModels.push_back(std::move(cube));
+	//mModels.push_back(std::move(sponza));
 
 	// Load scene constant buffer.
 	gfx::BufferCreationDesc sceneBufferCreationDesc
@@ -125,7 +125,17 @@ void SandBox::OnInit()
 
 	mOffscreenRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(offscreenRenderTargetTextureCreationDesc));
 
-	gfx::TextureCreationDesc postProcessAndFinalRenderTargetsTextureCreationDesc
+	gfx::TextureCreationDesc postProcessRenderTargetsTextureCreationDesc
+	{
+		.usage = gfx::TextureUsage::RenderTarget,
+		.dimensions = mDimensions,
+		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.name = L"Post Process Render Texture"
+	};
+
+	mPostProcessingRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(postProcessRenderTargetsTextureCreationDesc));
+	
+	gfx::TextureCreationDesc finalRenderTargetsTextureCreationDesc
 	{
 		.usage = gfx::TextureUsage::RenderTarget,
 		.dimensions = mDimensions,
@@ -133,8 +143,7 @@ void SandBox::OnInit()
 		.name = L"Final Render Texture"
 	};
 
-	mPostProcessingRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(postProcessAndFinalRenderTargetsTextureCreationDesc));
-	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(postProcessAndFinalRenderTargetsTextureCreationDesc));
+	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(finalRenderTargetsTextureCreationDesc));
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -245,11 +254,10 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mModels, mCamera.get(), clearColor, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
+		mEditor->Render(mDevice.get(), mModels, mCamera.get(), clearColor, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swapchain
-	// Render the editor.
 	{
 		graphicsContext->AddResourceBarrier(mFinalRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
 		graphicsContext->AddResourceBarrier(backBuffer->GetResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -273,6 +281,7 @@ void SandBox::OnRender()
 
 void SandBox::OnDestroy()
 {
+	mEditor.reset();
 }
 
 void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown) 
@@ -298,8 +307,13 @@ void SandBox::OnResize()
 
 		mDimensions = core::Application::GetClientDimensions();
 
-		mEditor->OnResize(core::Application::GetClientDimensions());
-
 		mAspectRatio = static_cast<float>(mDimensions.x) / static_cast<float>(mDimensions.y);
+
+		// Recreate RTV and SRV of all render targets.
+		mDevice->ResizeRenderTarget(mFinalRT.get());
+		mDevice->ResizeRenderTarget(mOffscreenRT.get());
+		mDevice->ResizeRenderTarget(mPostProcessingRT.get());
+
+		mEditor->OnResize(core::Application::GetClientDimensions());
 	}
 }

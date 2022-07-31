@@ -71,6 +71,8 @@ namespace helios::gfx
 
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 
+		// Resource resizing operations.
+		void ResizeRenderTarget(RenderTarget* renderTarget);
 
 	public:
 		// Number of SwapChain backbuffers.
@@ -180,6 +182,7 @@ namespace helios::gfx
 			buffer.cbvIndex = CreateCbv(cbvCreationDesc);
 		}
 
+		buffer.bufferName = bufferCreationDesc.name;
 		return buffer;
 	}
 }

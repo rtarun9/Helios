@@ -30,7 +30,7 @@ namespace helios::scene
 		mTransform.transformBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<TransformBuffer>(transformBufferCreationDesc, std::span<TransformBuffer, 0u>{}));
 
 		std::string modelPathStr = WstringToString(mModelPath);
-		std::string modelDirectoryPathStr = modelPathStr.substr(0, modelPathStr.find_last_of(L'/') + 1);
+		std::string modelDirectoryPathStr = tinygltf::GetBaseDir(modelPathStr) + "/";
 		
 		mModelDirectory = StringToWString(modelDirectoryPathStr);
 
@@ -41,17 +41,39 @@ namespace helios::scene
 
 		tinygltf::Model model{};
 
-		if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
+		std::vector<uint8_t> fileContents{};
+		ReadFile(mModelPath, fileContents);
+
+		if (modelPathStr.find(".glb") != std::string::npos)
 		{
-			if (!error.empty())
+			if (!context.LoadBinaryFromMemory(&model, &error, &warning, fileContents.data(), static_cast<unsigned int>(fileContents.size()), modelDirectoryPathStr))
 			{
-				ErrorMessage(StringToWString(error));
+				if (!error.empty())
+				{
+					ErrorMessage(StringToWString(error));
+				}
+
+				if (!warning.empty())
+				{
+					ErrorMessage(StringToWString(warning));
+				}
+			}
+		}
+		else
+		{
+			if (!context.LoadASCIIFromString(&model, &error, &warning, reinterpret_cast<const char*>(&fileContents.at(0)), static_cast<unsigned int>(fileContents.size()), modelDirectoryPathStr))
+			{
+				if (!error.empty())
+				{
+					ErrorMessage(StringToWString(error));
+				}
+
+				if (!warning.empty())
+				{
+					ErrorMessage(StringToWString(warning));
+				}
 			}
 
-			if (!warning.empty())
-			{
-				ErrorMessage(StringToWString(warning));
-			}
 		}
 
 		// Build meshes.
@@ -248,7 +270,7 @@ namespace helios::scene
 				tinygltf::Image& albedoImage = model.images[albedoTexture.source];
 
 				std::wstring albedoTexturePath = mModelDirectory + StringToWString(albedoImage.uri);
-				if (!albedoTexturePath.empty())
+				if (!albedoImage.uri.empty())
 				{
 					gfx::TextureCreationDesc albedoTextureCreationDesc
 					{
@@ -268,7 +290,7 @@ namespace helios::scene
 				tinygltf::Image& normalImage = model.images[normalTexture.source];
 
 				std::wstring normalTexturePath = mModelDirectory + StringToWString(normalImage.uri);
-				if (!normalTexturePath.empty())
+				if (!normalImage.uri.empty())
 				{
 					gfx::TextureCreationDesc normalTextureCreationDesc
 					{
@@ -288,7 +310,7 @@ namespace helios::scene
 				tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
 
 				std::wstring metallicRoughnessTexturePath = mModelDirectory + StringToWString(metalRoughnessImage.uri);
-				if (!metallicRoughnessTexturePath.empty())
+				if (!metalRoughnessImage.uri.empty())
 				{
 					gfx::TextureCreationDesc metalRoughnessTextureCreationDesc
 					{
@@ -308,7 +330,7 @@ namespace helios::scene
 				tinygltf::Image& aoImage = model.images[aoTexture.source];
 
 				std::wstring occlusionTexturePath = mModelDirectory + StringToWString(aoImage.uri);
-				if (!occlusionTexturePath.empty())
+				if (!aoImage.uri.empty())
 				{
 					gfx::TextureCreationDesc occlusionTextureCreationDesc
 					{
@@ -328,7 +350,7 @@ namespace helios::scene
 				tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
 
 				std::wstring emissiveTexturePath = mModelDirectory + StringToWString(emissiveImage.uri);
-				if (!emissiveTexturePath.empty())
+				if (!emissiveImage.uri.empty())
 				{
 					gfx::TextureCreationDesc emissiveTextureCreationDesc
 					{

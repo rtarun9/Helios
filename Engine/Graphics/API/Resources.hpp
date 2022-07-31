@@ -16,6 +16,7 @@ namespace helios::gfx
 		gfx::DescriptorHandle backBufferDescriptorHandle;
 
 		ID3D12Resource* GetResource() { return backBufferResource.Get(); }
+		std::wstring bufferName{};
 	};
 
 	// When custom allocator is used much more data will be stored in the allocation struct.
@@ -67,6 +68,8 @@ namespace helios::gfx
 		uint32_t uavIndex{};
 		uint32_t cbvIndex{};
 		size_t sizeInBytes{};
+
+		std::wstring bufferName{};
 
 		// To be used primarily for constant buffers.
 		void Update(const void* data)
@@ -139,6 +142,7 @@ namespace helios::gfx
 		uint32_t rtvIndex{};
 		
 		Uint2 dimensions{};
+		std::wstring textureName{};
 
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
@@ -273,5 +277,6 @@ namespace helios::gfx
 		ID3D12Resource* const GetResource() const { return renderTexture->GetResource(); }
 
 		std::unique_ptr<Texture> renderTexture{};
+		std::wstring renderTargetName{};
 	};
 }

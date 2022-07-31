@@ -95,6 +95,21 @@ struct Float2
 	float y{};
 };
 
+// Read file to vector
+static void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
+{
+	std::ifstream file(WstringToString(filePath), std::ios::binary | std::ios::ate);
+	size_t fileSizeBytes = static_cast<size_t>(file.tellg());
+
+	data.resize(fileSizeBytes);
+
+	file.seekg(0);
+
+	file.read((char*)data.data(), fileSizeBytes);
+
+	file.close();
+}
+
 static Uint2 GetDimensionFromRect(const RECT& rect)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);

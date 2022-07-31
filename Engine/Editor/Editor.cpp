@@ -22,17 +22,11 @@ namespace helios::editor
 
 		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-		// note(rtarun9 : Uncommenting this line causes some issues (because of the HWND being null, and ImGui internally creates a new window for this).
-		// Currently, multiple viewports is not being used so commenting this out.
-		// Error we recieve upon shutdown (closing window) : 
-		// Line: 850
-		//Expression: hwnd != 0
-
-		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		
 		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 		ImGuiStyle& style = ImGui::GetStyle();
+		
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
 			style.WindowRounding = 0.0f;
@@ -61,7 +55,7 @@ namespace helios::editor
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
 	// and when ECS is setup, it should take only one paramter and make the solution a bit cleaner.
-	void Editor::Render(std::span<std::unique_ptr<helios::scene::Model>> models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext) const
+	void Editor::Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -82,17 +76,23 @@ namespace helios::editor
 				ImGui::EndMainMenuBar();
 			}
 
+			ImGui::ShowDemoWindow();
+
 			// Set clear color & other scene properties.
 			RenderSceneProperties(clearColor);
-
-			// Render scene hierarchy UI.
-			RenderModelProperties(models);
 
 			// Render camera UI.
 			RenderCameraProperties(camera);
 
+			// Render scene hierarchy UI.
+			RenderSceneHierarchy(models);
+
 			// Render scene viewport (After all post processing).
-			RenderSceneViewport(rtDescriptorHandle);
+			// All add model to model list if a path is dragged into scene viewport.
+			RenderSceneViewport(device, rtDescriptorHandle, models);
+
+			// Render content browser panel.
+			RenderContentBrowser();
 
 			// Render and update handles.
 			ImGui::Render();
@@ -164,7 +164,7 @@ namespace helios::editor
 		style.ScrollbarRounding = 16.0f;
 	}
 
-	void Editor::RenderModelProperties(std::span<std::unique_ptr<helios::scene::Model>> models) const
+	void Editor::RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const
 	{
 		ImGui::Begin("Scene Hierarchy");
 		
@@ -182,7 +182,7 @@ namespace helios::editor
 
 				ImGui::TreePop();
 			}
-		}
+		}		
 
 		ImGui::End();
 	}
@@ -197,11 +197,8 @@ namespace helios::editor
 			ImGui::SliderFloat("Movement Speed", &camera->mMovementSpeed, 0.1f, 1000.0f);
 			ImGui::SliderFloat("Rotation Speed", &camera->mRotationSpeed, 0.1f, 250.0f);
 
-			ImGui::SliderFloat("Smoothness Factor", &camera->mSmoothnessFactor, 0.0f, 1.0f);
-
-			ImGui::SliderFloat("Movment Multiplier", &camera->mMovementSmoothnessMultipler, 0.0f, 5.0f);
-			ImGui::SliderFloat("Rotation Multiplier", &camera->mRotationSmoothnessMultipler, 0.0f, 5.0f);
-
+			ImGui::SliderFloat("Friction Factor", &camera->mFrictionFactor, 0.0f, 1.0f);
+			
 			ImGui::TreePop();
 		}
 
@@ -215,10 +212,85 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderSceneViewport(gfx::DescriptorHandle rtDescriptorHandle) const
+	void Editor::RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, std::vector<std::unique_ptr<helios::scene::Model>>& models) const
 	{
 		ImGui::Begin("View Port");
 		ImGui::Image((ImTextureID)(rtDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payLoad = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ASSET_ITEM", ImGuiCond_Once))
+			{
+				// Check if item path dragged in actually belongs to model. If yes, load the model and add to models vector.
+				// If yes, let the model name be the name between final \ and .gltf.
+				// note(rtarun9) : the / and \\ are platform specific, preferring windows format for now.
+				const wchar_t* modelPath = reinterpret_cast<const wchar_t*>(payLoad->Data);
+				if (std::wstring modelPathWStr = modelPath; modelPathWStr.find(L".gltf") != std::wstring::npos)
+				{
+					size_t lastSlash = modelPathWStr.find_last_of(L"\\");
+					size_t lastDot = modelPathWStr.find_last_of(L".");
+
+					// note(rtarun9) : the +1 and -1 are present to get the exact name (example : \\test.gltf should return test.
+					scene::ModelCreationDesc modelCreationDesc
+					{
+						.modelPath = modelPathWStr,
+						.modelName = modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash - 1) + L"-runtime",
+					};
+
+					auto model = std::make_unique<scene::Model>(device, modelCreationDesc);
+					models.push_back(std::move(model));
+				}
+			}
+
+
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::End();
+	}
+
+	void Editor::RenderContentBrowser()
+	{
+		ImGui::Begin("Content Browser");
+
+		// We dont want to allow renderer to see paths other than those of the Assets directory.
+		// If the current path is not assets (i.e within one of the assets/ files), show a backbutton, else disable it.
+		if (mContentBrowserCurrentPath != ASSETS_PATH)
+		{
+			if (ImGui::Button("Back"))
+			{
+				mContentBrowserCurrentPath = mContentBrowserCurrentPath.parent_path();
+			}
+		}
+
+		// If a directory entry is a path (folder), let it be a button which on pressing will set the current content browser path to go within the folder.
+		// Else, just display the file name as text.
+		for (auto& directoryEntry : std::filesystem::directory_iterator(mContentBrowserCurrentPath))
+		{
+			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+			{
+				// If a asset (in our case, model) is being dragged, payload is set to its path.
+				// Null size is + 1 because nulltermination char must also be copied.
+				std::filesystem::path absolutePath = std::filesystem::absolute(directoryEntry.path());
+				const wchar_t* itemPath = absolutePath.c_str();
+				ImGui::SetDragDropPayload("CONTENT_BROWSER_ASSET_ITEM", itemPath, (wcslen(itemPath) + 1) * sizeof(wchar_t));
+				ImGui::EndDragDropSource();
+			}
+
+			if (directoryEntry.is_directory())
+			{
+				if (ImGui::Button(directoryEntry.path().string().c_str()))
+				{
+					// Weird C++ operator for concatanating two paths.
+					mContentBrowserCurrentPath /= directoryEntry.path().filename();
+				}
+			}
+			else
+			{
+				ImGui::TextColored({ 0.9f, 0.9f, 0.8f, 1.0f }, "%s\n", directoryEntry.path().string().c_str());
+			}
+		}
+
 		ImGui::End();
 	}
 
@@ -229,7 +301,7 @@ namespace helios::editor
 
 	void Editor::OnResize(Uint2 dimensions) const
 	{
-		ImGuiIO& io = ImGui::GetIO();
+		ImGui::GetMainViewport()->WorkSize = ImVec2((float)dimensions.x, (float)dimensions.y);
 		ImGui::GetMainViewport()->Size = ImVec2((float)dimensions.x, (float)dimensions.y);
 	}
 }
