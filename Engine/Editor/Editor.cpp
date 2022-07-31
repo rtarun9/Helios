@@ -1,19 +1,15 @@
 #include "Pch.hpp"
+#include "Editor.hpp"
 
-#include "UIManager.hpp"
 #include "Core/Application.hpp"
 
-#include "Graphics/API/GraphicsContext.hpp"
+#include "ImGUI/imgui.h"
+#include "ImGUI/imgui_impl_dx12.h"
+#include "ImGUI/imgui_impl_win32.h"
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
-
-// note(rtarun9) : TODO : ImGui Docking and viewport support.
-
-namespace helios::ui
+namespace helios::editor
 {
-	UIManager::UIManager(gfx::Device* device)
+	Editor::Editor(const gfx::Device* device)
 	{
 		ImGui_ImplWin32_EnableDpiAwareness();
 
@@ -26,13 +22,13 @@ namespace helios::ui
 
 		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		
+
 		// note(rtarun9 : Uncommenting this line causes some issues (because of the HWND being null, and ImGui internally creates a new window for this).
 		// Currently, multiple viewports is not being used so commenting this out.
 		// Error we recieve upon shutdown (closing window) : 
 		// Line: 850
 		//Expression: hwnd != 0
-		
+
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
@@ -55,54 +51,53 @@ namespace helios::ui
 		device->GetSrvCbvUavDescriptor()->OffsetCurrentHandle();
 	}
 
-	void UIManager::BeginFrame() const
-	{
-		if (mShowUI)
-		{
-			ImGui_ImplDX12_NewFrame();
-			ImGui_ImplWin32_NewFrame();
-			ImGui::NewFrame();
-			
-			ImGui::DockSpaceOverViewport(ImGui::GetWindowViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-		}
-	}
-
-	UIManager::~UIManager()
+	Editor::~Editor()
 	{
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
 	}
 
-	void UIManager::Render(const gfx::GraphicsContext* commandList) const
+	// This massive class will do all rendering of UI and its settings / configs within in.
+	// May seem like lot of code squashed into a single function, but this makes the engine code clean
+	// and when ECS is setup, it should take only one paramter and make the solution a bit cleaner.
+	void Editor::Render(std::span<std::unique_ptr<helios::scene::Model>> models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext) const
 	{
 		if (mShowUI)
 		{
+			ImGui_ImplDX12_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+
+			ImGui::DockSpaceOverViewport(ImGui::GetWindowViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+			// Render main menu bar
+			if (ImGui::BeginMainMenuBar())
+			{
+				if (ImGui::BeginMenu("Helios Editor"))
+				{
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMainMenuBar();
+			}
+
+			// Set clear color & other scene properties.
+			RenderSceneProperties(clearColor);
+
+			// Render scene hierarchy UI.
+			RenderModelProperties(models);
+
+			// Render camera UI.
+			RenderCameraProperties(camera);
+
+			// Render scene viewport (After all post processing).
+			RenderSceneViewport(rtDescriptorHandle);
+
+			// Render and update handles.
 			ImGui::Render();
-			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList->GetCommandList());
-		}
-	}
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), graphicsContext->GetCommandList());
 
-	void UIManager::BeginPanel(std::wstring_view uiComponentName) const
-	{
-		if (mShowUI)
-		{
-			ImGui::Begin(WstringToString(uiComponentName).c_str());
-		}
-	}
-
-	void UIManager::EndPanel() const
-	{
-		if (mShowUI)
-		{
-			ImGui::End();
-		}
-	}
-
-	void UIManager::EndFrame(const gfx::GraphicsContext* graphicsContext) const
-	{
-		if (mShowUI)
-		{
 			ImGuiIO& io = ImGui::GetIO(); (void)io;
 			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 			{
@@ -112,15 +107,7 @@ namespace helios::ui
 		}
 	}
 
-	void UIManager::SetClearColor(std::span<float> clearColor) const
-	{
-		if (mShowUI)
-		{
-			ImGui::ColorPicker3 ("Clear Color", clearColor.data(), ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
-		}
-	}
-
-	void UIManager::SetCustomDarkTheme() const
+	void Editor::SetCustomDarkTheme() const
 	{
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.86f, 0.93f, 0.89f, 0.78f);
@@ -177,109 +164,72 @@ namespace helios::ui
 		style.ScrollbarRounding = 16.0f;
 	}
 
-	void UIManager::SliderFloat(std::wstring_view name, float& data, float minExtent, float maxExtent) const
+	void Editor::RenderModelProperties(std::span<std::unique_ptr<helios::scene::Model>> models) const
 	{
-		if (mShowUI)
+		ImGui::Begin("Scene Hierarchy");
+		
+		for (auto& model : models)
 		{
-			ImGui::SliderFloat(WstringToString(name).c_str(), &data, minExtent, maxExtent);
-		}
-	}
+			if (ImGui::TreeNode(WstringToString(model->GetName()).c_str()))
+			{
+				// Scale uniformally along all axises.
+				ImGui::SliderFloat("Scale", &model->GetTransform().data.scale.x, 0.1f, 10.0f);
 
-	void UIManager::SliderFloat3(std::wstring_view name, float& data, float minExtent, float maxExtent) const
-	{
-		if (mShowUI)
-		{
-			ImGui::SliderFloat3(WstringToString(name).c_str(), &data, minExtent, maxExtent);
-		}
-	}
+				model->GetTransform().data.scale = math::XMFLOAT3(model->GetTransform().data.scale.x, model->GetTransform().data.scale.x, model->GetTransform().data.scale.x);
 
-	void UIManager::ShowImage(std::wstring_view name, gfx::DescriptorHandle descriptorHandle, Uint2 dimensions) const
-	{
-		if (mShowUI)
-		{
-			ImGui::Begin(WstringToString(name).c_str());
-			ImGui::Image((ImTextureID)descriptorHandle.cpuDescriptorHandle.ptr, ImVec2(float(dimensions.x), float(dimensions.y)));
-			ImGui::End();
-		}
-	}
+				ImGui::SliderFloat3("Translate", &model->GetTransform().data.translate.x, -10.0f, 10.0f);
+				ImGui::SliderFloat3("Rotate", &model->GetTransform().data.rotation.x, DirectX::XMConvertToRadians(-180.0f), DirectX::XMConvertToRadians(180.0f));
 
-	bool UIManager::CollapsingHeader(std::wstring_view name) const
-	{
-		if (mShowUI)
-		{
-			return ImGui::CollapsingHeader(WstringToString(name).c_str());
+				ImGui::TreePop();
+			}
 		}
 
-		return false;
+		ImGui::End();
 	}
 
-	bool UIManager::BeginMainMenuBar() const
+	void Editor::RenderCameraProperties(scene::Camera* camera) const
 	{
-		if (mShowUI)
+		ImGui::Begin("Camera Properties");
+
+		if (ImGui::TreeNode("Primary Camera"))
 		{
-			return ImGui::BeginMainMenuBar();
-		}
+			// Scale uniformally along all axises.
+			ImGui::SliderFloat("Movement Speed", &camera->mMovementSpeed, 0.1f, 1000.0f);
+			ImGui::SliderFloat("Rotation Speed", &camera->mRotationSpeed, 0.1f, 250.0f);
 
-		return false;
-	}
+			ImGui::SliderFloat("Smoothness Factor", &camera->mSmoothnessFactor, 0.0f, 1.0f);
 
-	void UIManager::EndMainMenuBar() const
-	{
-		if (mShowUI)
-		{
-			ImGui::EndMainMenuBar();
-		}
-	}
+			ImGui::SliderFloat("Movment Multiplier", &camera->mMovementSmoothnessMultipler, 0.0f, 5.0f);
+			ImGui::SliderFloat("Rotation Multiplier", &camera->mRotationSmoothnessMultipler, 0.0f, 5.0f);
 
-	bool UIManager::BeginMenu(std::wstring_view name) const
-	{
-		if (mShowUI)
-		{
-			return ImGui::BeginMenu(WstringToString(name).c_str());
-		}
-
-		return false;
-	}
-
-	void UIManager::EndMenu() const
-	{
-		if (mShowUI)
-		{
-			ImGui::EndMenu();
-		}
-	}
-
-	bool UIManager::TreeNode(std::wstring_view name) const
-	{
-		if (mShowUI)
-		{
-			return ImGui::TreeNode(WstringToString(name).c_str());
-		}
-
-		return false;
-	}
-
-	void UIManager::TreePop() const
-	{
-		if (mShowUI)
-		{
 			ImGui::TreePop();
 		}
+
+		ImGui::End();
 	}
 
-	void UIManager::ShowUI()
+	void Editor::RenderSceneProperties(std::span<float, 4> clearColor) const
 	{
-		mShowUI = true;
+		ImGui::Begin("Scene Properties");
+		ImGui::ColorPicker3("Clear Color", clearColor.data(), ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+		ImGui::End();
 	}
 
-	void UIManager::HideUI()
+	void Editor::RenderSceneViewport(gfx::DescriptorHandle rtDescriptorHandle) const
 	{
-		mShowUI = false;
+		ImGui::Begin("View Port");
+		ImGui::Image((ImTextureID)(rtDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::End();
 	}
 
-	void UIManager::UpdateDisplaySize(Uint2 displaySize)
+	void Editor::ShowUI(bool value)
+	{
+		mShowUI = value;
+	}
+
+	void Editor::OnResize(Uint2 dimensions) const
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		ImGui::GetMainViewport()->Size = ImVec2((float)displaySize.x, (float)displaySize.y);
+		ImGui::GetMainViewport()->Size = ImVec2((float)dimensions.x, (float)dimensions.y);
 	}
 }

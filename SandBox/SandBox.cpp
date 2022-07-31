@@ -16,15 +16,50 @@ void SandBox::OnInit()
 {
 	mDevice = std::make_unique<gfx::Device>();
 
-	scene::ModelCreationDesc sponzaCreationDesc
+	// Load all the scene models.
+	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
-		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-		.modelName = L"Sponza",
+		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+		.modelName = L"DamagedHelmet",
+	};
+	
+	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
+	damagedHelmet->GetTransform().data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+
+	scene::ModelCreationDesc sciFiHelmetCreationDesc
+	{
+		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
+		.modelName = L"SciFiHelmet",
 	};
 
-	mSponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
-	mSponza->GetTransform().data.scale = { 0.2f, 0.2f, 0.2f };
+	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
+	sciFiHelmet->GetTransform().data.translate = {5.0f, 0.0f, 0.0f};
 
+	scene::ModelCreationDesc metalRoughSpheresCreationDesc
+	{
+		.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+		.modelName = L"MetalRoughSpheres",
+	};
+
+	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
+	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
+
+	scene::ModelCreationDesc cubeCreationDesc
+	{
+		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
+		.modelName = L"Cube",
+	};
+
+	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
+	cube->GetTransform().data.translate = { 10.0f, 0.0f, 0.0f };
+
+	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
+	mModels.push_back(std::move(damagedHelmet));
+	mModels.push_back(std::move(sciFiHelmet));
+	mModels.push_back(std::move(metalRoughSpheres));
+	mModels.push_back(std::move(cube));
+
+	// Load scene constant buffer.
 	gfx::BufferCreationDesc sceneBufferCreationDesc
 	{
 		.usage = gfx::BufferUsage::ConstantBuffer,
@@ -33,6 +68,7 @@ void SandBox::OnInit()
 
 	mSceneBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<SceneBuffer>(sceneBufferCreationDesc, std::span<SceneBuffer, 0u>{}));
 
+	// Load pipeline states.
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
 	{
 		.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
@@ -55,6 +91,19 @@ void SandBox::OnInit()
 
 	mOffscreenPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(offscreenPipelineStateCreationDesc));
 	
+	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
+	{
+		.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
+		.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
+		.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.pipelineName = L"Final Render Target Pipeline"
+	};
+
+	mFinalPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(finalRenderPassPipelineStateCreationDesc));
+
+
+	// Load depth stencil texture.
 	gfx::TextureCreationDesc depthStencilTextureCreationDesc
 	{
 		.usage = gfx::TextureUsage::DepthStencil,
@@ -65,6 +114,7 @@ void SandBox::OnInit()
 
 	mDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(depthStencilTextureCreationDesc));
 
+	// Load render targets.
 	gfx::TextureCreationDesc offscreenRenderTargetTextureCreationDesc
 	{
 		.usage = gfx::TextureUsage::RenderTarget,
@@ -75,7 +125,19 @@ void SandBox::OnInit()
 
 	mOffscreenRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(offscreenRenderTargetTextureCreationDesc));
 
-	mUIManager = std::make_unique<ui::UIManager>(mDevice.get());
+	gfx::TextureCreationDesc postProcessAndFinalRenderTargetsTextureCreationDesc
+	{
+		.usage = gfx::TextureUsage::RenderTarget,
+		.dimensions = mDimensions,
+		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.name = L"Final Render Texture"
+	};
+
+	mPostProcessingRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(postProcessAndFinalRenderTargetsTextureCreationDesc));
+	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(postProcessAndFinalRenderTargetsTextureCreationDesc));
+
+	// Init other scene objects.
+	mEditor = std::make_unique<editor::Editor>(mDevice.get());
 
 	mCamera = std::make_unique<scene::Camera>();
 }
@@ -92,7 +154,10 @@ void SandBox::OnUpdate()
 
 	mSceneBuffer->Update(&sceneBufferData);
 
-	mSponza->GetTransform().Update();
+	for (auto& model : mModels)
+	{
+		model->GetTransform().Update();
+	}
 }
 
 void SandBox::OnRender()
@@ -101,7 +166,6 @@ void SandBox::OnRender()
 	gfx::BackBuffer* backBuffer = mDevice->GetCurrentBackBuffer();
 
 	mDevice->BeginFrame();
-	mUIManager->BeginFrame();
 
 	// Configure offscreen render target's.
 	std::array<const gfx::RenderTarget*, 1u> renderTargets
@@ -109,35 +173,17 @@ void SandBox::OnRender()
 		mOffscreenRT.get()
 	};
 
+	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+	
 	// RenderPass 1 : Render the model's to the offscreen render target.
 	{
-		graphicsContext->ResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		graphicsContext->ExecuteResourceBarriers();
 
 		graphicsContext->SetGraphicsPipelineState(mOffscreenPipelineState.get());
 		graphicsContext->SetRenderTarget(renderTargets, mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-		
-		if (mUIManager->BeginMainMenuBar())
-		{
-			if (mUIManager->BeginMenu(L"Helios Editor"))
-			{
-				mUIManager->EndMenu();
-			}
-
-			mUIManager->EndMainMenuBar();
-		}
-
-		mUIManager->BeginPanel(L"Scene Settings");
-		mUIManager->SetClearColor(clearColor);
-		mUIManager->EndPanel();
-
-		mUIManager->BeginPanel(L"Scene Hierarchy");
-		mCamera->UpdateUI(mUIManager.get());
-		mSponza->UpdateTransformUI(mUIManager.get());
-		mUIManager->EndPanel();
 
 		graphicsContext->ClearRenderTargetView(renderTargets, clearColor);
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
@@ -147,22 +193,26 @@ void SandBox::OnRender()
 			.sceneBufferIndex = mSceneBuffer->cbvIndex
 		};
 
-		mSponza->Render(graphicsContext.get(), sceneRenderResources);
+		for (auto& model : mModels)
+		{
+			model->Render(graphicsContext.get(), sceneRenderResources);
+		}
 
-		graphicsContext->ResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	
-	// Render pass 2 : Render offscreen rt to swapchain's backbuffer and present.
-	// The UI is directly rendered on swapchain's backbuffer rather than render target.
+	// Render pass 2 : Render offscreen rt to post processed RT (after all processing has occured).
 	{
-		graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		graphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		graphicsContext->ExecuteResourceBarriers();
 
 		graphicsContext->SetGraphicsPipelineState(mPipelineState.get());
-		graphicsContext->SetRenderTarget(backBuffer, mDepthStencilTexture.get());
+		graphicsContext->SetRenderTarget(mPostProcessingRT.get(), mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		graphicsContext->ClearRenderTargetView(backBuffer, std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
+		graphicsContext->ClearRenderTargetView(mPostProcessingRT.get(), std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
 		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
@@ -170,14 +220,48 @@ void SandBox::OnRender()
 		{
 			.textureIndex = mOffscreenRT->renderTexture->srvIndex,
 		};
-		
-		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
-		mUIManager->Render(graphicsContext.get());
-		mUIManager->EndFrame(graphicsContext.get());
 
-		graphicsContext->ResourceBarrier(backBuffer->backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 	}
-	
+
+	// Render pass 3 : The RT that is to be displayed to swapchain is processed. For now, UI is rendered in this RT as well.
+	{
+		graphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext->AddResourceBarrier(mFinalRT->GetResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		graphicsContext->ExecuteResourceBarriers();
+
+		graphicsContext->SetGraphicsPipelineState(mFinalPipelineState.get());
+		graphicsContext->SetRenderTarget(mFinalRT.get(), mDepthStencilTexture.get());
+		graphicsContext->SetDefaultViewportAndScissor();
+		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
+
+		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
+		RenderTargetRenderResources rtvRenderResources
+		{
+			.textureIndex = mPostProcessingRT->renderTexture->srvIndex,
+		};
+
+		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
+
+		mEditor->Render(mModels, mCamera.get(), clearColor, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
+	}
+
+	// Render pass 3 : Copy the final RT to the swapchain
+	// Render the editor.
+	{
+		graphicsContext->AddResourceBarrier(mFinalRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		graphicsContext->AddResourceBarrier(backBuffer->GetResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
+		graphicsContext->ExecuteResourceBarriers();
+
+		graphicsContext->CopyResource(mFinalRT->GetResource(), backBuffer->GetResource());
+
+		graphicsContext->AddResourceBarrier(backBuffer->GetResource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
+		graphicsContext->ExecuteResourceBarriers();
+	}
+
+
 	mDevice->EndFrame();
 
 	mDevice->ExecuteContext(std::move(graphicsContext));
@@ -195,12 +279,12 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 {
 	if (isKeyDown && keycode == VK_SPACE)
 	{
-		mUIManager->HideUI();
+		mEditor->ShowUI(false);
 	}
 
 	if (isKeyDown && keycode == VK_SHIFT)
 	{
-		mUIManager->ShowUI();
+		mEditor->ShowUI(true);
 	}
 
 	mCamera->HandleInput(keycode, isKeyDown);
@@ -214,7 +298,7 @@ void SandBox::OnResize()
 
 		mDimensions = core::Application::GetClientDimensions();
 
-		mUIManager->UpdateDisplaySize(core::Application::GetClientDimensions());
+		mEditor->OnResize(core::Application::GetClientDimensions());
 
 		mAspectRatio = static_cast<float>(mDimensions.x) / static_cast<float>(mDimensions.y);
 	}

@@ -4,7 +4,7 @@
 #include "Core/Application.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "STB/stb_image.h"
 
 // Some operator overloads are in the namespace, hence declaring it in global namespace here.
 using namespace Microsoft::WRL;
@@ -383,7 +383,7 @@ namespace helios::gfx
 
 			texture.dsvIndex = CreateDsv(dsvCreationDesc, texture.allocation->resource.Get());
 		}
-
+		
 		// Create RTV (if applicable).
 		if (textureCreationDesc.usage == TextureUsage::RenderTarget)
 		{

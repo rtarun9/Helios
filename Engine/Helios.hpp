@@ -6,7 +6,7 @@
 #include "Core/Engine.hpp"
 #include "Core/Timer.hpp"
 
-#include "UI/UIManager.hpp"
+#include "Editor/Editor.hpp"
 
 #include "Graphics/API/Device.hpp"
 #include "Graphics/API/Descriptor.hpp"

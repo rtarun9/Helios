@@ -33,16 +33,6 @@ project "Helios"
     objdir "Bin/Obj/%{cfg.buildcfg}"
 
     debugdir "."
-    
-    links 
-    { 
-        "d3d12", 
-        "dxgi",
-        "dxguid", 
-        "d3dcompiler",
-        "user32",
-        "gdi32"
-    }
 
     includedirs
     {
@@ -60,7 +50,6 @@ project "Helios"
         "SandBox/**.cpp",
         "Shaders/**.hlsl",
         "Shaders/**.hlsli",
-        "ThirdParty/D3D12MemoryAllocator/D3D12MemAlloc.cpp"
     }
 
     pchsource "Engine/Pch.cpp"
@@ -104,3 +93,30 @@ project "Helios"
 
     filter "files:**.hlsli"
         buildaction "None"
+
+    filter {}
+
+        -- link system libs.
+        libdirs {}
+
+        links 
+        {    
+            "d3d12", 
+            "dxgi",
+            "dxguid", 
+            "d3dcompiler",
+            "user32",
+            "gdi32",
+            "ThirdParty"
+        }
+
+        -- link thirdparty libs.
+        libdirs "Bin/%{cfg.buildcfg}"
+        links "ThirdParty"
+        
+        -- run thirdparty premake scripts.
+        group "ThirdParty"
+        include "ThirdParty/premake.lua"
+
+
+

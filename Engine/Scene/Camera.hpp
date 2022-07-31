@@ -4,7 +4,6 @@
 
 #include "Graphics/API/Resources.hpp"
 #include "Graphics/API/Device.hpp"
-#include "UI/UIManager.hpp"
 
 namespace helios::scene
 {
@@ -39,16 +38,16 @@ namespace helios::scene
 	class Camera
 	{
 	public:
-		Camera(float movementSpeed = 150.0f, float rotationSpeed = 5.0f);
+		Camera(float movementSpeed = 500.0f, float rotationSpeed = 5.0f);
 
 		void HandleInput(uint8_t keycode, bool isKeyDown);
 
 		void Update(float deltaTime);
-		void UpdateUI(const ui::UIManager* uiManager);
 
 		DirectX::XMMATRIX GetViewMatrix() const;
 
 	public:
+		// The member variables are made public so the Editor can access it.
 		// note(rtarun9) : Usually member variables are stored in XMFloat3 / XmFloat4x4 types, but in some cases when no operations are done on some
 		// member variables (i.e constant world orientation, etc), they are directly stored in SIMD compatible types.
 		const DirectX::XMVECTOR mWorldFront{ DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f) };
@@ -66,7 +65,7 @@ namespace helios::scene
 
 		// Movement speed is for WASD
 		// Rotation speed is for orientation
-		float mMovementSpeed{ 150.0f };
+		float mMovementSpeed{ 500.0f };
 		float mRotationSpeed{ 5.0f };
 
 		// Used to control how fast or slow to lerp to rest position. For camera rotation / movement, the smoothness factor is multiplied by the corresponding SmoothnessMultiplier.

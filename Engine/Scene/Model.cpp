@@ -1,7 +1,5 @@
 #include "Pch.hpp"
 
-#include "UI/UIManager.hpp"
-
 #include "Core/Helpers.hpp"
 
 #include "Common/BindlessRS.hlsli"
@@ -23,7 +21,6 @@ namespace helios::scene
 		mModelPath = modelCreationDesc.modelPath;
 		mModelName = modelCreationDesc.modelName;
 
-		// Placed here as it will be used in both braches : either if model is already loaded or not.
 		gfx::BufferCreationDesc transformBufferCreationDesc
 		{
 			.usage = gfx::BufferUsage::ConstantBuffer,
@@ -43,17 +40,6 @@ namespace helios::scene
 		tinygltf::TinyGLTF context{};
 
 		tinygltf::Model model{};
-
-		// If a model with same path has already been loaded previously.
-		//auto loadedModel = sLoadedGLTFModels.find(mModelPath);
-
-		//if (loadedModel != sLoadedGLTFModels.end())
-		//{ 
-		//	mMeshes = loadedModel->second.mMeshes;
-		//
-		//	return;
-		//}
-
 
 		if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
 		{
@@ -75,20 +61,19 @@ namespace helios::scene
 		{
 			LoadNode(device, modelCreationDesc, nodeIndex, model);
 		}
-
-		//sLoadedGLTFModels[mModelPath] = *this;
 	}
 
 	void Model::LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model)
 	{
-		if (nodeIndex < 0)
-		{
-			return;
-		}
-
 		tinygltf::Node& node = model.nodes[nodeIndex];
 		if (node.mesh < 0)
 		{
+			// Load children immediatly, as it may have some.
+			for (const int& childrenNodeIndex : node.children)
+			{
+				LoadNode(device, modelCreationDesc, childrenNodeIndex, model);
+			}
+
 			return;
 		}
 
@@ -366,21 +351,6 @@ namespace helios::scene
 		}
 	}
 
-	void Model::UpdateTransformUI(const ui::UIManager* uiManager)
-	{
-		if (uiManager->TreeNode(mModelName))
-		{
-			// Scale uniformally along all axises.
-			uiManager->SliderFloat(L"Scale", mTransform.data.scale.x, 0.1f, 10.0f);
-
-			mTransform.data.scale = math::XMFLOAT3(mTransform.data.scale.x, mTransform.data.scale.x, mTransform.data.scale.x);
-
-			uiManager->SliderFloat3(L"Translate", mTransform.data.translate.x, -10.0f, 10.0f);
-			uiManager->SliderFloat3(L"Rotate", mTransform.data.rotation.x, -90.0f, 90.0f);
-
-			uiManager->TreePop();
-		}
-	}
 
 	void Model::Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
 	{

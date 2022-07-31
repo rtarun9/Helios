@@ -2,7 +2,6 @@
 
 #include "Light.hpp"
 
-#include "imgui.h"
 
 /*
 namespace helios::gfx

@@ -19,7 +19,7 @@ public:
 	void OnResize() override;
 
 private:
-	std::unique_ptr<helios::scene::Model> mSponza{};
+	std::vector<std::unique_ptr<helios::scene::Model>> mModels{};
 
 	std::unique_ptr<helios::scene::Camera> mCamera{};
 
@@ -29,8 +29,15 @@ private:
 	
 	std::unique_ptr<helios::gfx::RenderTarget> mOffscreenRT{};
 
+	// All post processing effects are processed and stored in here (final result of the main scene).
+	std::unique_ptr<helios::gfx::RenderTarget> mPostProcessingRT{};
+
+	// Contains the final image that is to be rendered to the swapchain.
+	std::unique_ptr<helios::gfx::RenderTarget> mFinalRT{};
+
 	std::unique_ptr<helios::gfx::PipelineState> mOffscreenPipelineState{};
+	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 
-	std::unique_ptr<helios::ui::UIManager> mUIManager{};
+	std::unique_ptr<helios::editor::Editor> mEditor{};
 };

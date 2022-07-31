@@ -28,7 +28,6 @@ namespace helios::scene
 		TransformComponent data{};
 		std::unique_ptr<gfx::Buffer> transformBuffer{};
 
-		// note(rtarun9) : Making an exception here where view and projection matrix are not wrapped into a struct, for code simplicity.
 		void Update()
 		{
 			DirectX::XMVECTOR scalingVector = DirectX::XMLoadFloat3(&data.scale);
@@ -84,15 +83,15 @@ namespace helios::scene
 	// Model class uses tinygltf for loading GLTF models.
 	// Currently, only GLTF model loading is supported. This is mostly because of the much faster load times of this mesh type compared to .obj, .fbx, etc.
 	// Most smart pointers are shared since multiple model's may have been created from the same path, so they refer / point to same texture / mesh etc.
-	// note(rtarun9) : CURRENTLY THIS CLASS DOES NOT HANDLE CHECKING OF MODEL IS ALREADY LOADED : THERE SEEMS TO BE SOME PROBLEM WITH THE USE OF UNIQUE_PTR's.
+	// note(rtarun9) : CURRENTLY THIS CLASS DOES NOT HANDLE CHECKING OF MODEL IS ALREADY LOADED : THERE SEEMS TO BE SOME PROBLEM WITH THE USE OF UNIQUE_PTR's IN INTERNAL MEMBER VARIABLES.
 	class Model
 	{
 	public:
+		Model() = default;
 		Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc);
 
 		Transform& GetTransform() { return mTransform; };
-
-		void UpdateTransformUI(const ui::UIManager* uiManager);
+		std::wstring GetName() const { return mModelName; }
 
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 
@@ -108,8 +107,5 @@ namespace helios::scene
 		std::wstring mModelPath{};
 		std::wstring mModelName{};
 		std::wstring mModelDirectory{};
-
-		// Holds all the models loaded in (key : model path) format. If model has already been loaded, it need not go through loading process again.
-		//static inline std::map<std::wstring, Model> sLoadedGLTFModels{};
 	};
 }

@@ -126,20 +126,6 @@ namespace helios::scene
 		math::XMStoreFloat3(&mCameraRight, cameraRight);
 	}
 
-	void Camera::UpdateUI(const ui::UIManager* uiManager)
-	{
-		if (uiManager->CollapsingHeader(L"Camera Settings"))
-		{
-			// Scale uniformally along all axises.
-			uiManager->SliderFloat(L"Movement Speed", mMovementSpeed, 0.1f, 1000.0f);
-			uiManager->SliderFloat(L"Rotation Speed", mRotationSpeed, 0.1f, 250.0f);
-			uiManager->SliderFloat(L"Smoothness Factor", mSmoothnessFactor, 0.0f, 1.0f);
-
-			uiManager->SliderFloat(L"Movment Multiplier", mMovementSmoothnessMultipler, 0.0f, 5.0f);
-			uiManager->SliderFloat(L"Rotation Multiplier", mRotationSmoothnessMultipler, 0.0f, 5.0f);
-		}
-	}
-
 	math::XMMATRIX Camera::GetViewMatrix() const
 	{
 		return mViewMatrix;

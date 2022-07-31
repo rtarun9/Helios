@@ -251,6 +251,7 @@ namespace helios::gfx
 	class Device;
 	class GraphicsContext;
 
+	// note(rtarun9) : TODO : HANDLE RESIZING.
 	struct RenderTarget
 	{
 		// Create all buffers.
