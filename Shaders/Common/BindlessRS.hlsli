@@ -53,9 +53,29 @@ struct MeshViewerRenderResources
     uint emissiveTextureIndex;
 };
 
+struct PBRRenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint normalBufferIndex;
+    uint tangetBufferIndex;
+
+    uint transformBufferIndex;
+
+    uint sceneBufferIndex;
+    uint lightBufferIndex;
+
+    uint albedoTextureIndex;
+    uint metalRoughnessTextureIndex;
+    uint normalTextureIndex;
+    uint aoTextureIndex;
+    uint emissiveTextureIndex;
+};
+
 struct SceneRenderResources
 {
     uint sceneBufferIndex;
+    uint lightBufferIndex;
 };
 
 struct RenderTargetRenderResources
@@ -63,6 +83,9 @@ struct RenderTargetRenderResources
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint textureIndex;
+
+    // For exposure and other scene properties.
+    uint sceneBufferIndex;
 };
 
 #endif

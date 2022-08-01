@@ -380,7 +380,7 @@ namespace helios::scene
 		{
 			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
 
-			MeshViewerRenderResources pbrRenderResources
+			PBRRenderResources pbrRenderResources
 			{
 				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
 				.textureBufferIndex = gfx::Buffer::GetSrvIndex(mesh.textureCoordsBuffer.get()),
@@ -389,7 +389,8 @@ namespace helios::scene
 
 				.transformBufferIndex = gfx::Buffer::GetCbvIndex(mTransform.transformBuffer.get()),
 				.sceneBufferIndex = sceneRenderResources.sceneBufferIndex,
-				
+				.lightBufferIndex = sceneRenderResources.lightBufferIndex,
+
 				.albedoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.albedoTexture.get()),
 				.metalRoughnessTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.metalRoughnessTexture.get()),
 				.normalTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.normalTexture.get()),

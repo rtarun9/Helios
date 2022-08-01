@@ -44,7 +44,9 @@ namespace helios::scene
 
 		void Update(float deltaTime);
 
-		DirectX::XMMATRIX GetViewMatrix() const;
+		DirectX::XMMATRIX GetViewMatrix() const { return mViewMatrix; }
+		DirectX::XMFLOAT3 GetCameraPosition() const { return mCameraPosition; }
+		DirectX::XMFLOAT3 GetCameraTarget() const { return mCameraTarget; }
 
 	public:
 		// The member variables are made public so the Editor can access it.

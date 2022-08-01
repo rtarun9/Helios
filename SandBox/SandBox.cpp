@@ -44,20 +44,22 @@ void SandBox::OnInit()
 	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
 	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
 
-	//scene::ModelCreationDesc sponzaCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-	//	.modelName = L"Sponza",
-	//};
-	//
-	//auto sponza  = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
-	//sponza->GetTransform().data.scale = { 0.2f, 0.2f, 0.2f };
-	//sponza->GetTransform().data.translate = { 0.0f, -10.0f, 0.0f };
-
 	mModels.push_back(std::move(damagedHelmet));
 	mModels.push_back(std::move(sciFiHelmet));
 	mModels.push_back(std::move(metalRoughSpheres));
-	//mModels.push_back(std::move(sponza));
+	
+	// Load lights and the common static light buffer.
+	scene::Light::CreateLightDataBuffer(mDevice.get());
+
+	scene::LightCreationDesc directionalLightCreationDesc
+	{
+		.lightNumber = 0u,
+		.lightType = scene::LightTypes::DirectionalLightData
+	};
+
+	auto directionalLight = std::make_unique<scene::Light>(directionalLightCreationDesc);
+
+	mLights.push_back(std::move(directionalLight));
 
 	// Load scene constant buffer.
 	gfx::BufferCreationDesc sceneBufferCreationDesc
@@ -80,16 +82,16 @@ void SandBox::OnInit()
 
 	mPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(graphicsPipelineStateCreationDesc));
 	
-	gfx::GraphicsPipelineStateCreationDesc offscreenPipelineStateCreationDesc
+	gfx::GraphicsPipelineStateCreationDesc pbrPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/MeshViewer/MeshViewerVS.cso",
-		.psShaderPath = L"Shaders/MeshViewer/MeshViewerPS.cso",
+		.vsShaderPath = L"Shaders/PBR/PBRVS.cso",
+		.psShaderPath = L"Shaders/PBR/PBRPS.cso",
 		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
-		.pipelineName = L"Offscreen Render Target Pipeline"
+		.pipelineName = L"PBR Pipeline"
 	};
 
-	mOffscreenPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(offscreenPipelineStateCreationDesc));
+	mPBRPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrPipelineStateCreationDesc));
 	
 	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
 	{
@@ -157,8 +159,11 @@ void SandBox::OnUpdate()
 
 	SceneBuffer sceneBufferData = 
 	{
+		.cameraPosition = mCamera->GetCameraPosition(),
+		.cameraTarget = mCamera->GetCameraTarget(),
 		.viewMatrix = mCamera->GetViewMatrix(),
-		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 1000.0f)
+		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 1000.0f),
+		.exposure = 1.0f,
 	};
 
 	mSceneBuffer->Update(&sceneBufferData);
@@ -167,6 +172,8 @@ void SandBox::OnUpdate()
 	{
 		model->GetTransform().Update();
 	}
+
+	scene::Light::Update();
 }
 
 void SandBox::OnRender()
@@ -183,13 +190,14 @@ void SandBox::OnRender()
 	};
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+	static float exposure{ 1.0f };
 	
 	// RenderPass 1 : Render the model's to the offscreen render target.
 	{
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		graphicsContext->ExecuteResourceBarriers();
 
-		graphicsContext->SetGraphicsPipelineState(mOffscreenPipelineState.get());
+		graphicsContext->SetGraphicsPipelineState(mPBRPipelineState.get());
 		graphicsContext->SetRenderTarget(renderTargets, mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -199,7 +207,8 @@ void SandBox::OnRender()
 
 		SceneRenderResources sceneRenderResources
 		{
-			.sceneBufferIndex = mSceneBuffer->cbvIndex
+			.sceneBufferIndex = mSceneBuffer->cbvIndex,
+			.lightBufferIndex = scene::Light::GetCbvIndex()
 		};
 
 		for (auto& model : mModels)
@@ -250,11 +259,12 @@ void SandBox::OnRender()
 		RenderTargetRenderResources rtvRenderResources
 		{
 			.textureIndex = mPostProcessingRT->renderTexture->srvIndex,
+			.sceneBufferIndex = mSceneBuffer->cbvIndex
 		};
 
 		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mModels, mCamera.get(), clearColor, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
+		mEditor->Render(mDevice.get(), mModels, mLights, mCamera.get(), clearColor, exposure, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swapchain
@@ -281,6 +291,7 @@ void SandBox::OnRender()
 
 void SandBox::OnDestroy()
 {
+	scene::Light::DestroyLightDataBuffer();
 	mEditor.reset();
 }
 

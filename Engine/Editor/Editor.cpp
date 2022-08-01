@@ -55,7 +55,7 @@ namespace helios::editor
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
 	// and when ECS is setup, it should take only one paramter and make the solution a bit cleaner.
-	void Editor::Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, scene::Camera* camera, std::span<float, 4> clearColor, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, std::vector<std::unique_ptr<helios::scene::Light>>& lights, scene::Camera* camera, std::span<float, 4> clearColor, float& exposure, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -79,13 +79,16 @@ namespace helios::editor
 			ImGui::ShowDemoWindow();
 
 			// Set clear color & other scene properties.
-			RenderSceneProperties(clearColor);
+			RenderSceneProperties(clearColor, exposure);
 
 			// Render camera UI.
 			RenderCameraProperties(camera);
 
 			// Render scene hierarchy UI.
 			RenderSceneHierarchy(models);
+
+			// Render Light property menu.
+			RenderLightProperties(lights);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
@@ -205,10 +208,36 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderSceneProperties(std::span<float, 4> clearColor) const
+	void Editor::RenderSceneProperties(std::span<float, 4> clearColor, float& exposure) const
 	{
 		ImGui::Begin("Scene Properties");
 		ImGui::ColorPicker3("Clear Color", clearColor.data(), ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+		ImGui::SliderFloat("Exposure", &exposure, 0.0f, 5.0f);
+		ImGui::End();
+	}
+
+	void Editor::RenderLightProperties(std::vector<std::unique_ptr<helios::scene::Light>>& lights) const
+	{
+		ImGui::Begin("Light Properties");
+
+		for (auto& light : lights)
+		{
+			if (light->GetLightType() == scene::LightTypes::DirectionalLightData)
+			{
+				if (ImGui::TreeNode("Directional Light " + light->GetLightNumber()))
+				{
+					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData().lightColor[light->GetLightNumber()].x);
+
+					// note(rtarun9) : Hardcoded ! NEED TO CHANGE
+					static float sunAngle{-153.0};
+					ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
+					scene::Light::GetLightBufferData().lightPosition[light->GetLightNumber()] = math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
+
+					ImGui::TreePop();
+				}
+			}
+		}
+
 		ImGui::End();
 	}
 
@@ -227,6 +256,8 @@ namespace helios::editor
 				const wchar_t* modelPath = reinterpret_cast<const wchar_t*>(payLoad->Data);
 				if (std::wstring modelPathWStr = modelPath; modelPathWStr.find(L".gltf") != std::wstring::npos)
 				{
+					// Needed if two models have same name they end up having same transform.
+					static int modelNumber{};
 					size_t lastSlash = modelPathWStr.find_last_of(L"\\");
 					size_t lastDot = modelPathWStr.find_last_of(L".");
 
@@ -234,7 +265,7 @@ namespace helios::editor
 					scene::ModelCreationDesc modelCreationDesc
 					{
 						.modelPath = modelPathWStr,
-						.modelName = modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash - 1) + L"-runtime",
+						.modelName = modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash - 1) + std::to_wstring(modelNumber++),
 					};
 
 					auto model = std::make_unique<scene::Model>(device, modelCreationDesc);

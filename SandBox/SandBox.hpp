@@ -20,6 +20,7 @@ public:
 
 private:
 	std::vector<std::unique_ptr<helios::scene::Model>> mModels{};
+	std::vector<std::unique_ptr<helios::scene::Light>> mLights{};
 
 	std::unique_ptr<helios::scene::Camera> mCamera{};
 
@@ -33,7 +34,7 @@ private:
 	// Contains the final image that is to be rendered to the swapchain.
 	std::unique_ptr<helios::gfx::RenderTarget> mFinalRT{};
 
-	std::unique_ptr<helios::gfx::PipelineState> mOffscreenPipelineState{};
+	std::unique_ptr<helios::gfx::PipelineState> mPBRPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 

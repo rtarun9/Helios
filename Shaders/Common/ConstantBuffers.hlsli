@@ -21,7 +21,7 @@
 #endif
 
 // Constants that are also shared between hlsl and C++.
-static const uint TOTAL_POINT_LIGHTS = 1;
+static const uint TOTAL_POINT_LIGHTS = 0;
 static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
 
 // The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.
@@ -42,43 +42,21 @@ ConstantBufferStruct TransformBuffer
 
 ConstantBufferStruct SceneBuffer
 {
+    float3 cameraPosition;
+    float3 cameraTarget;
     float4x4 viewMatrix;
     float4x4 projectionMatrix;
-};
-
-ConstantBufferStruct ShadowMappingData
-{
-    float4x4 lightViewMatrix;
-    float4x4 lightProjectionMatrix;
-};
-
-ConstantBufferStruct LightData
-{
-    // Note : lightPosition essentially stores the light direction if the type is directional light.
-    float4 lightPosition[TOTAL_LIGHTS];
-    float4 lightColor[TOTAL_LIGHTS];
-    float radius[TOTAL_LIGHTS];
-};
-
-ConstantBufferStruct RenderTargetSettings
-{
     float exposure;
 };
 
-ConstantBufferStruct CameraData
+ConstantBufferStruct LightBuffer
 {
-    float3 cameraPosition;
-    float4x4 viewMatrix;
-};
-
-ConstantBufferStruct MaterialData
-{
-    float3 albedo;
-    float metallicFactor;
-    float roughnessFactor;
-    float ao;
-    float2 padding;
-    float3 emissive;
+    // Note : lightPosition essentially stores the light direction if the type is directional light.
+    // The shader can differentiate between directional and point lights based on the 'w' value. If 1 (i.e it is a position), light is a point light, while
+    // if it is zero, then it is a light direction.
+    float4 lightPosition[TOTAL_LIGHTS];
+    float4 lightColor[TOTAL_LIGHTS];
+    float radius[TOTAL_LIGHTS];
 };
 
 #endif

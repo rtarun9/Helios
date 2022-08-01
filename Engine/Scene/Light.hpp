@@ -1,67 +1,54 @@
 #pragma once
 
-
 #include "Pch.hpp"
-/*
-#include "Graphics/API/ConstantBuffer.hpp"
 
-#include "Graphics/Model/Model.hpp"
+#include "Graphics/API/Resources.hpp"
+#include "Graphics/API/Device.hpp"
 
-namespace helios::gfx
+#include "Model.hpp"
+
+#include "Common/ConstantBuffers.hlsli"
+
+namespace helios::scene
 {
-	struct PointLightData
-	{
-		float radius{0.05f};
-		DirectX::XMFLOAT4 lightPosition{};
-		DirectX::XMFLOAT4 lightColor{1.0f, 1.0f, 1.0f, 1.0f};
-	};
-
-	struct DirectionalLightData
-	{
-		float sunAngle{33.0f};
-		DirectX::XMFLOAT4 lightColor{1.0f, 1.0f, 1.0f, 1.0f};
-	};
-
 	enum class LightTypes : uint8_t
 	{
 		PointLightData,
 		DirectionalLightData
 	};
 
+	struct LightCreationDesc
+	{
+		uint32_t lightNumber{};
+		LightTypes lightType{};
+	};
+
 	static constexpr uint8_t UNSPECIFIED_LIGHT_NUMBER = -1;
 	static constexpr const wchar_t *SPHERE_MODEL_PATH = L"Assets/Models/Sphere/scene.gltf";
 
 	// This common light is used for all types of Light (Point, directional as of now and in future (area, punctual etc)) used in the Engine.
-	// It is made common for simplicity (similar to how the Texture Class is common for TextureUAV, Texture to be loaded using stbi, etc).
-	// This is also why there is a common constant buffer for all light types.
+	// This is also why there is a common buffer for all light types.
 	// Class inherits from Model class just for visualization of punctual lights. 
+	// note(rtarun9) : No support for point lights for now, simply because they wont be used and require differnet ways of representing the lights.
 	class Light : public Model
 	{
 	public:
-		static void InitLightDataCBuffer(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor);
-		// -1 is default light number. Stands for unspecified.
-		void Init(ID3D12Device* const device, ID3D12GraphicsCommandList* const commandList, gfx::Descriptor& srvCbDescriptor, std::variant<PointLightData, DirectionalLightData> lightData, uint32_t lightNumber = UNSPECIFIED_LIGHT_NUMBER);
+		static void CreateLightDataBuffer(const gfx::Device* device);
+		static void DestroyLightDataBuffer();
 
-		void UpdateData();
+		Light(const LightCreationDesc& lightCreationDesc);
+		uint32_t GetLightNumber() const { return mLightNumber; }
+		LightTypes GetLightType() const { return mLightType; }
 
-		// Only point lights will have a transform component.
-		void UpdateTransformData(ID3D12GraphicsCommandList* const commandList, DirectX::XMMATRIX& projectionMatrix, DirectX::XMMATRIX& viewMatrix);
-
-		uint32_t GetLightIndex() const { return m_LightNumber; };
-		uint32_t GetLightType() const { return m_LightType; };
-
-		static LightData& GetLightData() { return s_LightData.GetBufferData(); }
-		static uint32_t GetLightDataCBufferIndex() { return s_LightData.GetBufferIndex(); }
+		static LightBuffer& GetLightBufferData() { return sLightBufferData; }
+		static uint32_t GetCbvIndex() { return sLightBuffer->cbvIndex; }
+		static void Update();
 
 	private:
-		uint32_t m_LightNumber{};
-		
-		// This is used as certain functions are only applicable for certain light types.
-		// ex : UpdateTransformData are to be used only if the light type is a punctual light.
-		uint32_t m_LightType{};
-		std::variant<PointLightData, DirectionalLightData> m_LightData{};
-		
-		static inline gfx::ConstantBuffer<LightData> s_LightData{};
+		LightTypes mLightType{};
+		uint32_t mLightNumber{};
+
+		static inline LightBuffer sLightBufferData{};
+		static inline std::unique_ptr<gfx::Buffer> sLightBuffer{};
 	};
 }
-*/

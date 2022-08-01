@@ -212,7 +212,7 @@ namespace helios::gfx
 		mComputeCommandQueue->FlushQueue();
 
 		// Resize the swap chain's back buffer.
-		for (int i = 0; i < NUMBER_OF_FRAMES; i++)
+		for (int i  : std::views::iota(0u, NUMBER_OF_FRAMES))
 		{
 			mBackBuffers[i].backBufferResource.Reset();
 			mFrameFenceValues[i] = mFrameFenceValues[mCurrentBackBufferIndex];

@@ -125,9 +125,4 @@ namespace helios::scene
 		math::XMStoreFloat3(&mCameraUp, cameraUp);
 		math::XMStoreFloat3(&mCameraRight, cameraRight);
 	}
-
-	math::XMMATRIX Camera::GetViewMatrix() const
-	{
-		return mViewMatrix;
-	}
 }
