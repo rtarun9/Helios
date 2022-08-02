@@ -3,6 +3,8 @@
 
 #include "Core/Application.hpp"
 
+#include "Scene/Scene.hpp"
+
 #include "ImGUI/imgui.h"
 #include "ImGUI/imgui_impl_dx12.h"
 #include "ImGUI/imgui_impl_win32.h"
@@ -54,8 +56,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	// and when ECS is setup, it should take only one paramter and make the solution a bit cleaner.
-	void Editor::Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, std::vector<std::unique_ptr<helios::scene::Light>>& lights, scene::Camera* camera, std::span<float, 4> clearColor, float& exposure, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(const gfx::Device* device, scene::Scene* scene, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -79,20 +80,20 @@ namespace helios::editor
 			ImGui::ShowDemoWindow();
 
 			// Set clear color & other scene properties.
-			RenderSceneProperties(clearColor, exposure);
+			RendererProperties(clearColor, postProcessBufferData);
 
 			// Render camera UI.
-			RenderCameraProperties(camera);
+			RenderCameraProperties(scene->mCamera.get());
 
 			// Render scene hierarchy UI.
-			RenderSceneHierarchy(models);
+			RenderSceneHierarchy(scene->mModels);
 
 			// Render Light property menu.
-			RenderLightProperties(lights);
+			RenderLightProperties(scene->mLights);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
-			RenderSceneViewport(device, rtDescriptorHandle, models);
+			RenderSceneViewport(device, rtDescriptorHandle, scene);
 
 			// Render content browser panel.
 			RenderContentBrowser();
@@ -176,12 +177,12 @@ namespace helios::editor
 			if (ImGui::TreeNode(WstringToString(model->GetName()).c_str()))
 			{
 				// Scale uniformally along all axises.
-				ImGui::SliderFloat("Scale", &model->GetTransform().data.scale.x, 0.1f, 10.0f);
+				ImGui::SliderFloat("Scale", &model->GetTransform()->data.scale.x, 0.1f, 10.0f);
 
-				model->GetTransform().data.scale = math::XMFLOAT3(model->GetTransform().data.scale.x, model->GetTransform().data.scale.x, model->GetTransform().data.scale.x);
+				model->GetTransform()->data.scale = math::XMFLOAT3(model->GetTransform()->data.scale.x, model->GetTransform()->data.scale.x, model->GetTransform()->data.scale.x);
 
-				ImGui::SliderFloat3("Translate", &model->GetTransform().data.translate.x, -10.0f, 10.0f);
-				ImGui::SliderFloat3("Rotate", &model->GetTransform().data.rotation.x, DirectX::XMConvertToRadians(-180.0f), DirectX::XMConvertToRadians(180.0f));
+				ImGui::SliderFloat3("Translate", &model->GetTransform()->data.translate.x, -10.0f, 10.0f);
+				ImGui::SliderFloat3("Rotate", &model->GetTransform()->data.rotation.x, DirectX::XMConvertToRadians(-180.0f), DirectX::XMConvertToRadians(180.0f));
 
 				ImGui::TreePop();
 			}
@@ -208,11 +209,11 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderSceneProperties(std::span<float, 4> clearColor, float& exposure) const
+	void Editor::RendererProperties(std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData) const
 	{
 		ImGui::Begin("Scene Properties");
 		ImGui::ColorPicker3("Clear Color", clearColor.data(), ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
-		ImGui::SliderFloat("Exposure", &exposure, 0.0f, 5.0f);
+		ImGui::SliderFloat("Exposure", &postProcessBufferData.exposure, 0.0f, 5.0f);
 		ImGui::End();
 	}
 
@@ -228,10 +229,20 @@ namespace helios::editor
 				{
 					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData().lightColor[light->GetLightNumber()].x);
 
-					// note(rtarun9) : Hardcoded ! NEED TO CHANGE
-					static float sunAngle{-153.0};
+					static float sunAngle{scene::Light::DIRECTIONAL_LIGHT_ANGLE};
 					ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
-					scene::Light::GetLightBufferData().lightPosition[light->GetLightNumber()] = math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
+					light->GetTransform()->data.translate = math::XMFLOAT3(0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)));
+
+					ImGui::TreePop();
+				}
+			}
+			else
+			{
+				if (ImGui::TreeNode(" Point Light " + light->GetLightNumber()))
+				{
+					ImGui::ColorEdit3("Light Color", &scene::Light::GetLightBufferData().lightColor[light->GetLightNumber()].x);
+
+					ImGui::SliderFloat3("Translate", &light->GetTransform()->data.translate.x, -10.0f, 10.0f);
 
 					ImGui::TreePop();
 				}
@@ -241,7 +252,7 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, std::vector<std::unique_ptr<helios::scene::Model>>& models) const
+	void Editor::RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, scene::Scene* scene) const
 	{
 		ImGui::Begin("View Port");
 		ImGui::Image((ImTextureID)(rtDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
@@ -268,8 +279,7 @@ namespace helios::editor
 						.modelName = modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash - 1) + std::to_wstring(modelNumber++),
 					};
 
-					auto model = std::make_unique<scene::Model>(device, modelCreationDesc);
-					models.push_back(std::move(model));
+					scene->AddModel(device, modelCreationDesc);
 				}
 			}
 

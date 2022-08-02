@@ -16,15 +16,18 @@ void SandBox::OnInit()
 {
 	mDevice = std::make_unique<gfx::Device>();
 
-	// Load all the scene models.
+	// Load scene and its data.
+	mScene = std::make_unique<scene::Scene>(mDevice.get());
+
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
 		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.glTF",
 		.modelName = L"DamagedHelmet",
 	};
-	
+
 	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
-	damagedHelmet->GetTransform().data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+	damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+	mScene->AddModel(std::move(damagedHelmet));
 
 	scene::ModelCreationDesc sciFiHelmetCreationDesc
 	{
@@ -33,7 +36,8 @@ void SandBox::OnInit()
 	};
 
 	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
-	sciFiHelmet->GetTransform().data.translate = {5.0f, 0.0f, 0.0f};
+	sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
+	mScene->AddModel(std::move(sciFiHelmet));
 
 	scene::ModelCreationDesc metalRoughSpheresCreationDesc
 	{
@@ -42,33 +46,39 @@ void SandBox::OnInit()
 	};
 
 	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
-	metalRoughSpheres->GetTransform().data.translate = { -15.0f, 0.0f, 0.0f };
+	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
+	mScene->AddModel(std::move(metalRoughSpheres));
 
-	mModels.push_back(std::move(damagedHelmet));
-	mModels.push_back(std::move(sciFiHelmet));
-	mModels.push_back(std::move(metalRoughSpheres));
-	
-	// Load lights and the common static light buffer.
-	scene::Light::CreateLightDataBuffer(mDevice.get());
 
+	// Load lights.
 	scene::LightCreationDesc directionalLightCreationDesc
 	{
 		.lightNumber = 0u,
 		.lightType = scene::LightTypes::DirectionalLightData
 	};
 
-	auto directionalLight = std::make_unique<scene::Light>(directionalLightCreationDesc);
+	mScene->AddLight(mDevice.get(), directionalLightCreationDesc);
 
-	mLights.push_back(std::move(directionalLight));
-
-	// Load scene constant buffer.
-	gfx::BufferCreationDesc sceneBufferCreationDesc
+	scene::LightCreationDesc pointLightcreationDesc1
 	{
-		.usage = gfx::BufferUsage::ConstantBuffer,
-		.name = L"Scene Buffer",
+		.lightNumber = 1u,
+		.lightType = scene::LightTypes::PointLightData
 	};
 
-	mSceneBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<SceneBuffer>(sceneBufferCreationDesc, std::span<SceneBuffer, 0u>{}));
+	mScene->AddLight(mDevice.get(), pointLightcreationDesc1);
+
+	// Create post process buffer.
+	gfx::BufferCreationDesc postProcessBufferCreationDesc
+	{
+		.usage = gfx::BufferUsage::ConstantBuffer,
+		.name = L"Post Process Buffer",
+	};
+
+	mPostProcessBuffer = std::make_unique<gfx::Buffer>(mDevice->CreateBuffer<PostProcessBuffer>(postProcessBufferCreationDesc, std::span<PostProcessBuffer, 0u>{}));
+	mPostProcessBufferData =
+	{
+		.exposure = 1.0f
+	};
 
 	// Load pipeline states.
 	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
@@ -149,31 +159,13 @@ void SandBox::OnInit()
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
-
-	mCamera = std::make_unique<scene::Camera>();
 }
 
 void SandBox::OnUpdate()
 {
-	mCamera->Update(static_cast<float>(core::Application::GetTimer().GetDeltaTime()));
+	mScene->Update(mAspectRatio);
 
-	SceneBuffer sceneBufferData = 
-	{
-		.cameraPosition = mCamera->GetCameraPosition(),
-		.cameraTarget = mCamera->GetCameraTarget(),
-		.viewMatrix = mCamera->GetViewMatrix(),
-		.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), mAspectRatio, 0.1f, 1000.0f),
-		.exposure = 1.0f,
-	};
-
-	mSceneBuffer->Update(&sceneBufferData);
-
-	for (auto& model : mModels)
-	{
-		model->GetTransform().Update();
-	}
-
-	scene::Light::Update();
+	mPostProcessBuffer->Update(&mPostProcessBufferData);
 }
 
 void SandBox::OnRender()
@@ -205,16 +197,7 @@ void SandBox::OnRender()
 		graphicsContext->ClearRenderTargetView(renderTargets, clearColor);
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
-		SceneRenderResources sceneRenderResources
-		{
-			.sceneBufferIndex = mSceneBuffer->cbvIndex,
-			.lightBufferIndex = scene::Light::GetCbvIndex()
-		};
-
-		for (auto& model : mModels)
-		{
-			model->Render(graphicsContext.get(), sceneRenderResources);
-		}
+		mScene->RenderModels(graphicsContext.get());
 
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
@@ -237,6 +220,7 @@ void SandBox::OnRender()
 		RenderTargetRenderResources rtvRenderResources
 		{
 			.textureIndex = mOffscreenRT->renderTexture->srvIndex,
+			.postProcessBufferIndex = mPostProcessBuffer->cbvIndex
 		};
 
 		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
@@ -259,12 +243,11 @@ void SandBox::OnRender()
 		RenderTargetRenderResources rtvRenderResources
 		{
 			.textureIndex = mPostProcessingRT->renderTexture->srvIndex,
-			.sceneBufferIndex = mSceneBuffer->cbvIndex
 		};
 
 		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mModels, mLights, mCamera.get(), clearColor, exposure, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), clearColor, mPostProcessBufferData, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swapchain
@@ -291,7 +274,7 @@ void SandBox::OnRender()
 
 void SandBox::OnDestroy()
 {
-	scene::Light::DestroyLightDataBuffer();
+	scene::Light::DestroyLightResources();
 	mEditor.reset();
 }
 
@@ -307,7 +290,7 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 		mEditor->ShowUI(true);
 	}
 
-	mCamera->HandleInput(keycode, isKeyDown);
+	mScene->mCamera->HandleInput(keycode, isKeyDown);
 }
 
 void SandBox::OnResize() 

@@ -28,6 +28,16 @@ namespace helios::gfx
 		std::optional<void*> mappedPointer{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> resource{};
 		
+		Allocation() = default;
+
+		Allocation(const Allocation& other) : allocation(other.allocation), resource(other.resource)
+		{
+			if (other.mappedPointer.has_value())
+			{
+				mappedPointer = other.mappedPointer;
+			}
+		}
+
 		void Update(const void* data, size_t size)
 		{
 			if (!data || !mappedPointer.has_value())

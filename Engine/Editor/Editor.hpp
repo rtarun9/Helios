@@ -4,9 +4,7 @@
 
 #include "Graphics/API/Device.hpp"
 
-#include "Scene/Camera.hpp"
-#include "Scene/Model.hpp"
-#include "Scene/Light.hpp"
+#include "Scene/Scene.hpp"
 
 namespace helios::editor
 {
@@ -19,9 +17,8 @@ namespace helios::editor
 		~Editor();
 
 		// Goal is to call this single function from the engine which does all the UI internally, helps make the engine clean as well.
-		// When ECS is setup, it should be enough to pass a single object to this function.
 		// This function is heavy WIP and not given as much importance as other abstractions.
-		void Render(const gfx::Device* device, std::vector<std::unique_ptr<helios::scene::Model>>& models, std::vector<std::unique_ptr<helios::scene::Light>>& lights, scene::Camera* camera, std::span<float, 4> clearColor, float& exposure, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
+		void Render(const gfx::Device* device, scene::Scene* scene, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
 
 		void OnResize(Uint2 dimensions) const;
 
@@ -32,12 +29,12 @@ namespace helios::editor
 
 		void RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const;
 		void RenderCameraProperties(scene::Camera* camera) const;
-		void RenderSceneProperties(std::span<float, 4> clearColor, float& exposure) const;
+		void RendererProperties(std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData) const;
 
 		void RenderLightProperties(std::vector<std::unique_ptr<helios::scene::Light>>& lights) const;
 
 		// Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads the model (if path belongs to a .gltf file).
-		void RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, std::vector<std::unique_ptr<helios::scene::Model>>& models) const;
+		void RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, scene::Scene* scene) const;
 
 		// Handle drag and drop of models into viewport at run time.
 		void RenderContentBrowser();

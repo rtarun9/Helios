@@ -31,6 +31,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
             outgoingLight += albedoColor.xyz * radiance * nDotL;
         }
+
         // if positional light
         else if (lightBuffer.lightPosition[i].w == 1.0f)
         {

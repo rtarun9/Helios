@@ -45,7 +45,7 @@ namespace helios::scene
 		}
 
 		Transform() = default;
-		Transform(const Transform& other) : data(other.data)
+		Transform(const Transform& other) : data(other.data), transformBuffer(std::move(other.transformBuffer.get()))
 		{
 		}
 	};
@@ -90,18 +90,21 @@ namespace helios::scene
 		Model() = default;
 		Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc);
 
-		Transform& GetTransform() { return mTransform; };
+		Transform* GetTransform() { return &mTransform; };
 		std::wstring GetName() const { return mModelName; }
 
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
+		
+		// Transform made private as if instanced rendering is used, then each object will have own transform.
+		// The light class is a example of this.
+		Transform mTransform{};
 	
 	protected:
 		std::vector<Mesh> mMeshes{};
 		
-		Transform mTransform{};
 
 		// Used to prevent unnecessary loading of already loaded models.
 		std::wstring mModelPath{};

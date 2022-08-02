@@ -19,12 +19,10 @@ public:
 	void OnResize() override;
 
 private:
-	std::vector<std::unique_ptr<helios::scene::Model>> mModels{};
-	std::vector<std::unique_ptr<helios::scene::Light>> mLights{};
+	std::unique_ptr<helios::scene::Scene> mScene{};
 
-	std::unique_ptr<helios::scene::Camera> mCamera{};
-
-	std::unique_ptr<helios::gfx::Buffer> mSceneBuffer{};
+	std::unique_ptr<helios::gfx::Buffer> mPostProcessBuffer{};
+	PostProcessBuffer mPostProcessBufferData{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
 	

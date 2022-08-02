@@ -17,3 +17,4 @@
 #include "Scene/Model.hpp"
 #include "Scene/Camera.hpp"
 #include "Scene/Light.hpp"
+#include "Scene/Scene.hpp"

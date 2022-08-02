@@ -40,13 +40,17 @@ ConstantBufferStruct TransformBuffer
     float4x4 inverseModelMatrix;
 };
 
+ConstantBufferStruct PostProcessBuffer
+{
+    float exposure;
+};
+
 ConstantBufferStruct SceneBuffer
 {
     float3 cameraPosition;
     float3 cameraTarget;
     float4x4 viewMatrix;
     float4x4 projectionMatrix;
-    float exposure;
 };
 
 ConstantBufferStruct LightBuffer
