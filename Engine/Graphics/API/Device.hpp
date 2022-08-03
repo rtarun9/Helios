@@ -7,6 +7,7 @@
 #include "GraphicsContext.hpp"
 #include "MemoryAllocator.hpp"
 #include "PipelineState.hpp"
+#include "ComputeContext.hpp"
 
 namespace helios::gfx
 {
@@ -36,6 +37,7 @@ namespace helios::gfx
 		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
 
 		std::unique_ptr<GraphicsContext> GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(*this)); }
+		std::unique_ptr<ComputeContext> GetComputeContext() { return std::move(std::make_unique<ComputeContext>(*this)); }
 		
 		// Misc getters for resources and thier contents.
 		DescriptorHandle GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
@@ -53,6 +55,7 @@ namespace helios::gfx
 		void EndFrame();
 
 		void ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext);
+		void ExecuteContext(std::unique_ptr<ComputeContext> computeContext);
 		void Present();
 
 		// Helper creation functions.

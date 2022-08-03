@@ -15,6 +15,15 @@ namespace helios::scene
 		sLightBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<LightBuffer>(lightDataBufferCreationDesc, std::span<const LightBuffer, 0u>{}));
 		sLightBufferData = {};
 
+		gfx::BufferCreationDesc lightInstanceBufferCreationDesc
+		{
+			.usage = gfx::BufferUsage::ConstantBuffer,
+			.name = L"Light Instance Constant Buffer"
+		};
+
+		sLightInstanceBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<InstanceLightBuffer>(lightInstanceBufferCreationDesc, std::span<InstanceLightBuffer, 0u>{}));
+		sLightInstanceData = {};
+
 		ModelCreationDesc lightModelCreationDesc
 		{
 			.modelPath = LIGHT_MODEL_PATH,
@@ -28,18 +37,11 @@ namespace helios::scene
 	{
 		sLightModel.reset();
 		sLightBuffer->allocation->Reset();
+		sLightInstanceBuffer->allocation->Reset();
 	}
 
 	Light::Light(const gfx::Device* device, const LightCreationDesc& lightCreationDesc) : mLightNumber(lightCreationDesc.lightNumber), mLightType(lightCreationDesc.lightType)
 	{
-		gfx::BufferCreationDesc transformBufferCreationDesc
-		{
-			.usage = gfx::BufferUsage::ConstantBuffer,
-			.name =  (lightCreationDesc.lightType == LightTypes::DirectionalLightData ? L" Directional Light Transform Buffer "  : L"Point Light Transform Buffer") + std::to_wstring(lightCreationDesc.lightNumber),
-		};
-
-		mTransform.transformBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<TransformBuffer>(transformBufferCreationDesc, std::span<TransformBuffer, 0u>{}));
-
 		// The value 0.001 is hardcoded, which is not ideal.
 		// The sphere model is very large, which is why this happens.
 		sLightBufferData.lightColor[mLightNumber] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -47,29 +49,38 @@ namespace helios::scene
 
 		if (lightCreationDesc.lightType == LightTypes::DirectionalLightData)
 		{
-			mTransform.data.translate = math::XMFLOAT3(0.0f, sin(math::XMConvertToRadians(DIRECTIONAL_LIGHT_ANGLE)), cos(math::XMConvertToRadians(DIRECTIONAL_LIGHT_ANGLE)));
+			sLightBufferData.lightPosition[mLightNumber] = math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(DIRECTIONAL_LIGHT_ANGLE)), cos(math::XMConvertToRadians(DIRECTIONAL_LIGHT_ANGLE)), 0.0f);
 		}
 		else
 		{
-			mTransform.data.translate = math::XMFLOAT3(1.0f, 1.0f, 1.0f);
+			sLightBufferData.lightPosition[mLightNumber] = math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 	}
 
 	void Light::Update()
 	{
-		sLightBufferData.lightPosition[mLightNumber] = 
-		{ 
-			mTransform.data.translate.x, 
-			mTransform.data.translate.y, 
-			mTransform.data.translate.z,
-			mLightType == LightTypes::DirectionalLightData ? 0.0f : 1.0f
-		};
+		// Make the model matrix.
+		if (mLightType == LightTypes::PointLightData)
+		{
+			math::XMVECTOR translationVector = math::XMLoadFloat4(&sLightBufferData.lightPosition[mLightNumber]);
+			sLightInstanceData.modelMatrix[mLightNumber] = math::XMMatrixScaling(0.02f, 0.02f, 0.02f) *  math::XMMatrixTranslationFromVector(translationVector);
 
-		mTransform.Update();
+			sLightInstanceBuffer->Update(&sLightInstanceData);
+		}
 	}
 
 	void Light::UpdateLightBuffer()
 	{	
 		sLightBuffer->Update(&sLightBufferData);
+	}
+
+	void Light::Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources)
+	{
+		LightRenderResources lightRenderResource{};
+		lightRenderResource.lightBufferIndex = sLightBuffer->cbvIndex;
+		lightRenderResource.transformBufferIndex = sLightInstanceBuffer->cbvIndex;
+		lightRenderResource.sceneBufferIndex= lightRenderResources.sceneBufferIndex;
+
+		sLightModel->Render(graphicsContext, lightRenderResource);
 	}
 }

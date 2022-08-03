@@ -4,7 +4,7 @@
 struct VSOutput
 {
     float4 position : SV_Position;
-    uint lightID : LIGHT_INDEX;
+    float4 color : COLOR;
 };
 
 ConstantBuffer<LightRenderResources> renderResource : register(b0);
@@ -13,14 +13,16 @@ ConstantBuffer<LightRenderResources> renderResource : register(b0);
 VSOutput VsMain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
     StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    ConstantBuffer<LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResource.lightBufferIndex];
 
-    ConstantBuffer<TransformBuffer> transformBuffer = ResourceDescriptorHeap[renderResource.transformBufferIndex];
+    ConstantBuffer<InstanceLightBuffer> transformBuffer = ResourceDescriptorHeap[renderResource.transformBufferIndex];
 
-    matrix mvpMatrix = mul(mul(transformBuffer[instanceID].modelMatrix, sceneBuffer.viewMatrix), sceneBuffer.projectionMatrix);
+    ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
+
+    matrix mvpMatrix = mul(mul(transformBuffer.modelMatrix[instanceID], sceneBuffer.viewMatrix), sceneBuffer.projectionMatrix);
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-    output.lightID = instanceID;
-
+    output.color = lightBuffer.lightColor[instanceID];
     return output;
 }

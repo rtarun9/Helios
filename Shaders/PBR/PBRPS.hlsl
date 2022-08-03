@@ -35,6 +35,12 @@ float4 PsMain(VSOutput psInput) : SV_Target
         // if positional light
         else if (lightBuffer.lightPosition[i].w == 1.0f)
         {
+            float3 lightDirection = normalize(lightBuffer.lightPosition[i].xyz  - psInput.position.xyz);
+            float nDotL = saturate(dot(psInput.normal, lightDirection));
+
+            float3 radiance = lightBuffer.lightColor[i].xyz;
+
+            outgoingLight += albedoColor.xyz * radiance * nDotL;
         }
     }
 

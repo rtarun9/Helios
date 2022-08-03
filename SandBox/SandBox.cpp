@@ -51,21 +51,34 @@ void SandBox::OnInit()
 
 
 	// Load lights.
+	math::XMFLOAT4 lightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
+	
+	for (uint32_t i : std::views::iota(0u, TOTAL_POINT_LIGHTS))
+	{
+		scene::LightCreationDesc pointLightcreationDesc2
+		{
+			.lightNumber = i,
+			.lightType = scene::LightTypes::PointLightData
+		};
+
+		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
+
+		lightPos.x = (i) % 10;
+		lightPos.z = (i) / 10;
+
+		scene::Light::GetLightBufferData()->lightColor[i].x += lightPos.x / 255.0f;
+		scene::Light::GetLightBufferData()->lightColor[i].z += lightPos.z / 255.0f;
+		scene::Light::GetLightBufferData()->lightPosition[i].x += lightPos.x;
+		scene::Light::GetLightBufferData()->lightPosition[i].z += lightPos.z;
+	}
+
 	scene::LightCreationDesc directionalLightCreationDesc
 	{
-		.lightNumber = 0u,
+		.lightNumber = DIRECTIONAL_LIGHT_OFFSET + 0u,
 		.lightType = scene::LightTypes::DirectionalLightData
 	};
 
 	mScene->AddLight(mDevice.get(), directionalLightCreationDesc);
-
-	scene::LightCreationDesc pointLightcreationDesc1
-	{
-		.lightNumber = 1u,
-		.lightType = scene::LightTypes::PointLightData
-	};
-
-	mScene->AddLight(mDevice.get(), pointLightcreationDesc1);
 
 	// Create post process buffer.
 	gfx::BufferCreationDesc postProcessBufferCreationDesc
@@ -103,6 +116,18 @@ void SandBox::OnInit()
 
 	mPBRPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrPipelineStateCreationDesc));
 	
+	gfx::GraphicsPipelineStateCreationDesc lightPipelineStateCreationDesc
+	{
+		.vsShaderPath = L"Shaders/Light/LightVS.cso",
+		.psShaderPath = L"Shaders/Light/LightPS.cso",
+		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.pipelineName = L"Light Pipeline"
+	};
+
+	mLightPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(lightPipelineStateCreationDesc));
+
+
 	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
 	{
 		.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
@@ -198,6 +223,10 @@ void SandBox::OnRender()
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
 		mScene->RenderModels(graphicsContext.get());
+
+		graphicsContext->SetGraphicsPipelineState(mLightPipelineState.get());
+
+		mScene->RenderLights(graphicsContext.get());
 
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}

@@ -171,9 +171,9 @@ namespace helios::gfx
 		mCommandList->OMSetRenderTargets(1u, &rtHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
 
 	}
-	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount) const
+	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount) const
 	{
-		mCommandList->DrawIndexedInstanced(indicesCount, 1u, 0u, 0u, 0u);
+		mCommandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);
 	}
 	 
 	void GraphicsContext::CopyResource(ID3D12Resource* source, ID3D12Resource* destination)

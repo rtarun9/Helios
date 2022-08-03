@@ -132,6 +132,7 @@ namespace helios::gfx
 		DepthStencil,
 		RenderTarget,
 		TextureFromPath,	
+		UAV,
 	};
 
 	struct TextureCreationDesc
@@ -148,20 +149,23 @@ namespace helios::gfx
 	{
 		std::unique_ptr<Allocation> allocation{};
 		uint32_t srvIndex{};
+		uint32_t uavIndex{};
 		uint32_t dsvIndex{};
 		uint32_t rtvIndex{};
 		
 		Uint2 dimensions{};
 		std::wstring textureName{};
 
+		std::vector<Texture> mipTextures{};
+
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
-		// So, upon passing the texture to this function, it will return 0 is texture is null, or the srvIndex otherwise.
+		// So, upon passing the texture to this function, it will return -1 is texture is null, or the srvIndex otherwise.
 		static uint32_t GetSrvIndex(const Texture* texture)
 		{
 			if (texture == nullptr)
 			{
-				return 0;
+				return -1;
 			}
 
 			return texture->srvIndex;

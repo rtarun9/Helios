@@ -130,7 +130,14 @@ namespace helios::gfx
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 				resourceState = D3D12_RESOURCE_STATE_COMMON;
 			}break;
-		}
+
+			case TextureUsage::UAV:
+			{
+				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+				resourceState = D3D12_RESOURCE_STATE_COMMON;
+			}break;
+		};
 
 		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 

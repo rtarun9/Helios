@@ -10,7 +10,7 @@
 
 #define TINYGLTF_USE_CPP14
 #define TINYGLTF_NO_EXTERNAL_IMAGE
-#include "tiny_gltf.h"
+#include "TinyGLTF/tiny_gltf.h"
 
 namespace helios::scene
 {
@@ -94,6 +94,7 @@ namespace helios::scene
 		std::wstring GetName() const { return mModelName; }
 
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
+		void Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);

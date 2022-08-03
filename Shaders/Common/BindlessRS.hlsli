@@ -59,6 +59,7 @@ struct LightRenderResources
     uint lightBufferIndex;
 
     uint transformBufferIndex;
+    uint sceneBufferIndex;
 };
 
 struct PBRRenderResources
@@ -92,6 +93,19 @@ struct RenderTargetRenderResources
     uint textureBufferIndex;
     uint textureIndex;
     uint postProcessBufferIndex;
+};
+
+// For mip map generation.
+struct MipMapGenerationRenderResources
+{
+    uint sourceMipIndex;
+
+    uint outputMip1Index;
+    uint outputMip2Index;
+    uint outputMip3Index;
+    uint outputMip4Index;
+
+    uint mipMapGenerationBufferIndex;
 };
 
 #endif

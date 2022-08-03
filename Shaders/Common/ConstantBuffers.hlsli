@@ -8,6 +8,7 @@
 #define float2 DirectX::XMFLOAT2
 
 #define uint uint32_t
+#define uint2 uint32_t 
 
 // Note : using the typedef of matrix (float4x4) and struct (ConstantBufferStruct) to prevent name collision on the cpp code side. 
 #define float4x4 DirectX::XMMATRIX
@@ -21,7 +22,11 @@
 #endif
 
 // Constants that are also shared between hlsl and C++.
-static const uint TOTAL_POINT_LIGHTS = 0;
+// NOTE : Directional lights are placed after point lights
+static const uint POINT_LIGHT_OFFSET = 0; 
+static const uint TOTAL_POINT_LIGHTS = 200;
+
+static const uint DIRECTIONAL_LIGHT_OFFSET = TOTAL_POINT_LIGHTS;
 static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
 
 // The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.
@@ -32,6 +37,12 @@ static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
 ConstantBufferStruct LUTCBuffer
 {
     float lutIndex;
+};
+
+// Light resources that are used while instanced rendering.
+ConstantBufferStruct InstanceLightBuffer
+{
+    float4x4 modelMatrix[TOTAL_POINT_LIGHTS];
 };
 
 ConstantBufferStruct TransformBuffer
@@ -61,6 +72,26 @@ ConstantBufferStruct LightBuffer
     float4 lightPosition[TOTAL_LIGHTS];
     float4 lightColor[TOTAL_LIGHTS];
     float radius[TOTAL_LIGHTS];
+};
+
+// Data for mip map generation.
+enum class TextureDimensionTypes : uint
+{
+    WidthHeightEven,
+    WidthOddHeightEven,
+    WidthEvenHeightOdd,
+    WidthHeightOdd
+};
+
+ConstantBufferStruct MipMapGenerationBuffer
+{
+    uint sourceMipLevel;
+    uint numberMipLevels;
+    bool isSRGB;
+    TextureDimensionTypes sourceDimensionType;
+
+    // 1.0f  / outputDimension.size
+    float2 texelSize;
 };
 
 #endif

@@ -33,6 +33,7 @@ private:
 	std::unique_ptr<helios::gfx::RenderTarget> mFinalRT{};
 
 	std::unique_ptr<helios::gfx::PipelineState> mPBRPipelineState{};
+	std::unique_ptr<helios::gfx::PipelineState> mLightPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
 

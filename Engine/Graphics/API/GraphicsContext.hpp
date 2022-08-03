@@ -53,7 +53,7 @@ namespace helios::gfx
 		void SetRenderTarget(RenderTarget* renderTarget, const Texture* depthStencilTexture) const;
 
 		// Draw functions.
-		void DrawInstanceIndexed(uint32_t indicesCount) const;
+		void DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;
 
 		// Copy related calls.
 		void CopyResource(ID3D12Resource* source, ID3D12Resource* destination);

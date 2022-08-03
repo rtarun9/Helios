@@ -1,1 +1,0 @@
-// Primary reference : https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/Shaders/GenerateMipsCS.hlsli.

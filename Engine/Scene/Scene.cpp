@@ -13,7 +13,7 @@ namespace helios::scene
 		Light::CreateLightResources(device);
 
 		// Create scene buffer.
-			// Load scene constant buffer.
+		// Load scene constant buffer.
 		gfx::BufferCreationDesc sceneBufferCreationDesc
 		{
 			.usage = gfx::BufferUsage::ConstantBuffer,
@@ -94,6 +94,11 @@ namespace helios::scene
 
 	void Scene::RenderLights(const gfx::GraphicsContext* graphicsContext)
 	{
+		LightRenderResources lightRenderResources
+		{
+			.sceneBufferIndex = mSceneBuffer->cbvIndex
+		};
 
+		Light::Render(graphicsContext, lightRenderResources);
 	}
 }

@@ -159,7 +159,6 @@ namespace helios::scene
 					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2]
 				};
 	
-	
 				math::XMFLOAT2 textureCoord
 				{
 					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
@@ -258,7 +257,6 @@ namespace helios::scene
 			mesh.indexBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<uint32_t>(indexBufferCreationDesc, indices));
 
 			mesh.indicesCount = static_cast<uint32_t>(indices.size());
-
 
 			// Load material textures. 
 			// note(rtarun9) : Not complete implementation, but basic framework).
@@ -402,6 +400,26 @@ namespace helios::scene
 			graphicsContext->Set32BitGraphicsConstants(&pbrRenderResources);
 
 			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
+		}
+	}
+
+	void Model::Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources)
+	{
+		for (const Mesh& mesh : mMeshes)
+		{
+			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
+
+			LightRenderResources lightRenderResource
+			{
+				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
+				.lightBufferIndex = lightRenderResources.lightBufferIndex,
+				.transformBufferIndex = lightRenderResources.transformBufferIndex,
+				.sceneBufferIndex = lightRenderResources.sceneBufferIndex,
+			};
+
+			graphicsContext->Set32BitGraphicsConstants(&lightRenderResource);
+
+			graphicsContext->DrawInstanceIndexed(mesh.indicesCount, TOTAL_POINT_LIGHTS);
 		}
 	}
 }
