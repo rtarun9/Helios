@@ -274,6 +274,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+						.mipLevels = 6u,
 						.name = meshName + L" albedo texture",
 						.path = albedoTexturePath,
 					};
@@ -294,6 +295,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 6u,
 						.name = meshName + L" normal texture",
 						.path = normalTexturePath,
 					};
@@ -314,6 +316,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 6u,
 						.name = meshName + L" metal roughness texture",
 						.path = metallicRoughnessTexturePath,
 					};
@@ -334,6 +337,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 6u,
 						.name = meshName + L" occlusion texture",
 						.path = occlusionTexturePath,
 					};
@@ -354,6 +358,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromPath,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+						.mipLevels = 6u,
 						.name = meshName + L" emissive texture",
 						.path = emissiveTexturePath ,
 					};
@@ -403,21 +408,16 @@ namespace helios::scene
 		}
 	}
 
-	void Model::Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources)
+	// See Light.hpp for why this function takes a ref and not const ref to the render resources struct.
+	void Model::Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources)
 	{
 		for (const Mesh& mesh : mMeshes)
 		{
 			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
 
-			LightRenderResources lightRenderResource
-			{
-				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
-				.lightBufferIndex = lightRenderResources.lightBufferIndex,
-				.transformBufferIndex = lightRenderResources.transformBufferIndex,
-				.sceneBufferIndex = lightRenderResources.sceneBufferIndex,
-			};
+			lightRenderResources.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get());
 
-			graphicsContext->Set32BitGraphicsConstants(&lightRenderResource);
+			graphicsContext->Set32BitGraphicsConstants(&lightRenderResources);
 
 			graphicsContext->DrawInstanceIndexed(mesh.indicesCount, TOTAL_POINT_LIGHTS);
 		}

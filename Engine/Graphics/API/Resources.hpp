@@ -132,7 +132,6 @@ namespace helios::gfx
 		DepthStencil,
 		RenderTarget,
 		TextureFromPath,	
-		UAV,
 	};
 
 	struct TextureCreationDesc
@@ -155,8 +154,6 @@ namespace helios::gfx
 		
 		Uint2 dimensions{};
 		std::wstring textureName{};
-
-		std::vector<Texture> mipTextures{};
 
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
@@ -231,6 +228,11 @@ namespace helios::gfx
 	struct RtvCreationDesc
 	{
 		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+	};
+
+	struct UavCreationDesc
+	{
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 	};
 
 	// Structs related to pipeline's.

@@ -8,6 +8,7 @@
 #include "MemoryAllocator.hpp"
 #include "PipelineState.hpp"
 #include "ComputeContext.hpp"
+#include "MipMapGenerator.hpp"
 
 namespace helios::gfx
 {
@@ -62,6 +63,7 @@ namespace helios::gfx
 		uint32_t CreateSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* resource) const;
+		uint32_t CreateUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateCbv(const CbvCreationDesc& cbvCreationDesc) const;
 
 		template <typename T>
@@ -111,6 +113,10 @@ namespace helios::gfx
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};
 		std::unique_ptr<CommandQueue> mCopyCommandQueue{};
+
+		std::unique_ptr<MipMapGenerator> mMipMapGenerator{};
+
+		friend class MipMapGenerator;
 	};
 
 	template <typename T>

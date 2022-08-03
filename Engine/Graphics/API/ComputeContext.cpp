@@ -8,7 +8,7 @@ namespace helios::gfx
 {
 	ComputeContext::ComputeContext(Device& device) : mDevice(device)
 	{
-		mCommandList = device.GetGraphicsCommandQueue()->GetCommandList();
+		mCommandList = device.GetComputeCommandQueue()->GetCommandList();
 
 		// As all compute context's require to set the descriptor heap before hand, the user has option to set them manually (for explicitness) or just let the constructor take care of this.
 		SetDescriptorHeaps(mDevice.GetSrvCbvUavDescriptor());
@@ -27,5 +27,21 @@ namespace helios::gfx
 		};
 
 		mCommandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
+	}
+
+	void ComputeContext::SetComputeRootSignature(PipelineState* pipelineState) const
+	{
+		mCommandList->SetComputeRootSignature(pipelineState->rootSignature.Get());
+	}
+
+	void ComputeContext::Set32BitComputeConstants(const void* renderResources) const
+	{
+		mCommandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
+	}
+
+	void ComputeContext::SetComputePipelineState(PipelineState* pipelineState) const
+	{
+		mCommandList->SetComputeRootSignature(pipelineState->rootSignature.Get());
+		mCommandList->SetPipelineState(pipelineState->pipelineStateObject.Get());
 	}
 }

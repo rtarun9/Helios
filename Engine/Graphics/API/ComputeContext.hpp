@@ -24,6 +24,11 @@ namespace helios::gfx
 
 		void SetDescriptorHeaps(const Descriptor* descriptor) const;
 
+		void SetComputeRootSignature(PipelineState* pipelineState) const;
+		void Set32BitComputeConstants(const void* renderResources) const;
+
+		void SetComputePipelineState(PipelineState* pipelineState) const;
+
 	private:
 		static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;
 

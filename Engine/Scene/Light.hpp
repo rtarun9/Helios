@@ -44,7 +44,9 @@ namespace helios::scene
 		// Update the static member variables (light buffer).
 		static void UpdateLightBuffer();
 
-		static void Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources);
+		// note(rtarun9) Its a bit frustrating to use this LightRenderResources as in each relevant function call a new struct is created which copies some data into it and passes on the struct 
+		// to another function (and so on). For this, desisgnated initializers will not be used here. Also, the function will take a reference to the struct and not a const ref, which is a exception.
+		static void Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources);
 
 	public:
 		static constexpr float DIRECTIONAL_LIGHT_ANGLE{ -153.0f };

@@ -42,7 +42,6 @@ namespace helios::gfx
 
 		void SetIndexBuffer(Buffer* const buffer) const;
 		void Set32BitGraphicsConstants(const void* renderResources) const;
-		void Set32BitComputeConstants(const void* renderResources) const;
 		
 		void SetDefaultViewportAndScissor() const;
 		

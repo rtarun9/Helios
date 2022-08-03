@@ -74,21 +74,9 @@ ConstantBufferStruct LightBuffer
     float radius[TOTAL_LIGHTS];
 };
 
-// Data for mip map generation.
-enum class TextureDimensionTypes : uint
-{
-    WidthHeightEven,
-    WidthOddHeightEven,
-    WidthEvenHeightOdd,
-    WidthHeightOdd
-};
-
 ConstantBufferStruct MipMapGenerationBuffer
 {
-    uint sourceMipLevel;
-    uint numberMipLevels;
     bool isSRGB;
-    TextureDimensionTypes sourceDimensionType;
 
     // 1.0f  / outputDimension.size
     float2 texelSize;

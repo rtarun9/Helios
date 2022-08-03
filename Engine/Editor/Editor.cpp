@@ -221,35 +221,45 @@ namespace helios::editor
 	{
 		ImGui::Begin("Light Properties");
 
-		for (auto& light : lights)
+		if (ImGui::TreeNode("Point Lights"))
 		{
-			if (light->GetLightType() == scene::LightTypes::DirectionalLightData)
+			// Taking advantage of the fact that point lights come before directional lights (see Common/ConstantBuffers.hlsli for more info).
+			for (uint32_t pointLightIndex : std::views::iota(0u, TOTAL_POINT_LIGHTS))
 			{
-				std::string name = "Directional Light " + std::to_string(light->GetLightNumber());
+				std::string name = "Point Light " + std::to_string(pointLightIndex);
 				if (ImGui::TreeNode(name.c_str()))
 				{
-					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[light->GetLightNumber()].x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[pointLightIndex].x, ImGuiColorEditFlags_PickerHueWheel);
 
-					static float sunAngle{scene::Light::DIRECTIONAL_LIGHT_ANGLE};
+					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[pointLightIndex].x, -10.0f, 10.0f);
+
+					ImGui::TreePop();
+				}
+			}
+
+			ImGui::TreePop();
+		}
+
+
+		if (ImGui::TreeNode("Directional Lights"))
+		{
+			for (uint32_t directionalLightIndex : std::views::iota(DIRECTIONAL_LIGHT_OFFSET, DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS))
+			{
+				std::string name = "Directional Light " + std::to_string(directionalLightIndex);
+				if (ImGui::TreeNode(name.c_str()))
+				{
+					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[directionalLightIndex].x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+
+					static float sunAngle{ scene::Light::DIRECTIONAL_LIGHT_ANGLE };
 					ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
-					scene::Light::GetLightBufferData()->lightPosition[light->GetLightNumber()] = math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
+					scene::Light::GetLightBufferData()->lightPosition[directionalLightIndex] = math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
 
 					ImGui::TreePop();
 				}
 			}
-			else
-			{
 
-				std::string name = "Point Light " + std::to_string(light->GetLightNumber());
-				if (ImGui::TreeNode(name.c_str()))
-				{
-					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[light->GetLightNumber()].x, ImGuiColorEditFlags_PickerHueWheel);
 
-					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[light->GetLightNumber()].x, -10.0f, 10.0f);
-
-					ImGui::TreePop();
-				}
-			}
+			ImGui::TreePop();
 		}
 
 		ImGui::End();

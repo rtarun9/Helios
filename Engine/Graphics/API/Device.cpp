@@ -132,6 +132,9 @@ namespace helios::gfx
 
 		// Create render target resources.
 		RenderTarget::CreateRenderTargetResources(this);
+		
+		// Create mip map generator (required bindless RS to be created first).
+		mMipMapGenerator = std::make_unique<MipMapGenerator>(*this);
 	}
 
 	void Device::InitSwapChainResources()
@@ -291,6 +294,16 @@ namespace helios::gfx
 		return dsvIndex;
 	}
 
+	uint32_t Device::CreateUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* resource) const
+	{
+		uint32_t uavIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
+		mDevice->CreateUnorderedAccessView(resource, nullptr, &uavCreationDesc.uavDesc, mSrvCbvUavDescriptor->GetCurrentDescriptorHandle().cpuDescriptorHandle);
+
+		mSrvCbvUavDescriptor->OffsetCurrentHandle();
+
+		return uavIndex;
+	}
+
 	uint32_t Device::CreateCbv(const CbvCreationDesc& cbvCreationDesc) const
 	{
 		uint32_t cbvIndex = mSrvCbvUavDescriptor->GetCurrentDescriptorIndex();
@@ -447,73 +460,10 @@ namespace helios::gfx
 			uploadAllocation->Reset();
 		}
 
+		// Generate mip maps.
+		mMipMapGenerator->GenerateMips(&texture);
+
 		texture.textureName = textureCreationDesc.name;
-
-		// Generate mips (max of 4).
-		if (textureCreationDesc.mipLevels <= 4)
-		{
-			TextureDimensionTypes dimensionType{};
-			if (width % 2 == 0 && height % 2 == 0)
-			{
-				dimensionType = TextureDimensionTypes::WidthHeightEven;
-			}
-			else if (width % 2 == 0 && height % 2 != 0)
-			{
-				dimensionType = TextureDimensionTypes::WidthEvenHeightOdd;
-			}
-			else if (width % 2 != 0 && height % 2 != 0)
-			{
-				dimensionType = TextureDimensionTypes::WidthHeightOdd;
-			}
-			else
-			{
-				dimensionType = TextureDimensionTypes::WidthOddHeightEven;
-			}
-
-			MipMapGenerationBuffer mipMapGenBufferData
-			{
-				.sourceMipLevel = 1u,
-				.numberMipLevels = textureCreationDesc.mipLevels,
-				.isSRGB = textureCreationDesc.format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? true : false,
-				.sourceDimensionType = dimensionType,
-				.texelSize = DirectX::XMFLOAT2(1.0f / width, 1.0f / height),
-			};
-
-			gfx::BufferCreationDesc mipMapBufferCreationDesc
-			{
-				.usage = gfx::BufferUsage::ConstantBuffer,
-				.name = L"Mip Map Generation Buffer",
-			};
-
-			std::unique_ptr<gfx::Buffer> mipMapGenBuffer = std::make_unique<gfx::Buffer>(CreateBuffer<MipMapGenerationBuffer>(mipMapBufferCreationDesc, std::array{mipMapGenBufferData}));
-
-			Uint2 mipDimension = { width, height };
-			for (uint32_t mipLevels : std::views::iota(0u, textureCreationDesc.mipLevels))
-			{
-				TextureCreationDesc mipLevelTextureDesc
-				{
-					.usage = gfx::TextureUsage::UAV,
-					.dimensions = mipDimension,
-					.format = textureCreationDesc.format,
-					.mipLevels = 1u,
-					.name = textureCreationDesc.name + L" Mip Map " + std::to_wstring(mipLevels),
-				};
-
-				std::unique_ptr<Texture> mipTexture = std::make_unique<gfx::Texture>(CreateTexture(mipLevelTextureDesc));
-
-				MipMapGenerationRenderResources renderResource
-				{
-					.sourceMipIndex = texture.srvIndex,
-					.outputMip1Index = mipTexture->uavIndex,
-					.mipMapGenerationBufferIndex = mipMapGenBuffer->cbvIndex,
-				};
-
-				auto computeContext = std::make_unique<ComputeContext>(this);
-				computeContext->Dispatch(mipDimension.x / 8u, mipDimension.y / 8u, 1u);
-
-				//this->ExecuteContext(std::move(computeContext));
-			}
-		}
 
 		return texture;
 	}

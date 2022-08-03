@@ -74,13 +74,11 @@ namespace helios::scene
 		sLightBuffer->Update(&sLightBufferData);
 	}
 
-	void Light::Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources)
+	void Light::Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources)
 	{
-		LightRenderResources lightRenderResource{};
-		lightRenderResource.lightBufferIndex = sLightBuffer->cbvIndex;
-		lightRenderResource.transformBufferIndex = sLightInstanceBuffer->cbvIndex;
-		lightRenderResource.sceneBufferIndex= lightRenderResources.sceneBufferIndex;
+		lightRenderResources.lightBufferIndex = sLightBuffer->cbvIndex;
+		lightRenderResources.transformBufferIndex = sLightInstanceBuffer->cbvIndex;
 
-		sLightModel->Render(graphicsContext, lightRenderResource);
+		sLightModel->Render(graphicsContext, lightRenderResources);
 	}
 }

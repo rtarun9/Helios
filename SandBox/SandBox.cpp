@@ -63,8 +63,8 @@ void SandBox::OnInit()
 
 		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
 
-		lightPos.x = (i) % 10;
-		lightPos.z = (i) / 10;
+		lightPos.x = static_cast<float>((i) % 10);
+		lightPos.z = static_cast<float>((i) / 10);
 
 		scene::Light::GetLightBufferData()->lightColor[i].x += lightPos.x / 255.0f;
 		scene::Light::GetLightBufferData()->lightColor[i].z += lightPos.z / 255.0f;

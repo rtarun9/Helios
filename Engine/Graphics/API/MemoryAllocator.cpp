@@ -131,7 +131,8 @@ namespace helios::gfx
 				resourceState = D3D12_RESOURCE_STATE_COMMON;
 			}break;
 
-			case TextureUsage::UAV:
+			// Note : All resource loaded from path must be able to be used by UAVs.
+			case TextureUsage::TextureFromPath:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;

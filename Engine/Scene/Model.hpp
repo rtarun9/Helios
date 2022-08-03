@@ -94,7 +94,7 @@ namespace helios::scene
 		std::wstring GetName() const { return mModelName; }
 
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
-		void Render(const gfx::GraphicsContext* graphicsContext, const LightRenderResources& lightRenderResources);
+		void Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
