@@ -98,12 +98,12 @@ struct Float2
 // Read file to vector
 static void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
 {
-	std::ifstream file(WstringToString(filePath), std::ios::binary | std::ios::ate);
-	size_t fileSizeBytes = static_cast<size_t>(file.tellg());
+	std::filesystem::path fPath{ filePath };
+
+	std::ifstream file(WstringToString(filePath), std::ios::binary | std::ios::in);
+	size_t fileSizeBytes = std::filesystem::file_size(fPath);
 
 	data.resize(fileSizeBytes);
-
-	file.seekg(0);
 
 	file.read((char*)data.data(), fileSizeBytes);
 

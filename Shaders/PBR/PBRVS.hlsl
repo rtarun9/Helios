@@ -6,6 +6,7 @@ struct VSOutput
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
     float3 normal : NORMAL;
+    float3 worldSpacePosition : WORLD_SPACE_POSITION;
 };
 
 ConstantBuffer<PBRRenderResources> renderResource : register(b0);
@@ -25,7 +26,8 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
     output.textureCoord = textureCoordBuffer[vertexID];
-    output.normal = normalBuffer[vertexID];
+    output.normal = normalize(mul(float4(normalBuffer[vertexID], 0.0f), transformBuffer.modelMatrix).xyz);
+    output.worldSpacePosition = float3(mul(float4(positionBuffer[vertexID], 1.0f), transformBuffer.modelMatrix).xyz);
 
     return output;
 }

@@ -21,34 +21,43 @@ void SandBox::OnInit()
 
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
-		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.glTF",
+		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 		.modelName = L"DamagedHelmet",
 	};
-
+	
 	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
 	damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
 	mScene->AddModel(std::move(damagedHelmet));
-
+	
 	scene::ModelCreationDesc sciFiHelmetCreationDesc
 	{
 		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
 		.modelName = L"SciFiHelmet",
 	};
-
+	
 	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
 	sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(sciFiHelmet));
-
+	
 	scene::ModelCreationDesc metalRoughSpheresCreationDesc
 	{
 		.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
 		.modelName = L"MetalRoughSpheres",
 	};
-
+	
 	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
 	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(metalRoughSpheres));
 
+	scene::ModelCreationDesc sponzaCreationDesc
+	{
+		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+		.modelName = L"Sponza Scene",
+	};
+	
+	//auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
+	//sponza->GetTransform()->data.scale = { 0.2f, 0.2f, 0.2f};
+	//mScene->AddModel(std::move(sponza));
 
 	// Load lights.
 	math::XMFLOAT4 lightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -70,6 +79,7 @@ void SandBox::OnInit()
 		scene::Light::GetLightBufferData()->lightColor[i].z += lightPos.z / 255.0f;
 		scene::Light::GetLightBufferData()->lightPosition[i].x += lightPos.x;
 		scene::Light::GetLightBufferData()->lightPosition[i].z += lightPos.z;
+		scene::Light::GetLightBufferData()->lightPosition[i].y += 15.0f;
 	}
 
 	scene::LightCreationDesc directionalLightCreationDesc
@@ -313,10 +323,18 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 	{
 		mEditor->ShowUI(false);
 	}
-
-	if (isKeyDown && keycode == VK_SHIFT)
+	else if (isKeyDown && keycode == VK_SHIFT)
 	{
 		mEditor->ShowUI(true);
+	}
+
+	if (isKeyDown && keycode == VK_F5)
+	{
+		mDevice->EnableVSync();
+	}
+	else if (isKeyDown && keycode == VK_F6)
+	{
+		mDevice->DisableVSync();
 	}
 
 	mScene->mCamera->HandleInput(keycode, isKeyDown);

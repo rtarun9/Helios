@@ -44,6 +44,7 @@
 #include <chrono>
 #include <memory>
 #include <array>
+#include <mutex>
 #include <utility>
 #include <span>
 #include <fstream>

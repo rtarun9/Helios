@@ -9,7 +9,7 @@ project "ThirdParty"
     debugdir "."
 
     staticruntime "off"
-    runtime "Debug"
+    runtime "Debug" 
     systemversion "latest"
 
     files
@@ -20,5 +20,6 @@ project "ThirdParty"
         "ImGUI/*.cpp",
         "TinyGLTF/tiny_gltf.cpp",
         "TinyGLTF/tiny_gltf.h",
-        "STB/stb_image.h"
+        "STB/stb_image.h",
+        "RapidJSON/**/*.h"
     }

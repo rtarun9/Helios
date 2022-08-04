@@ -127,11 +127,13 @@ namespace helios::gfx
 	// The Depth stencil texture will not have a seperate abstraction and will be created using the common CreateTexture function.
 	// Similarly, Render Targets will also be of type Texture.
 	// TextureUpload is used for intermediate buffers (as used in UpdateSubresources).
+	// If data is already loaded elsewhere, use the TextureFromData enum (this requires TextureCreateionDesc has all properties correctly set (specifically dimensions).
 	enum class TextureUsage
 	{
 		DepthStencil,
 		RenderTarget,
 		TextureFromPath,	
+		TextureFromData
 	};
 
 	struct TextureCreationDesc

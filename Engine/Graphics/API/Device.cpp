@@ -5,7 +5,6 @@
 
 #include "Common/ConstantBuffers.hlsli"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "STB/stb_image.h"
 
 // Some operator overloads are in the namespace, hence declaring it in global namespace here.
@@ -123,9 +122,10 @@ namespace helios::gfx
 		mCopyCommandQueue = std::make_unique<CommandQueue>(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
 		
 		// Create the descriptor heaps.
+		// note(rtarun9) : srvCbvUav descriptor count will be very high, because of mip maps.
 		mRtvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 50u, L"RTV Descriptor");
 		mDsvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
-		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1024u, L"SRV_CBV_UAV Descriptor");
+		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 5124, L"SRV_CBV_UAV Descriptor");
 
 		// Create bindless root signature.
 		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
@@ -315,12 +315,22 @@ namespace helios::gfx
 		return cbvIndex;
 	}
 	
-	Texture Device::CreateTexture(TextureCreationDesc& textureCreationDesc) const
+	Texture Device::CreateTexture(TextureCreationDesc& textureCreationDesc, const unsigned char* data) const
 	{
 		Texture texture{};
 
 		int componentCount{ 4 }, width{}, height{};
-		unsigned char* data{ nullptr };
+
+		if (textureCreationDesc.usage == TextureUsage::TextureFromData)
+		{
+			if (!data)
+			{
+				throw std::runtime_error("Texture usage : TextureFromData but no data provided.");
+			}
+			
+			width = textureCreationDesc.dimensions.x;
+			height = textureCreationDesc.dimensions.y;
+		}
 
 		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
 		{
@@ -426,7 +436,7 @@ namespace helios::gfx
 		}
 
 		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.
-		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
+		if (textureCreationDesc.usage == TextureUsage::TextureFromPath || textureCreationDesc.usage == TextureUsage::TextureFromData)
 		{		
 			// Create upload buffer.
 			BufferCreationDesc uploadBufferCreationDesc

@@ -69,9 +69,10 @@ namespace helios::gfx
 		template <typename T>
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
 
+		
 		// note(rtarun9) : The creation descs are not passed as const T&, as the contents (the dimensions) are not set by user if the texture is being loaded from file.
 		// Because of this, its passed as reference and not const reference.
-		Texture CreateTexture(TextureCreationDesc& textureCreationDesc) const;
+		Texture CreateTexture(TextureCreationDesc& textureCreationDesc, const unsigned char *data = nullptr) const;
 		RenderTarget CreateRenderTarget(TextureCreationDesc& textureCreationDesc) const;
 
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
@@ -79,6 +80,9 @@ namespace helios::gfx
 		// Resource resizing operations.
 		void ResizeRenderTarget(RenderTarget* renderTarget);
 
+		// VSync related functions.
+		void EnableVSync() { mVSync = true; }
+		void DisableVSync() { mVSync = false; }
 	public:
 		// Number of SwapChain backbuffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;

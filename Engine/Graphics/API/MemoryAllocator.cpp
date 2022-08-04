@@ -67,7 +67,7 @@ namespace helios::gfx
 		return std::move(std::make_unique<Allocation>(allocation));
 	}
 
-	std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(const TextureCreationDesc& textureCreationDesc)
+	std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(TextureCreationDesc& textureCreationDesc)
 	{
 		Allocation allocation{};
 
@@ -114,6 +114,18 @@ namespace helios::gfx
 			}
 		};
 	
+		if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Width)
+		{
+			resourceCreationDesc.resourceDesc.MipLevels = resourceCreationDesc.resourceDesc.Width - 1;
+		}
+
+		if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Height)
+		{
+			resourceCreationDesc.resourceDesc.MipLevels = resourceCreationDesc.resourceDesc.Height- 1;
+		}
+
+		textureCreationDesc.mipLevels = resourceCreationDesc.resourceDesc.MipLevels;
+
 		switch (textureCreationDesc.usage)
 		{
 			case TextureUsage::DepthStencil:
@@ -133,6 +145,7 @@ namespace helios::gfx
 
 			// Note : All resource loaded from path must be able to be used by UAVs.
 			case TextureUsage::TextureFromPath:
+			case TextureUsage::TextureFromData:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;

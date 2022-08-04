@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="D3D12MemoryAllocator">
+      <UniqueIdentifier>{7DE1D868-6970-6232-128F-762DFEFC72D8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGUI">
+      <UniqueIdentifier>{80FB640D-EC0F-8DBE-B591-301E216589EF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RapidJSON">
+      <UniqueIdentifier>{AF368E70-1BA1-42E7-64DF-F38CD088203C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RapidJSON\error">
+      <UniqueIdentifier>{48D5F4FF-B460-62C4-BD71-E5B8297CBEC4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RapidJSON\internal">
+      <UniqueIdentifier>{DBCD7D61-C7B1-3EB7-3012-390A1C152939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RapidJSON\msinttypes">
+      <UniqueIdentifier>{1E53DDA1-0AE2-666B-B300-7B669F6E7711}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="STB">
+      <UniqueIdentifier>{0E1F880B-7A28-887C-03A4-9E7C6FAC937C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TinyGLTF">
+      <UniqueIdentifier>{76563D9D-6223-98A8-8B3C-86507768CD36}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D3D12MemoryAllocator\D3D12MemAlloc.h">
+      <Filter>D3D12MemoryAllocator</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imconfig.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imgui.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imgui_impl_dx12.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imgui_impl_win32.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imgui_internal.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imstb_rectpack.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imstb_textedit.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGUI\imstb_truetype.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="STB\stb_image.h">
+      <Filter>STB</Filter>
+    </ClInclude>
+    <ClInclude Include="TinyGLTF\tiny_gltf.h">
+      <Filter>TinyGLTF</Filter>
+    </ClInclude>
+    <ClInclude Include="STB\stb_image_write.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="D3D12MemoryAllocator\D3D12MemAlloc.cpp">
+      <Filter>D3D12MemoryAllocator</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_demo.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_draw.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_impl_dx12.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_impl_win32.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_tables.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGUI\imgui_widgets.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="TinyGLTF\tiny_gltf.cpp">
+      <Filter>TinyGLTF</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -8,8 +8,6 @@
 #include "Common/BindlessRS.hlsli"
 #include "Common/ConstantBuffers.hlsli"
 
-#define TINYGLTF_USE_CPP14
-#define TINYGLTF_NO_EXTERNAL_IMAGE
 #include "TinyGLTF/tiny_gltf.h"
 
 namespace helios::scene
@@ -99,15 +97,17 @@ namespace helios::scene
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
 		
+		// Function for loading texture from path (so that texture's can be loaded in parallel).
+		// The textureCreationDesc will be filled with appropirate dimensions in this function as well.
+		void LoadTexture(unsigned char*& data, uint32_t& componentCount, gfx::TextureCreationDesc& textureCreationDesc);
+
 		// Transform made private as if instanced rendering is used, then each object will have own transform.
 		// The light class is a example of this.
 		Transform mTransform{};
 	
 	protected:
 		std::vector<Mesh> mMeshes{};
-		
-
-		// Used to prevent unnecessary loading of already loaded models.
+			
 		std::wstring mModelPath{};
 		std::wstring mModelName{};
 		std::wstring mModelDirectory{};

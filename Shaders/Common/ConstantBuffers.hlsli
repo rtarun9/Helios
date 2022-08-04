@@ -24,7 +24,7 @@
 // Constants that are also shared between hlsl and C++.
 // NOTE : Directional lights are placed after point lights
 static const uint POINT_LIGHT_OFFSET = 0; 
-static const uint TOTAL_POINT_LIGHTS = 200;
+static const uint TOTAL_POINT_LIGHTS = 25;
 
 static const uint DIRECTIONAL_LIGHT_OFFSET = TOTAL_POINT_LIGHTS;
 static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
