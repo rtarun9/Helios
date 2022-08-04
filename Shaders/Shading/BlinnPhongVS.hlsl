@@ -26,7 +26,12 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
     output.textureCoord = textureCoordBuffer[vertexID];
-    output.normal = normalize(mul(float4(normalBuffer[vertexID], 0.0f), transformBuffer.modelMatrix).xyz);
+
+    // Normal matrix is the tranpose of the inverse of model matix.
+    // necessary when non uniform scaling is used.
+    matrix normalMatrix = transpose(transformBuffer.inverseModelMatrix);
+
+    output.normal = normalize(mul(float4(normalBuffer[vertexID], 0.0f), normalMatrix).xyz);
     output.worldSpacePosition = float3(mul(float4(positionBuffer[vertexID], 1.0f), transformBuffer.modelMatrix).xyz);
 
     return output;

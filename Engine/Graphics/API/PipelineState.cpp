@@ -64,11 +64,12 @@ namespace helios::gfx
 					.DepthFunc = pipelineStateCreationDesc.depthComparisonFunc,
 					.StencilEnable = FALSE,
 				};
+
+				// Not entirely sure why this is needed only in this case when cube map is used. If not used here / outside the if block the entire scene is blank.
+				psoDesc.RasterizerState.FrontCounterClockwise = true;
+
 			}
 		}
-
-		// Not entirely sure why this is needed only in this case when cube map is used. If not used here / outside the if block the entire scene is blank.
-		//psoDesc.RasterizerState.FrontCounterClockwise = true;
 
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 

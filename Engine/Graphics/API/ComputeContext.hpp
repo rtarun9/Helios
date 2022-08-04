@@ -28,11 +28,15 @@ namespace helios::gfx
 		void Set32BitComputeConstants(const void* renderResources) const;
 
 		void SetComputePipelineState(PipelineState* pipelineState) const;
+		void AddResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState);
+		void ExecuteResourceBarriers();
 
 	private:
 		static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;
 
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList{};
+
+		std::vector<CD3DX12_RESOURCE_BARRIER> mResourceBarriers{};
 
 		Device& mDevice;
 	};

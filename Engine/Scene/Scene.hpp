@@ -5,6 +5,7 @@
 #include "Scene/Camera.hpp"
 #include "Scene/Model.hpp"
 #include "Scene/Light.hpp"
+#include "Scene/SkyBox.hpp"
 
 namespace helios::scene
 {
@@ -25,6 +26,10 @@ namespace helios::scene
 		void AddModel(std::unique_ptr<Model> model);
 
 		void AddLight(const gfx::Device* device, const LightCreationDesc& modelCreationDesc);
+		
+		// note(rtarun9) : Try to fix the non const ref / type qualifier error preventing from using const T* for device.
+		void AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc);
+
 		void AddCamera();
 
 		// Aspect ratio is determined by engine.
@@ -32,11 +37,13 @@ namespace helios::scene
 
 		void RenderModels(const gfx::GraphicsContext* graphicsContext);
 		void RenderLights(const gfx::GraphicsContext* graphicsContext);
+		void RenderSkyBox(const gfx::GraphicsContext* graphicsContext);
 
 	public:
 		std::vector<std::unique_ptr<Model>> mModels{};
 		std::vector<std::unique_ptr<Light>> mLights{};
 		std::unique_ptr<Camera> mCamera{};
+		std::unique_ptr<SkyBox> mSkyBox{};
 
 		std::unique_ptr<gfx::Buffer> mSceneBuffer{};
 	};

@@ -44,4 +44,15 @@ namespace helios::gfx
 		mCommandList->SetComputeRootSignature(pipelineState->rootSignature.Get());
 		mCommandList->SetPipelineState(pipelineState->pipelineStateObject.Get());
 	}
+
+	void ComputeContext::AddResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState)
+	{
+		mResourceBarriers.push_back({ CD3DX12_RESOURCE_BARRIER::Transition(resource, previousState, newState) });
+	}
+
+	void ComputeContext::ExecuteResourceBarriers()
+	{
+		mCommandList->ResourceBarrier(static_cast<UINT>(mResourceBarriers.size()), mResourceBarriers.data());
+		mResourceBarriers.clear();
+	}
 }

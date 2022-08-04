@@ -19,6 +19,15 @@ void SandBox::OnInit()
 	// Load scene and its data.
 	mScene = std::make_unique<scene::Scene>(mDevice.get());
 
+	scene::ModelCreationDesc cubeCreationDesc
+	{
+		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
+		.modelName = L"Cube",
+	};
+
+	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
+	mScene->AddModel(std::move(cube));
+
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
 		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -90,6 +99,16 @@ void SandBox::OnInit()
 
 	mScene->AddLight(mDevice.get(), directionalLightCreationDesc);
 
+	// Load skybox.
+	scene::SkyBoxCreationDesc skyBoxCreationDesc
+	{
+		.equirectangularTexturePath = L"Assets/Textures/Environment.hdr",
+		.format = DXGI_FORMAT_R32G32B32A32_FLOAT,
+		.name = L"Sky Box"
+	};
+
+	mScene->AddSkyBox(mDevice.get(), skyBoxCreationDesc);
+
 	// Create post process buffer.
 	gfx::BufferCreationDesc postProcessBufferCreationDesc
 	{
@@ -117,8 +136,8 @@ void SandBox::OnInit()
 	
 	gfx::GraphicsPipelineStateCreationDesc pbrPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/PBR/PBRVS.cso",
-		.psShaderPath = L"Shaders/PBR/PBRPS.cso",
+		.vsShaderPath = L"Shaders/Shading/PBRVS.cso",
+		.psShaderPath = L"Shaders/Shading/PBRPS.cso",
 		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"PBR Pipeline"
@@ -148,7 +167,18 @@ void SandBox::OnInit()
 	};
 
 	mFinalPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(finalRenderPassPipelineStateCreationDesc));
+	
+	gfx::GraphicsPipelineStateCreationDesc skyBoxPipelineStateCreationDesc
+	{
+		.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
+		.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
+		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		.pipelineName = L"Sky Box Pipeline"
+	};
 
+	mSkyBoxPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(skyBoxPipelineStateCreationDesc));
 
 	// Load depth stencil texture.
 	gfx::TextureCreationDesc depthStencilTextureCreationDesc
@@ -191,6 +221,10 @@ void SandBox::OnInit()
 	};
 
 	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(finalRenderTargetsTextureCreationDesc));
+
+	// Load tcube maps and other textures.
+	
+	
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -237,6 +271,10 @@ void SandBox::OnRender()
 		graphicsContext->SetGraphicsPipelineState(mLightPipelineState.get());
 
 		mScene->RenderLights(graphicsContext.get());
+
+		graphicsContext->SetGraphicsPipelineState(mSkyBoxPipelineState.get());
+
+		mScene->RenderSkyBox(graphicsContext.get());
 
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}

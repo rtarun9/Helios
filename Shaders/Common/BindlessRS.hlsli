@@ -95,7 +95,6 @@ struct RenderTargetRenderResources
     uint postProcessBufferIndex;
 };
 
-// For mip map generation.
 struct MipMapGenerationRenderResources
 {
     uint sourceMipIndex;
@@ -103,6 +102,19 @@ struct MipMapGenerationRenderResources
     uint outputMipIndex;
 
     uint mipMapGenerationBufferIndex;
+};
+
+struct CubeFromEquirectRenderResources
+{
+    uint textureIndex;
+    uint outputTextureIndex;
+};
+
+struct SkyBoxRenderResources
+{
+    uint positionBufferIndex;
+    uint sceneBufferIndex;
+    uint textureIndex;
 };
 
 #endif

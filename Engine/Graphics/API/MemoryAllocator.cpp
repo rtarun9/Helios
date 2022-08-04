@@ -102,7 +102,7 @@ namespace helios::gfx
 				.Alignment = 0u,
 				.Width = textureCreationDesc.dimensions.x,
 				.Height = textureCreationDesc.dimensions.y,
-				.DepthOrArraySize = 1u,
+				.DepthOrArraySize = static_cast<UINT16>(textureCreationDesc.depthOrArraySize),
 				.MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
 				.Format = format,
 				.SampleDesc
@@ -116,12 +116,12 @@ namespace helios::gfx
 	
 		if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Width)
 		{
-			resourceCreationDesc.resourceDesc.MipLevels = resourceCreationDesc.resourceDesc.Width - 1;
+			resourceCreationDesc.resourceDesc.MipLevels = static_cast<UINT16>(resourceCreationDesc.resourceDesc.Width - 1);
 		}
 
 		if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Height)
 		{
-			resourceCreationDesc.resourceDesc.MipLevels = resourceCreationDesc.resourceDesc.Height- 1;
+			resourceCreationDesc.resourceDesc.MipLevels = static_cast<UINT16>(resourceCreationDesc.resourceDesc.Height- 1);
 		}
 
 		textureCreationDesc.mipLevels = resourceCreationDesc.resourceDesc.MipLevels;
@@ -146,6 +146,7 @@ namespace helios::gfx
 			// Note : All resource loaded from path must be able to be used by UAVs.
 			case TextureUsage::TextureFromPath:
 			case TextureUsage::TextureFromData:
+			case TextureUsage::CubeMap:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;

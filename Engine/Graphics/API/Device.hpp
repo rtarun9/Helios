@@ -36,9 +36,12 @@ namespace helios::gfx
 
 		MemoryAllocator* GetMemoryAllocator() const { return mMemoryAllocator.get(); }
 		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
+		
 
 		std::unique_ptr<GraphicsContext> GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(*this)); }
 		std::unique_ptr<ComputeContext> GetComputeContext() { return std::move(std::make_unique<ComputeContext>(*this)); }
+		
+		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
 		
 		// Misc getters for resources and thier contents.
 		DescriptorHandle GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
@@ -76,6 +79,7 @@ namespace helios::gfx
 		RenderTarget CreateRenderTarget(TextureCreationDesc& textureCreationDesc) const;
 
 		PipelineState CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
+		PipelineState CreatePipelineState(const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const;
 
 		// Resource resizing operations.
 		void ResizeRenderTarget(RenderTarget* renderTarget);

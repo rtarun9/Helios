@@ -93,6 +93,7 @@ namespace helios::scene
 
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 		void Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources);
+		void Render(const gfx::GraphicsContext* graphicsContext, SkyBoxRenderResources& skyBoxrenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
@@ -101,8 +102,6 @@ namespace helios::scene
 		// The textureCreationDesc will be filled with appropirate dimensions in this function as well.
 		void LoadTexture(unsigned char*& data, uint32_t& componentCount, gfx::TextureCreationDesc& textureCreationDesc);
 
-		// Transform made private as if instanced rendering is used, then each object will have own transform.
-		// The light class is a example of this.
 		Transform mTransform{};
 	
 	protected:

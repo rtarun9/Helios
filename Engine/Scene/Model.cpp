@@ -505,4 +505,18 @@ namespace helios::scene
 			graphicsContext->DrawInstanceIndexed(mesh.indicesCount, TOTAL_POINT_LIGHTS);
 		}
 	}
+
+	void Model::Render(const gfx::GraphicsContext* graphicsContext, SkyBoxRenderResources& skyBoxrenderResources)
+	{
+		for (const Mesh& mesh : mMeshes)
+		{
+			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
+
+			skyBoxrenderResources.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get());
+
+			graphicsContext->Set32BitGraphicsConstants(&skyBoxrenderResources);
+
+			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
+		}
+	}
 }

@@ -47,6 +47,11 @@ namespace helios::scene
 		mLights.push_back(std::move(light));
 	}
 
+	void Scene::AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc)
+	{
+		mSkyBox = std::make_unique<SkyBox>(device, skyBoxCreationDesc);
+	}
+
 	void Scene::AddCamera()
 	{
 	}
@@ -100,5 +105,15 @@ namespace helios::scene
 		};
 
 		Light::Render(graphicsContext, lightRenderResources);
+	}
+
+	void Scene::RenderSkyBox(const gfx::GraphicsContext* graphicsContext)
+	{
+		SkyBoxRenderResources skyBoxRenderResources
+		{
+			.sceneBufferIndex = mSceneBuffer->cbvIndex,
+		};
+
+		mSkyBox->Render(graphicsContext, skyBoxRenderResources);
 	}
 }

@@ -133,15 +133,18 @@ namespace helios::gfx
 		DepthStencil,
 		RenderTarget,
 		TextureFromPath,	
-		TextureFromData
+		TextureFromData,
+		HDRTextureFromPath,
+		CubeMap
 	};
 
 	struct TextureCreationDesc
 	{
 		TextureUsage usage;
 		Uint2 dimensions{};
-		DXGI_FORMAT format{DXGI_FORMAT_R8G8B8A8_UNORM};
-		uint32_t mipLevels{1u};
+		DXGI_FORMAT format{ DXGI_FORMAT_R8G8B8A8_UNORM };
+		uint32_t mipLevels{ 1u };
+		uint32_t depthOrArraySize{ 1u };
 		std::wstring name{};
 		std::wstring path{};
 	};

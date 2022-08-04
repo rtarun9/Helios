@@ -321,6 +321,9 @@ namespace helios::gfx
 
 		int componentCount{ 4 }, width{}, height{};
 
+		// For use only by HDR textures (mostly for Cube Map equirectangular textures).
+		float* hdrTextureData{ nullptr };
+
 		if (textureCreationDesc.usage == TextureUsage::TextureFromData)
 		{
 			if (!data)
@@ -330,6 +333,21 @@ namespace helios::gfx
 			
 			width = textureCreationDesc.dimensions.x;
 			height = textureCreationDesc.dimensions.y;
+		}
+
+		if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
+		{
+			hdrTextureData = stbi_loadf(WstringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+			if (!hdrTextureData)
+			{
+				ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
+			}
+
+			textureCreationDesc.dimensions =
+			{
+				.x = static_cast<uint32_t>(width),
+				.y = static_cast<uint32_t>(height)
+			};
 		}
 
 		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
@@ -345,13 +363,9 @@ namespace helios::gfx
 				.x = static_cast<uint32_t>(width),
 				.y = static_cast<uint32_t>(height)
 			};
+		}
 
-			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
-		}
-		else
-		{
-			texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
-		}
+		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
 		texture.dimensions = textureCreationDesc.dimensions;
 
@@ -378,20 +392,43 @@ namespace helios::gfx
 		}
 
 		// Create SRV.
-		SrvCreationDesc srvCreationDesc
+		SrvCreationDesc srvCreationDesc{};
+
+		if (textureCreationDesc.depthOrArraySize == 1u)
 		{
-			.srvDesc
+			srvCreationDesc = 
 			{
-				.Format = format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D
+				.srvDesc
 				{
-					.MostDetailedMip = 0u,
-					.MipLevels = mipLevels
+
+					.Format = format,
+					.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+					.Texture2D
+					{
+						.MostDetailedMip = 0u,
+						.MipLevels = mipLevels
+					}
 				}
-			}
-		};
+			};
+		}
+		else if (textureCreationDesc.depthOrArraySize == 6u)
+		{
+			srvCreationDesc =
+			{
+				.srvDesc
+				{
+					.Format = format,
+					.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE,
+					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+					.TextureCube
+					{
+						.MostDetailedMip = 0u,
+						.MipLevels = mipLevels
+					}
+				}
+			};
+		}
 
 		texture.srvIndex = CreateSrv(srvCreationDesc, texture.allocation->resource.Get());
 
@@ -435,8 +472,28 @@ namespace helios::gfx
 			texture.rtvIndex = CreateRtv(rtvCreationDesc, texture.allocation->resource.Get());
 		}
 
-		// If texture created from file, load data (using stb_image) into a upload buffer and copy subresource data accordingly.
-		if (textureCreationDesc.usage == TextureUsage::TextureFromPath || textureCreationDesc.usage == TextureUsage::TextureFromData)
+		// Create UAV (if applicable).
+		if (textureCreationDesc.usage == TextureUsage::CubeMap)
+		{
+			UavCreationDesc uavCreationDesc
+			{
+				.uavDesc
+				{
+					.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
+					.Texture2DArray
+					{
+						.MipSlice = 0u,
+						.FirstArraySlice = 0u,
+						.ArraySize = textureCreationDesc.depthOrArraySize
+					}
+				}
+			};
+			
+			texture.uavIndex = CreateUav(uavCreationDesc, texture.allocation->resource.Get());
+		}
+
+		// If texture created from file, load data (etc using stb_image) into a upload buffer and copy subresource data accordingly.
+		if (textureCreationDesc.usage == TextureUsage::TextureFromPath || textureCreationDesc.usage == TextureUsage::TextureFromData || textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
 		{		
 			// Create upload buffer.
 			BufferCreationDesc uploadBufferCreationDesc
@@ -452,18 +509,31 @@ namespace helios::gfx
 			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
 
 			// Specify data to copy.
-			D3D12_SUBRESOURCE_DATA textureData
-			{
-				.pData = data,
-				.RowPitch = width * componentCount,
-				.SlicePitch = width * height * componentCount
-			};
+			D3D12_SUBRESOURCE_DATA textureSubresourceData{};
 
+			if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
+			{
+				textureSubresourceData = 
+				{
+					.pData = hdrTextureData,
+					.RowPitch = width * componentCount * 4,
+					.SlicePitch = width * height * componentCount * 4
+				};
+			}
+			else
+			{
+				textureSubresourceData =
+				{
+					.pData = data,
+					.RowPitch = width * componentCount,
+					.SlicePitch = width * height * componentCount
+				};
+			}
 			
 			// Get a copy command and list and execute UpdateSubresources functions on the command queue.
 			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
 
-			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureData);
+			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
 
 			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
 
@@ -534,6 +604,13 @@ namespace helios::gfx
 	PipelineState Device::CreatePipelineState(const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
 	{
 		PipelineState pipelineState(mDevice.Get(), graphicsPipelineStateCreationDesc);
+
+		return pipelineState;
+	}
+
+	PipelineState Device::CreatePipelineState(const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const
+	{
+		PipelineState pipelineState(mDevice.Get(), computePipelineStateCreationDesc);
 
 		return pipelineState;
 	}

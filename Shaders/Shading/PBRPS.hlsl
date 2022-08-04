@@ -22,18 +22,28 @@ float4 PsMain(VSOutput psInput) : SV_Target
     
     float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
 
+    float3 normal = normalize(psInput.normal);
+
     for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
     {
         float3 lightDirection = normalize(lightBuffer.lightPosition[i].xyz  - psInput.worldSpacePosition);
         float3 viewDirection = normalize(sceneBuffer.cameraPosition - psInput.worldSpacePosition);
 
-        float3 reflectionDirection = normalize(reflect(-lightDirection, psInput.normal));
+        // Diffuse light.
+        float3 diffuseColor = max(dot(normal, lightDirection), 0.0f) * lightBuffer.lightColor[i].xyz;
 
-        float nDotL = pow(max(dot(reflectionDirection, viewDirection), 0.0fS), 64);
-        
-        float3 radiance = lightBuffer.lightColor[i].xyz;
-        
-        outgoingLight += albedoColor.xyz * radiance * nDotL;
+        // Ambient light.
+        float ambientStrength = 0.01f;
+        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
+                
+        // Specular light.
+        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
+        float3 halfWayVector = normalize(viewDirection + lightDirection);
+        float specularStrength = 0.51f;
+        float3 reflectionDirection = reflect(-lightDirection, normal);
+        float3 specularColor = specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(reflectionDirection, viewDirection), 0.0f), 32);
+
+        outgoingLight += (ambientColor + diffuseColor + specularColor) * albedoColor.xyz;
     }
 
     outgoingLight /= (float)TOTAL_POINT_LIGHTS;
