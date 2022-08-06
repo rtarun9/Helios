@@ -74,12 +74,26 @@ ConstantBufferStruct LightBuffer
     float radius[TOTAL_LIGHTS];
 };
 
+enum class TextureDimensionType
+{
+    HeightWidthEven,
+    HeightEvenWidthOdd,
+    HeightOddWidthEven,
+    HeightWidthOdd
+};
+
 ConstantBufferStruct MipMapGenerationBuffer
 {
     bool isSRGB;
 
+    uint sourceMipLevel;
+
     // 1.0f  / outputDimension.size
     float2 texelSize;
+
+    uint numberMipLevels;
+
+    TextureDimensionType dimensionType;
 };
 
 #endif

@@ -117,7 +117,10 @@ struct MipMapGenerationRenderResources
 {
     uint sourceMipIndex;
 
-    uint outputMipIndex;
+    uint outputMip1Index;
+    uint outputMip2Index;
+    uint outputMip3Index;
+    uint outputMip4Index;
 
     uint mipMapGenerationBufferIndex;
 };

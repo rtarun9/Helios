@@ -76,13 +76,38 @@ namespace helios::scene
 
 		}
 
-		// Load samplers.
-		LoadSamplers(device, model);
+		// note(rtarun9) : The below multi threaded approach does work, but can cause race conditions as device is shared amonst them and there is no 
+		// internal locking / mutex mech for device.
+		//// Load samplers.
+		//std::thread loadSamplerThread([&]()
+		//{
+		//	LoadSamplers(device, model);
+		//});
+		//
+		//// Load textures and materials.
+		//std::thread loadMaterialThread([&]()
+		//{
+		//	LoadMaterials(device, model);
+		//});
+		//
+		//// Build meshes.
+		//tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		//
+		//std::thread loadMeshThread([&]()
+		//{
+		//	for (const int& nodeIndex : scene.nodes)
+		//	{
+		//		LoadNode(device, modelCreationDesc, nodeIndex, model);
+		//	}
+		//});
+		//
+		//loadSamplerThread.join();
+		//loadMaterialThread.join();
+		//loadMeshThread.join();
 
-		// Load textures and materials.
+		LoadSamplers(device, model);
 		LoadMaterials(device, model);
 
-		// Build meshes.
 		tinygltf::Scene& scene = model.scenes[model.defaultScene];
 
 		for (const int& nodeIndex : scene.nodes)
@@ -90,6 +115,7 @@ namespace helios::scene
 			LoadNode(device, modelCreationDesc, nodeIndex, model);
 		}
 	}
+
 
 	// For slight speed up in model loading, one thread will be used to load / create materials (i.e the material textures),
 	// and one thread will read the mesh and fill the various accessors (position, indices, texture coord's, etc) into vector so they can be loaded into buffers.
@@ -278,7 +304,9 @@ namespace helios::scene
 	// Reference : https://github.com/syoyo/tinygltf/blob/master/examples/dxview/src/Viewer.cc
 	void Model::LoadSamplers(const gfx::Device* device, tinygltf::Model& model)
 	{
-		mSamplers.reserve(model.samplers.size());
+		mSamplers.resize(model.samplers.size());
+
+		size_t index{ 0 };
 
 		for (tinygltf::Sampler& sampler : model.samplers) 
 		{
@@ -399,11 +427,9 @@ namespace helios::scene
 			samplerCreationDesc.samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 			
 			uint32_t samplerIndex = device->CreateSampler(samplerCreationDesc);
-			mSamplers.push_back(samplerIndex);
+			mSamplers[index++] = samplerIndex;
 		}
 	}
-
-
 
 	void Model::LoadMaterials(const gfx::Device* device, tinygltf::Model& model)
 	{
@@ -428,6 +454,9 @@ namespace helios::scene
 			std::lock_guard<std::mutex> mutexGuard(deviceAccessMutex);
 			return std::move(std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc, data)));
 		};
+
+		size_t index{ 0 };
+		mMaterials.resize(model.materials.size());
 
 		for (const tinygltf::Material& material : model.materials)
 		{
@@ -540,13 +569,12 @@ namespace helios::scene
 			occlusionTextureThread.join();
 			emissiveTextureThread.join();
 
-			mMaterials.push_back(std::move(pbrMaterial));
+			mMaterials[index++] = std::move(pbrMaterial);
 		}
 	}
 	
 	void Model::Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
 	{
-		
 		for (const Mesh& mesh : mMeshes)
 		{
 			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());

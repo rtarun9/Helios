@@ -29,6 +29,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
     float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
 
     float3 normal = GetNormal(psInput.normal, psInput.textureCoord, psInput.tangent, psInput.modelMatrix, renderResource.normalTextureIndex, renderResource.normalTextureSamplerIndex);
+    normal = psInput.normal;
 
     for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
     {
@@ -53,10 +54,10 @@ float4 PsMain(VSOutput psInput) : SV_Target
         float lightToPixelDistance = length(lightBuffer.lightPosition[i].xyz - psInput.worldSpacePosition.xyz);
         float attenuation = 1.0f / lightToPixelDistance;
 
-        outgoingLight += (ambientColor + diffuseColor + specularColor) * albedoColor.xyz *attenuation;
+        outgoingLight += (ambientColor + diffuseColor + specularColor) * albedoColor.xyz;// *attenuation;
     }
 
     outgoingLight /= (float)TOTAL_POINT_LIGHTS;
 
-    return float4(outgoingLight, 1.0f);
+    return float4(albedoColor.xyz, 1.0f);
 }

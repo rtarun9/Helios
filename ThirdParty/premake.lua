@@ -21,5 +21,4 @@ project "ThirdParty"
         "TinyGLTF/tiny_gltf.cpp",
         "TinyGLTF/tiny_gltf.h",
         "STB/stb_image.h",
-        "RapidJSON/**/*.h"
     }

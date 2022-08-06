@@ -75,7 +75,7 @@ struct DeferredExecutionQueue
 };
 
 template <typename T>
-static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
+static constexpr typename std::underlying_type<T>::type EnumClassValue(const T& value)
 {
 	return static_cast<std::underlying_type<T>::type>(value);
 }

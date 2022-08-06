@@ -24,11 +24,11 @@ void SandBox::OnInit()
 		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
 		.modelName = L"Cube",
 	};
-
+	
 	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
 	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
 	mScene->AddModel(std::move(cube));
-
+	
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
 	{
 		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -59,15 +59,15 @@ void SandBox::OnInit()
 	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(metalRoughSpheres));
 
-	//scene::ModelCreationDesc sponzaCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-	//	.modelName = L"Sponza Scene",
-	//};
-	//
-	//auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
-	//sponza->GetTransform()->data.scale = { 0.2f, 0.2f, 0.2f};
-	//mScene->AddModel(std::move(sponza));
+	scene::ModelCreationDesc sponzaCreationDesc
+	{
+		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+		.modelName = L"Sponza Scene",
+	};
+	
+	auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
+	sponza->GetTransform()->data.scale = { 0.2f, 0.2f, 0.2f};
+	mScene->AddModel(std::move(sponza));
 
 	// Load lights.
 	math::XMFLOAT4 lightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -258,7 +258,6 @@ void SandBox::OnRender()
 	};
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-	static float exposure{ 1.0f };
 	
 	// RenderPass 1 : Render the model's to the offscreen render target.
 	{

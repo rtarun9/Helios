@@ -21,6 +21,7 @@ namespace helios::gfx
 
 	void MipMapGenerator::GenerateMips(gfx::Texture* texture)
 	{
+		
 		D3D12_RESOURCE_DESC sourceResourceDesc = texture->GetResource()->GetDesc();
 		if (sourceResourceDesc.MipLevels <= 1)
 		{
@@ -35,11 +36,44 @@ namespace helios::gfx
 
 		std::unique_ptr<gfx::Buffer> mipMapBuffer = std::make_unique<gfx::Buffer>(mDevice.CreateBuffer<MipMapGenerationBuffer>(mipMapBufferCreationDesc, std::span<MipMapGenerationBuffer, 0u>{}));
 
-		for (uint32_t i : std::views::iota(0u, sourceResourceDesc.MipLevels - 1u))
+		// Main reference : https://www.3dgep.com/learning-directx-12-4/#CommandListGenerateMips_UAV.
+		for (uint32_t srcMipLevel = 0; srcMipLevel < sourceResourceDesc.MipLevels - 1u;)
 		{
-			uint32_t destinationWidth = std::max<uint32_t>(sourceResourceDesc.Width >> (static_cast<uint32_t>(i) + 1u), 1u);
-			uint32_t destinationHeight = std::max<uint32_t>(sourceResourceDesc.Height >> (static_cast<uint32_t>(i) + 1u), 1u);
+			uint64_t sourceWidth = sourceResourceDesc.Width >> srcMipLevel;
+			uint64_t sourceHeight = sourceResourceDesc.Height >> srcMipLevel;
 
+			uint64_t destinationWidth = std::max<uint32_t>(sourceWidth >> 1u, 1u);
+			uint32_t destinationHeight = std::max<uint32_t>(sourceHeight >> 1u, 1u);
+
+			TextureDimensionType dimensionType{};
+			if (sourceHeight % 2 == 0 && sourceWidth % 2 == 0)
+			{
+				dimensionType = TextureDimensionType::HeightWidthEven;
+			}
+			else if (sourceHeight % 2 != 0 && sourceWidth % 2 == 0)
+			{
+				dimensionType = TextureDimensionType::HeightOddWidthEven;
+			}
+			else if (sourceHeight % 2 == 0 && sourceWidth % 2 != 0)
+			{
+				dimensionType = TextureDimensionType::HeightEvenWidthOdd;
+			}
+			else
+			{
+				dimensionType = TextureDimensionType::HeightWidthOdd;
+			}
+			
+			// At a single compute shader dispatch, we can generate atmost 4 mip maps.
+			// The code below checks for in this loop iteration, how many levels can we compute, so as to have subsequent mip level dimension
+			// be exactly half : exactly 50 % decrease in mip dimension.
+			// i.e number of times mip can be halved until we reach a mip level where one dimension is odd.
+			// If dimension is odd, texture needs to be sampled multiple times, which will be handled in a new dispatch.
+			DWORD mipCount{};
+			// Value of temp not required.
+			uint32_t temp = _BitScanForward64(&mipCount, (destinationWidth == 1u ? destinationHeight : destinationWidth) | (destinationHeight == 1u ? destinationWidth : destinationHeight));
+			mipCount = std::min<uint32_t>(4, mipCount + 1);
+			mipCount = (srcMipLevel + mipCount) >= sourceResourceDesc.MipLevels ? sourceResourceDesc.MipLevels - srcMipLevel - 1u : mipCount;
+			
 			SrvCreationDesc srvCreationDesc
 			{
 				.srvDesc
@@ -49,45 +83,55 @@ namespace helios::gfx
 					.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 					.Texture2D
 					{
-						.MostDetailedMip = i,
+						.MostDetailedMip = srcMipLevel,
 						.MipLevels = 1u
 					}
 				}
 			};
 			
-			uint32_t srvIndex = mDevice.CreateSrv(srvCreationDesc, texture->GetResource());
+			uint32_t sourceMipSrvIndex = mDevice.CreateSrv(srvCreationDesc, texture->GetResource());
 			
 			// NOTE : UAV's have a limited set of formats they can use.
 			// Refer : https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads.
-			UavCreationDesc uavCreationDesc
+			std::array<uint32_t, 4u> mipUavs{};
+			for (uint32_t uav : std::views::iota(0u, static_cast<uint32_t>(mipCount)))
 			{
-				.uavDesc 
+				UavCreationDesc uavCreationDesc
 				{
-					.Format = sourceResourceDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : sourceResourceDesc.Format,
-					.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
-					.Texture2D
+					.uavDesc
 					{
-						.MipSlice = i + 1,
-						.PlaneSlice = 0u
+						.Format = sourceResourceDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : sourceResourceDesc.Format,
+						.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+						.Texture2D
+						{
+							.MipSlice = uav + 1 + srcMipLevel,
+							.PlaneSlice = 0u
+						}
 					}
-				}		
-			};
+				};
 
-			//  Reading from a SRV/UAV mapped to a null resource will return black and writing to a UAV mapped to a null resource will have no effect (from 3DGEP).
-			uint32_t mipIndex = mDevice.CreateUav(uavCreationDesc, texture->GetResource());
+				//  Reading from a SRV/UAV mapped to a null resource will return black and writing to a UAV mapped to a null resource will have no effect (from 3DGEP).
+				mipUavs[uav] = mDevice.CreateUav(uavCreationDesc, texture->GetResource());
+			}
 
 			MipMapGenerationBuffer mipMapGenerationBufferData
 			{
 				.isSRGB = sourceResourceDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? true : false,
-				.texelSize = {1.0f / destinationWidth, 1.0f / destinationHeight}
+				.sourceMipLevel = srcMipLevel,
+				.texelSize = {1.0f / destinationWidth, 1.0f / destinationHeight},
+				.numberMipLevels = static_cast<uint32_t>(mipCount),
+				.dimensionType = dimensionType,
 			};
 
 			mipMapBuffer->Update(&mipMapGenerationBufferData);
 
 			MipMapGenerationRenderResources renderResources
 			{
-				.sourceMipIndex = srvIndex,
-				.outputMipIndex = mipIndex,
+				.sourceMipIndex = sourceMipSrvIndex,
+				.outputMip1Index = mipUavs[0],
+				.outputMip2Index = mipUavs[1],
+				.outputMip3Index = mipUavs[2],
+				.outputMip4Index = mipUavs[3],
 				.mipMapGenerationBufferIndex = mipMapBuffer->cbvIndex,
 			};
 
@@ -96,9 +140,11 @@ namespace helios::gfx
 			computeContext->SetComputePipelineState(mMipMapPipelineState.get());
 			computeContext->Set32BitComputeConstants(&renderResources);
 
-			computeContext->Dispatch(std::max(destinationWidth / 8, 1u), std::max(destinationHeight/ 8, 1u), 1);
+			computeContext->Dispatch(std::max((uint32_t)destinationWidth / 8u, 1u), std::max((uint32_t)destinationHeight/ 8u, 1u), 1);
 
 			mDevice.GetComputeCommandQueue()->ExecuteAndFlush(computeContext->GetCommandList());
+
+			srcMipLevel += static_cast<uint32_t>(mipCount);
 		}
 	}
 }
