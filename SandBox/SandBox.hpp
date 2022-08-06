@@ -35,7 +35,7 @@ private:
 	std::unique_ptr<helios::gfx::PipelineState> mPBRPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mLightPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
-	std::unique_ptr<helios::gfx::PipelineState> mPipelineState{};
+	std::unique_ptr<helios::gfx::PipelineState> mPostProcessingStaet{};
 	std::unique_ptr<helios::gfx::PipelineState> mSkyBoxPipelineState{};
 
 	std::unique_ptr<helios::editor::Editor> mEditor{};

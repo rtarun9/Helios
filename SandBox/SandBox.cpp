@@ -26,6 +26,7 @@ void SandBox::OnInit()
 	};
 
 	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
+	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
 	mScene->AddModel(std::move(cube));
 
 	scene::ModelCreationDesc DamagedHelmetCreationDesc
@@ -58,12 +59,12 @@ void SandBox::OnInit()
 	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(metalRoughSpheres));
 
-	scene::ModelCreationDesc sponzaCreationDesc
-	{
-		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-		.modelName = L"Sponza Scene",
-	};
-	
+	//scene::ModelCreationDesc sponzaCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+	//	.modelName = L"Sponza Scene",
+	//};
+	//
 	//auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
 	//sponza->GetTransform()->data.scale = { 0.2f, 0.2f, 0.2f};
 	//mScene->AddModel(std::move(sponza));
@@ -123,23 +124,26 @@ void SandBox::OnInit()
 	};
 
 	// Load pipeline states.
-	gfx::GraphicsPipelineStateCreationDesc graphicsPipelineStateCreationDesc
+
+	gfx::GraphicsPipelineStateCreationDesc pbrGraphicsPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
-		.psShaderPath = L"Shaders/OffscreenRTPS.cso",
-		.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
+			.psShaderPath = L"Shaders/OffscreenRTPS.cso",
+		},
 		.pipelineName = L"Mesh Viewer Pipeline"
 	};
 
-	mPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(graphicsPipelineStateCreationDesc));
+	mPostProcessingStaet = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrGraphicsPipelineStateCreationDesc));
 	
 	gfx::GraphicsPipelineStateCreationDesc pbrPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/Shading/PBRVS.cso",
-		.psShaderPath = L"Shaders/Shading/PBRPS.cso",
-		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
-		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/Shading/PBRVS.cso",
+			.psShaderPath = L"Shaders/Shading/PBRPS.cso",
+		},
 		.pipelineName = L"PBR Pipeline"
 	};
 
@@ -147,21 +151,24 @@ void SandBox::OnInit()
 	
 	gfx::GraphicsPipelineStateCreationDesc lightPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/Light/LightVS.cso",
-		.psShaderPath = L"Shaders/Light/LightPS.cso",
-		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
-		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/Light/LightVS.cso",
+			.psShaderPath = L"Shaders/Light/LightPS.cso",
+		},
 		.pipelineName = L"Light Pipeline"
 	};
 
 	mLightPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(lightPipelineStateCreationDesc));
 
-
 	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
-		.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
-		.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
+			.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
+		},
+		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"Final Render Target Pipeline"
 	};
@@ -170,13 +177,17 @@ void SandBox::OnInit()
 	
 	gfx::GraphicsPipelineStateCreationDesc skyBoxPipelineStateCreationDesc
 	{
-		.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
-		.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
+			.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
+		},
 		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
-		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		.frontFaceWindingOrder = gfx::FrontFaceWindingOrder::CounterClockWise,
 		.pipelineName = L"Sky Box Pipeline"
 	};
+
 
 	mSkyBoxPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(skyBoxPipelineStateCreationDesc));
 
@@ -206,7 +217,7 @@ void SandBox::OnInit()
 	{
 		.usage = gfx::TextureUsage::RenderTarget,
 		.dimensions = mDimensions,
-		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.format = DXGI_FORMAT_R16G16B16A16_FLOAT,
 		.name = L"Post Process Render Texture"
 	};
 
@@ -216,15 +227,11 @@ void SandBox::OnInit()
 	{
 		.usage = gfx::TextureUsage::RenderTarget,
 		.dimensions = mDimensions,
-		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+		.format = gfx::Device::SWAPCHAIN_FORMAT,
 		.name = L"Final Render Texture"
 	};
 
 	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(finalRenderTargetsTextureCreationDesc));
-
-	// Load tcube maps and other textures.
-	
-	
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -285,7 +292,7 @@ void SandBox::OnRender()
 		graphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		graphicsContext->ExecuteResourceBarriers();
 
-		graphicsContext->SetGraphicsPipelineState(mPipelineState.get());
+		graphicsContext->SetGraphicsPipelineState(mPostProcessingStaet.get());
 		graphicsContext->SetRenderTarget(mPostProcessingRT.get(), mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

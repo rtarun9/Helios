@@ -46,5 +46,10 @@ namespace helios::scene
 		std::unique_ptr<SkyBox> mSkyBox{};
 
 		std::unique_ptr<gfx::Buffer> mSceneBuffer{};
+
+		// For projection matrix.
+		float mFov{ 45.0f };
+		float mNearPlane{ 0.1f };
+		float mFarPlane{ 1000.0f };
 	};
 }

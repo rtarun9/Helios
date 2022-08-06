@@ -43,7 +43,7 @@ namespace helios::editor
 		ImGui_ImplWin32_Init(core::Application::GetWindowHandle());
 		gfx::DescriptorHandle srvDescriptorHandle = device->GetSrvCbvUavDescriptor()->GetCurrentDescriptorHandle();
 
-		ImGui_ImplDX12_Init(device->GetDevice(), gfx::Device::NUMBER_OF_FRAMES, DXGI_FORMAT_R8G8B8A8_UNORM, device->GetSrvCbvUavDescriptor()->GetDescriptorHeap(), srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
+		ImGui_ImplDX12_Init(device->GetDevice(), gfx::Device::NUMBER_OF_FRAMES, gfx::Device::SWAPCHAIN_FORMAT, device->GetSrvCbvUavDescriptor()->GetDescriptorHeap(), srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
 		device->GetSrvCbvUavDescriptor()->OffsetCurrentHandle();
 	}
 
@@ -83,7 +83,7 @@ namespace helios::editor
 			RendererProperties(clearColor, postProcessBufferData);
 
 			// Render camera UI.
-			RenderCameraProperties(scene->mCamera.get());
+			RenderSceneProperties(scene);
 
 			// Render scene hierarchy UI.
 			RenderSceneHierarchy(scene->mModels);
@@ -177,7 +177,7 @@ namespace helios::editor
 			if (ImGui::TreeNode(WstringToString(model->GetName()).c_str()))
 			{
 				// Scale uniformally along all axises.
-				ImGui::SliderFloat("Scale", &model->GetTransform()->data.scale.x, 0.1f, 10.0f);
+				ImGui::SliderFloat("Scale", &model->GetTransform()->data.scale.x, 0.1f, 15.0f);
 
 				model->GetTransform()->data.scale = math::XMFLOAT3(model->GetTransform()->data.scale.x, model->GetTransform()->data.scale.x, model->GetTransform()->data.scale.x);
 
@@ -191,18 +191,27 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderCameraProperties(scene::Camera* camera) const
+	void Editor::RenderSceneProperties(scene::Scene* scene) const
 	{
-		ImGui::Begin("Camera Properties");
+		ImGui::Begin("Scene Properties");
 
 		if (ImGui::TreeNode("Primary Camera"))
 		{
 			// Scale uniformally along all axises.
-			ImGui::SliderFloat("Movement Speed", &camera->mMovementSpeed, 0.1f, 1000.0f);
-			ImGui::SliderFloat("Rotation Speed", &camera->mRotationSpeed, 0.1f, 250.0f);
+			ImGui::SliderFloat("Movement Speed", &scene->mCamera->mMovementSpeed, 0.1f, 5000.0f);
+			ImGui::SliderFloat("Rotation Speed", &scene->mCamera->mRotationSpeed, 0.1f, 250.0f);
 
-			ImGui::SliderFloat("Friction Factor", &camera->mFrictionFactor, 0.0f, 1.0f);
+			ImGui::SliderFloat("Friction Factor", &scene->mCamera->mFrictionFactor, 0.0f, 1.0f);
 			
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Projection"))
+		{
+			ImGui::SliderFloat("FOV", &scene->mFov, 0.5f, 90.0f);
+			ImGui::SliderFloat("Near Plane", &scene->mNearPlane, 0.1f, 100.0f);
+			ImGui::SliderFloat("Far Plane", &scene->mFarPlane, 10.0f, 10000.0f);
+
 			ImGui::TreePop();
 		}
 

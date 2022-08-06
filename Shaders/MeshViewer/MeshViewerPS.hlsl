@@ -12,5 +12,5 @@ struct VSOutput
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput psInput) : SV_Target
 {
-    return GetAlbedo(psInput.textureCoord, renderResource.albedoTextureIndex);    
+    return GetAlbedo(psInput.textureCoord, renderResource.albedoTextureIndex, renderResource.albedoTextureSamplerIndex);    
 }

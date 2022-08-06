@@ -1,11 +1,14 @@
 #include "../Common/BindlessRS.hlsli"
 #include "../Common/ConstantBuffers.hlsli"
+#include "../Utils.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
     float3 normal : NORMAL;
+    float4 tangent : TANGENT;
+    float3x3 modelMatrix : MODEL_MATRIX;
     float3 worldSpacePosition : WORLD_SPACE_POSITION;
 };
 
@@ -32,6 +35,18 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     matrix normalMatrix = transpose(transformBuffer.inverseModelMatrix);
 
     output.normal = normalize(mul(float4(normalBuffer[vertexID], 0.0f), normalMatrix).xyz);
+
+    if (renderResource.tangentBufferIndex != -1)
+    {
+        StructuredBuffer<float4> tangentBuffer = ResourceDescriptorHeap[renderResource.tangentBufferIndex];
+        output.tangent = tangentBuffer[vertexID];
+    }
+    else
+    {
+        output.tangent = GenerateTangent(output.normal);
+    }
+
+    output.modelMatrix = (float3x3)transformBuffer.modelMatrix;
     output.worldSpacePosition = float3(mul(float4(positionBuffer[vertexID], 1.0f), transformBuffer.modelMatrix).xyz);
 
     return output;

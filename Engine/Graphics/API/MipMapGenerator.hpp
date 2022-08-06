@@ -14,7 +14,7 @@ namespace helios::gfx
 	class MipMapGenerator
 	{
 	public:
-		MipMapGenerator(gfx::Device& device);
+		MipMapGenerator(gfx::Device* device);
 
 		void GenerateMips(gfx::Texture* texture);
 

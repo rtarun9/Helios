@@ -65,7 +65,7 @@ namespace helios::scene
 			.cameraPosition = mCamera->GetCameraPosition(),
 			.cameraTarget = mCamera->GetCameraTarget(),
 			.viewMatrix = mCamera->GetViewMatrix(),
-			.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f), cameraAspectRatio, 0.1f, 1000.0f),
+			.projectionMatrix = math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(mFov), cameraAspectRatio, mNearPlane, mFarPlane),
 		};
 
 		mSceneBuffer->Update(&sceneBufferData);

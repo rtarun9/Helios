@@ -31,14 +31,12 @@ namespace helios::scene
 
 	private:
 		static constexpr inline const wchar_t* SKYBOX_MODEL_PATH{ L"Assets/Models/Cube/glTF/Cube.gltf" };
-		static constexpr uint32_t ENVIRONMENT_CUBEMAP_DIMENSION = 2048;
+		static constexpr uint32_t ENVIRONMENT_CUBEMAP_DIMENSION = 2048u;
 
 		std::unique_ptr<Model> mSkyBoxModel{};
 		std::unique_ptr<gfx::PipelineState> mCubeMapFromEquirectPipelineState{};
 
 		std::unique_ptr<gfx::Texture> mSkyBoxTexture;
-
-
 	};
 }
 

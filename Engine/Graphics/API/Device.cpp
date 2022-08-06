@@ -125,7 +125,8 @@ namespace helios::gfx
 		// note(rtarun9) : srvCbvUav descriptor count will be very high, because of mip maps.
 		mRtvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 50u, L"RTV Descriptor");
 		mDsvDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 15u, L"DSV Descriptor");
-		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 5124, L"SRV_CBV_UAV Descriptor");
+		mSrvCbvUavDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 8192u, L"SRV_CBV_UAV Descriptor");
+		mSamplerDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1000u, L"Sampler Descriptor");
 
 		// Create bindless root signature.
 		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
@@ -134,7 +135,7 @@ namespace helios::gfx
 		RenderTarget::CreateRenderTargetResources(this);
 		
 		// Create mip map generator (required bindless RS to be created first).
-		mMipMapGenerator = std::make_unique<MipMapGenerator>(*this);
+		mMipMapGenerator = std::make_unique<MipMapGenerator>(this);
 	}
 
 	void Device::InitSwapChainResources()
@@ -152,7 +153,7 @@ namespace helios::gfx
 		{
 			.Width = core::Application::GetClientDimensions().x,
 			.Height = core::Application::GetClientDimensions().y,
-			.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+			.Format = Device::SWAPCHAIN_FORMAT,
 			.Stereo = FALSE,
 			.SampleDesc
 			{
@@ -314,6 +315,16 @@ namespace helios::gfx
 
 		return cbvIndex;
 	}
+
+	uint32_t Device::CreateSampler(const SamplerCreationDesc& samplerCreationDesc) const
+	{
+		uint32_t samplerIndex = mSamplerDescriptor->GetCurrentDescriptorIndex();
+		gfx::DescriptorHandle samplerDescriptorHandle = mSamplerDescriptor->GetCurrentDescriptorHandle();
+
+		mDevice->CreateSampler(&samplerCreationDesc.samplerDesc, samplerDescriptorHandle.cpuDescriptorHandle);
+
+		return samplerIndex;
+	}
 	
 	Texture Device::CreateTexture(TextureCreationDesc& textureCreationDesc, const unsigned char* data) const
 	{
@@ -369,10 +380,10 @@ namespace helios::gfx
 
 		texture.dimensions = textureCreationDesc.dimensions;
 
-		uint32_t mipLevels = textureCreationDesc.usage != TextureUsage::TextureFromPath ? 1u : textureCreationDesc.mipLevels;
+		uint32_t mipLevels = textureCreationDesc.mipLevels;
 
 		// Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D32_FLOAT) or formats used by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
-		DXGI_FORMAT format{};
+		DXGI_FORMAT format{textureCreationDesc.format};
 		DXGI_FORMAT dsFormat{};
 
 		switch (textureCreationDesc.format)
@@ -541,9 +552,9 @@ namespace helios::gfx
 		}
 
 		// Generate mip maps.
+		texture.textureName = textureCreationDesc.name;
 		mMipMapGenerator->GenerateMips(&texture);
 
-		texture.textureName = textureCreationDesc.name;
 
 		return texture;
 	}

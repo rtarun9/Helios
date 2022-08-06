@@ -8,7 +8,7 @@
 
 namespace helios::gfx
 {
-	MipMapGenerator::MipMapGenerator(gfx::Device& device): mDevice(device)
+	MipMapGenerator::MipMapGenerator(gfx::Device* device): mDevice(*device)
 	{
 		ComputePipelineStateCreationDesc pipelineCreationDesc
 		{
@@ -16,7 +16,7 @@ namespace helios::gfx
 			.pipelineName = L"Mip Map Generation Pipeline"
 		};
 
-		mMipMapPipelineState = std::make_unique<gfx::PipelineState>(device.GetDevice(), pipelineCreationDesc);	
+		mMipMapPipelineState = std::make_unique<gfx::PipelineState>(device->GetDevice(), pipelineCreationDesc);	
 	}
 
 	void MipMapGenerator::GenerateMips(gfx::Texture* texture)
@@ -37,8 +37,8 @@ namespace helios::gfx
 
 		for (uint32_t i : std::views::iota(0u, sourceResourceDesc.MipLevels - 1u))
 		{
-			uint32_t destinationWidth = std::max<UINT>(sourceResourceDesc.Width >> (i + 1), 1);
-			uint32_t destinationHeight = std::max<UINT>(sourceResourceDesc.Height >> (i + 1), 1);
+			uint32_t destinationWidth = std::max<uint32_t>(sourceResourceDesc.Width >> (static_cast<uint32_t>(i) + 1u), 1u);
+			uint32_t destinationHeight = std::max<uint32_t>(sourceResourceDesc.Height >> (static_cast<uint32_t>(i) + 1u), 1u);
 
 			SrvCreationDesc srvCreationDesc
 			{

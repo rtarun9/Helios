@@ -2,17 +2,24 @@
 
 #include "GraphicsContext.hpp"
 #include "Device.hpp"
+#include "Descriptor.hpp"
 
 #include "Core/Application.hpp"
 
 namespace helios::gfx
 {
-	GraphicsContext::GraphicsContext(Device& device) : mDevice(device)
+	GraphicsContext::GraphicsContext(Device* device) : mDevice(*device)
 	{
-		mCommandList = device.GetGraphicsCommandQueue()->GetCommandList();
+		mCommandList = device->GetGraphicsCommandQueue()->GetCommandList();
 
 		// As all graphics context's require to set the descriptor heap before hand, the user has option to set them manually (for explicitness) or just let the constructor take care of this.
-		SetDescriptorHeaps(mDevice.GetSrvCbvUavDescriptor());
+		std::array<gfx::Descriptor*, 2> descriptors
+		{
+			mDevice.GetSrvCbvUavDescriptor(),
+			mDevice.GetSamplerDescriptor()
+		};
+
+		SetDescriptorHeaps(descriptors);
 	}
 
 	void GraphicsContext::AddResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) 
@@ -52,11 +59,12 @@ namespace helios::gfx
 		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 1, 0u, nullptr);
 	}
 
-	void GraphicsContext::SetDescriptorHeaps(Descriptor* const descriptor) const
+	void GraphicsContext::SetDescriptorHeaps(std::array<gfx::Descriptor*, 2> descriptors) const
 	{
-		std::array<ID3D12DescriptorHeap*, 1>  descriptorHeaps
+		std::array<ID3D12DescriptorHeap*, 2>  descriptorHeaps
 		{
-			descriptor->GetDescriptorHeap(),
+			descriptors[0]->GetDescriptorHeap(),
+			descriptors[1]->GetDescriptorHeap(),
 		};
 
 		mCommandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());

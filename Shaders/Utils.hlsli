@@ -8,7 +8,7 @@ static const float TWO_PI = 2.0f * PI;
 static const float INV_PI = 1.0f / PI;
 static const float INV_TWO_PI = 1.0f / TWO_PI;
 
-float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex)
+float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex, uint albedoTextureSamplerIndex)
 {
     if (albedoTextureIndex == -1)
     {
@@ -16,7 +16,13 @@ float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex)
     }
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
-    return albedoTexture.Sample(anisotropicSampler, texCoord);
+    if (!albedoTextureSamplerIndex)
+    {
+        return albedoTexture.Sample(linearWrapSampler, texCoord);
+    }
+
+    SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(albedoTextureSamplerIndex)];
+    return albedoTexture.Sample(samplerState, texCoord);
 }
 
 
@@ -55,5 +61,48 @@ float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
     return samplingVector;
 }
 
+float3 GetNormal(float3 inputNormal, float2 texCoord, float4 tangent, float3x3 modelMatrix, uint normalTextureIndex, uint normalTextureSamplerIndex)
+{
+    if (normalTextureIndex != -1)
+    {
+        Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
+
+        inputNormal = normalize(inputNormal);
+        
+        float3 normal = float3(0.0f, 0.0f, 0.0f);
+
+        if (!normalTextureSamplerIndex)
+        {
+            normal = normalize(2.0f * normalTexture.Sample(anisotropicSampler, texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+        }
+        else
+        {
+            SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
+            normal = normalize(2.0f * normalTexture.Sample(samplerState, texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
+        }
+
+        tangent.xyz = normalize(tangent.xyz);
+
+        float3 bitangent = normalize(cross(inputNormal, tangent.xyz)) * tangent.w;
+        float3x3 tbn = float3x3(tangent.xyz, bitangent, inputNormal);
+
+        normal = mul(normal, tbn);
+        normal = normalize(mul(normal, modelMatrix));
+
+        return normal;
+    }
+    else
+    {
+        return normalize(inputNormal);
+    }
+}
+
+float4 GenerateTangent(float3 normal)
+{
+    float3 tangent = cross(normal, float3(0.0f, 1.0f, 0.0));
+    tangent = normalize(lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), tangent, step(MIN_FLOAT_VALUE, dot(tangent, tangent))));
+
+    return float4(tangent, 1.0f);
+}
 
 #endif

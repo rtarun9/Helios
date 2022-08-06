@@ -16,7 +16,7 @@ namespace helios::gfx
 	class GraphicsContext
 	{
 	public:
-		GraphicsContext(Device& device);
+		GraphicsContext(Device* device);
 		ID3D12GraphicsCommandList* const GetCommandList() const { return mCommandList.Get(); }
 
 		// Core functionalities.
@@ -31,7 +31,7 @@ namespace helios::gfx
 
 		void ClearDepthStencilView(Texture* const depthStencilTexture, float depth = 1.0f);
 
-		void SetDescriptorHeaps(Descriptor* const descriptor) const;
+		void SetDescriptorHeaps(std::array<gfx::Descriptor*, 2> descriptors) const;
 
 		// COnfigure pipeline / root signature related functions.
 		void SetGraphicsPipelineState(PipelineState* const pipelineState) const;

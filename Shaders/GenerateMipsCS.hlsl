@@ -15,7 +15,7 @@ float3 ConvertToLinear(float3 x)
 // Source: https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_(CIE_XYZ_to_sRGB)
 float3 ConvertToSRGB(float3 x)
 {
-	return x < 0.0031308 ? 12.92 * x : 1.055 * pow(abs(x), 1.0 / 2.4) - 0.055;
+    return x < 0.0031308 ? 12.92 * x : 1.13005 * sqrt(abs(x - 0.00228)) - 0.13448 * x + 0.005719;
 }
 
 // Convert linear color to sRGB before storing if the original source is 
@@ -28,7 +28,7 @@ float4 PackColor(float4 color, bool isSRGB)
     }
     else
     {
-        return color;
+        return float4(ConvertToLinear(color.rgb), color.a);
     }
 }
 
@@ -49,7 +49,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID, uint groupIndex : SV_G
     // This offset is taken so that when we use linear filtering the sampler will sample / blend from four corner pixels of sample location.
     float2 uvCoords = mipMapBuffer.texelSize * (dispatchThreadID.xy + 0.5);
 
-    source = sourceMipTexture.SampleLevel(linearClampSampler, uvCoords, renderResources.sourceMipIndex);
+    source = sourceMipTexture.SampleLevel(anisotropicSampler, uvCoords, renderResources.sourceMipIndex);
 
     outputMipTexture[dispatchThreadID.xy] = PackColor(source, mipMapBuffer.isSRGB);
 }

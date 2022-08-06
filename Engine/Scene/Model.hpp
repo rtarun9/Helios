@@ -48,15 +48,26 @@ namespace helios::scene
 		}
 	};
 
-	// This struct stores the texture's required for a PBR material. If a texture does not exist, it will be null, in which case the index (used to index into descriptor heap) will be -1.
+
+	// This struct stores the texture's required for a PBR material. If a texture does not exist, it will be null, in which case the index (used to index into descriptor heap) will be 0.
 	// The shader will accordingly set a null view and not use that particular texture.
+	// Each texture (if it exist) will have a sampler index associated with it, so we can use SamplerDescriptorHeap to index into the heap directly. If no sampler, index defaults to 0.
 	struct PBRMaterial
 	{
 		std::shared_ptr<gfx::Texture> albedoTexture{};
+		uint32_t albedoTextureSamplerIndex{};
+		
 		std::shared_ptr<gfx::Texture> normalTexture{};
+		uint32_t normalTextureSamplerIndex{};
+
 		std::shared_ptr<gfx::Texture> metalRoughnessTexture{};
+		uint32_t metalRoughnessTextureSamplerIndex{};
+
 		std::shared_ptr<gfx::Texture> aoTexture{};
+		uint32_t aoTextureSamplerIndex{};
+
 		std::shared_ptr<gfx::Texture> emissiveTexture{};
+		uint32_t emissiveTextureSamplerIndex{};
 	};
 
 	// Stores all data required by a mesh (necessary buffer's and material).
@@ -69,7 +80,7 @@ namespace helios::scene
 		std::shared_ptr<gfx::Buffer> indexBuffer{};
 		uint32_t indicesCount{};
 
-		PBRMaterial pbrMaterial{};
+		uint32_t materialIndex{};
 	};
 
 	struct ModelCreationDesc
@@ -97,15 +108,15 @@ namespace helios::scene
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);
-		
-		// Function for loading texture from path (so that texture's can be loaded in parallel).
-		// The textureCreationDesc will be filled with appropirate dimensions in this function as well.
-		void LoadTexture(unsigned char*& data, uint32_t& componentCount, gfx::TextureCreationDesc& textureCreationDesc);
+		void LoadSamplers(const gfx::Device* device, tinygltf::Model& model);
+		void LoadMaterials(const gfx::Device* device, tinygltf::Model& model);
 
 		Transform mTransform{};
 	
-	protected:
+	private:
 		std::vector<Mesh> mMeshes{};
+		std::vector<PBRMaterial> mMaterials{};
+		std::vector<uint32_t> mSamplers{};
 			
 		std::wstring mModelPath{};
 		std::wstring mModelName{};

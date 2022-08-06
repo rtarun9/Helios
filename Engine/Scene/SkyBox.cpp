@@ -4,7 +4,7 @@
 
 namespace helios::scene
 {
-	SkyBox::SkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc)
+	SkyBox::SkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc) 
 	{
 		// Create environment textures.
 		gfx::TextureCreationDesc equirectTextureCreationDesc

@@ -30,16 +30,16 @@ namespace helios::gfx
 		Descriptor* GetRtvDescriptor() const { return mRtvDescriptor.get(); }
 		Descriptor* GetSrvCbvUavDescriptor() const { return mSrvCbvUavDescriptor.get(); }
 		Descriptor* GetDsvDescriptor() const { return mDsvDescriptor.get(); }
+		Descriptor* GetSamplerDescriptor() const { return mSamplerDescriptor.get(); }
 
 		CommandQueue* GetGraphicsCommandQueue() const { return mGraphicsCommandQueue.get(); }
 		CommandQueue* GetComputeCommandQueue() const { return mComputeCommandQueue.get(); }
 
 		MemoryAllocator* GetMemoryAllocator() const { return mMemoryAllocator.get(); }
-		BackBuffer* GetCurrentBackBuffer()  { return &mBackBuffers[mCurrentBackBufferIndex]; }
+		BackBuffer* GetCurrentBackBuffer() { return &mBackBuffers[mCurrentBackBufferIndex]; }
 		
-
-		std::unique_ptr<GraphicsContext> GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(*this)); }
-		std::unique_ptr<ComputeContext> GetComputeContext() { return std::move(std::make_unique<ComputeContext>(*this)); }
+		std::unique_ptr<GraphicsContext> const  GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(this)); }
+		std::unique_ptr<ComputeContext> const GetComputeContext() { return std::move(std::make_unique<ComputeContext>(this)); }
 		
 		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
 		
@@ -68,6 +68,7 @@ namespace helios::gfx
 		uint32_t CreateDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* resource) const;
 		uint32_t CreateCbv(const CbvCreationDesc& cbvCreationDesc) const;
+		uint32_t CreateSampler(const SamplerCreationDesc& samplerCreationDesc) const;
 
 		template <typename T>
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
@@ -90,7 +91,7 @@ namespace helios::gfx
 	public:
 		// Number of SwapChain backbuffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
-	
+		static constexpr DXGI_FORMAT SWAPCHAIN_FORMAT = DXGI_FORMAT_R10G10B10A2_UNORM;
 	private:
 		Microsoft::WRL::ComPtr<ID3D12Device5> mDevice{};
 		Microsoft::WRL::ComPtr<ID3D12DebugDevice2> mDebugDevice{};
@@ -117,6 +118,7 @@ namespace helios::gfx
 		std::unique_ptr<Descriptor> mRtvDescriptor{};
 		std::unique_ptr<Descriptor> mDsvDescriptor{};
 		std::unique_ptr<Descriptor> mSrvCbvUavDescriptor{};
+		std::unique_ptr<Descriptor> mSamplerDescriptor{};
 
 		std::unique_ptr<CommandQueue> mGraphicsCommandQueue{};
 		std::unique_ptr<CommandQueue> mComputeCommandQueue{};

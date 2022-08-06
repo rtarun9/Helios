@@ -44,12 +44,9 @@ namespace helios::scene
 
 		tinygltf::Model model{};
 
-		std::vector<uint8_t> fileContents{};
-		ReadFile(mModelPath, fileContents);
-
 		if (modelPathStr.find(".glb") != std::string::npos)
 		{
-			if (!context.LoadBinaryFromMemory(&model, &error, &warning, fileContents.data(), static_cast<unsigned int>(fileContents.size()), modelDirectoryPathStr))
+			if (!context.LoadBinaryFromFile(&model, &error, &warning, modelPathStr))
 			{
 				if (!error.empty())
 				{
@@ -64,7 +61,7 @@ namespace helios::scene
 		}
 		else
 		{
-			if (!context.LoadASCIIFromString(&model, &error, &warning, reinterpret_cast<const char*>(&fileContents.at(0)), static_cast<unsigned int>(fileContents.size()), modelDirectoryPathStr))
+			if (!context.LoadASCIIFromFile(&model, &error, &warning, modelPathStr))
 			{
 				if (!error.empty())
 				{
@@ -78,6 +75,12 @@ namespace helios::scene
 			}
 
 		}
+
+		// Load samplers.
+		LoadSamplers(device, model);
+
+		// Load textures and materials.
+		LoadMaterials(device, model);
 
 		// Build meshes.
 		tinygltf::Scene& scene = model.scenes[model.defaultScene];
@@ -125,270 +128,96 @@ namespace helios::scene
 			tinygltf::Primitive primitive = nodeMesh.primitives[i];
 			tinygltf::Accessor& indexAccesor = model.accessors[primitive.indices];
 
-			std::mutex textureCreationMutexLock{};
+			// Position data.
+			tinygltf::Accessor& positionAccesor = model.accessors[primitive.attributes["POSITION"]];
+			tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccesor.bufferView];
+			tinygltf::Buffer& positionBuffer = model.buffers[positionBufferView.buffer];
 
-			std::thread materialLoadingThread([&]()
+			int positionByteStride = positionAccesor.ByteStride(positionBufferView);
+			uint8_t const* const positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
+
+			// TextureCoord data.
+			tinygltf::Accessor& textureCoordAccesor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+			tinygltf::BufferView& textureCoordBufferView = model.bufferViews[textureCoordAccesor.bufferView];
+			tinygltf::Buffer& textureCoordBuffer = model.buffers[textureCoordBufferView.buffer];
+			int textureCoordBufferStride = textureCoordAccesor.ByteStride(textureCoordBufferView);
+			uint8_t const* const texcoords = &textureCoordBuffer.data[textureCoordBufferView.byteOffset + textureCoordAccesor.byteOffset];
+
+			// Normal data.
+			tinygltf::Accessor& normalAccesor = model.accessors[primitive.attributes["NORMAL"]];
+			tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccesor.bufferView];
+			tinygltf::Buffer& normalBuffer = model.buffers[normalBufferView.buffer];
+			int normalByteStride = normalAccesor.ByteStride(normalBufferView);
+			uint8_t const* const normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
+
+			// Tangent data.
+			tinygltf::Accessor& tangentAccesor = model.accessors[primitive.attributes["TANGENT"]];
+			tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccesor.bufferView];
+			tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
+			int tangentByteStride = tangentAccesor.ByteStride(tangentBufferView);
+			uint8_t  const* const tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
+
+			// Fill in the vertices array.
+			for (size_t i : std::views::iota(0u, positionAccesor.count))
 			{
-				// Load material textures. 
-				// note(rtarun9) : Not complete implementation, but basic framework).
-				tinygltf::Material gltfPBRMaterial = model.materials[primitive.material];
-
-				std::thread albedoTextureThread([&]()
+				math::XMFLOAT3 position
 				{
-					if (gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0)
-					{
-						tinygltf::Texture& albedoTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.baseColorTexture.index];
-						tinygltf::Image& albedoImage = model.images[albedoTexture.source];
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0],
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1],
+					 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2]
+				};
 
-						std::wstring albedoTexturePath = mModelDirectory + StringToWString(albedoImage.uri);
-						if (!albedoImage.uri.empty())
-						{
-
-							gfx::TextureCreationDesc albedoTextureCreationDesc
-							{
-								.usage = gfx::TextureUsage::TextureFromData,
-								.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-								.mipLevels = 6u,
-								.name = meshName + L" albedo texture",
-								.path = albedoTexturePath,
-							};
-
-							unsigned char* data{};
-							uint32_t componentCount{ 4u };
-
-							LoadTexture(data, componentCount, albedoTextureCreationDesc);
-							std::lock_guard<std::mutex> mutexGuard(textureCreationMutexLock);
-							mesh.pbrMaterial.albedoTexture = std::make_shared<gfx::Texture>(device->CreateTexture(albedoTextureCreationDesc, data));
-						}
-					}
-				});
-				
-				std::thread normalTextureThread([&]()
+				math::XMFLOAT2 textureCoord
 				{
-					if (gltfPBRMaterial.normalTexture.index >= 0)
-					{
-						tinygltf::Texture& normalTexture = model.textures[gltfPBRMaterial.normalTexture.index];
-						tinygltf::Image& normalImage = model.images[normalTexture.source];
+					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
+					(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
+				};
 
-						std::wstring normalTexturePath = mModelDirectory + StringToWString(normalImage.uri);
-
-						if (!normalImage.uri.empty())
-						{
-							gfx::TextureCreationDesc normalTextureCreationDesc
-							{
-								.usage = gfx::TextureUsage::TextureFromData,
-								.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-								.mipLevels = 4u,
-								.name = meshName + L" normal texture",
-								.path = normalTexturePath,
-							};
-
-							unsigned char* data{};
-							uint32_t componentCount{ 4u };
-
-							LoadTexture(data, componentCount, normalTextureCreationDesc);
-							std::lock_guard<std::mutex> mutexGuard(textureCreationMutexLock);
-							mesh.pbrMaterial.normalTexture = std::make_shared<gfx::Texture>(device->CreateTexture(normalTextureCreationDesc, data));
-						}
-					}
-				});
-				
-				std::thread metallicRoughnessTextureThread([&]()
+				math::XMFLOAT3 normal
 				{
-					if (gltfPBRMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
-					{
-						tinygltf::Texture& metalRoughnessTexture = model.textures[gltfPBRMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index];
-						tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0],
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1],
+					(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2],
+				};
 
-						std::wstring metallicRoughnessTexturePath = mModelDirectory + StringToWString(metalRoughnessImage.uri);
-						if (!metalRoughnessImage.uri.empty())
-						{
-							gfx::TextureCreationDesc metalRoughnessTextureCreationDesc
-							{
-								.usage = gfx::TextureUsage::TextureFromData,
-								.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-								.mipLevels = 4u,
-								.name = meshName + L" metal roughness texture",
-								.path = metallicRoughnessTexturePath,
-							};
-							unsigned char* data{};
-							uint32_t componentCount{ 4u };
+				math::XMFLOAT4 tangent{};
 
-							LoadTexture(data, componentCount, metalRoughnessTextureCreationDesc);
-							std::lock_guard<std::mutex> mutexGuard(textureCreationMutexLock);
-							mesh.pbrMaterial.metalRoughnessTexture = std::make_shared<gfx::Texture>(device->CreateTexture(metalRoughnessTextureCreationDesc, data));
-						}
-					}
-				});
-
-				std::thread occlusionTextureThread([&]()
+				// Required as a model need not have tangents.
+				if (tangentAccesor.bufferView)
 				{
-					if (gltfPBRMaterial.occlusionTexture.index >= 0)
+					tangent =
 					{
-						tinygltf::Texture& aoTexture = model.textures[gltfPBRMaterial.occlusionTexture.index];
-						tinygltf::Image& aoImage = model.images[aoTexture.source];
-
-						std::wstring occlusionTexturePath = mModelDirectory + StringToWString(aoImage.uri);
-						if (!aoImage.uri.empty())
-						{
-							gfx::TextureCreationDesc occlusionTextureCreationDesc
-							{
-								.usage = gfx::TextureUsage::TextureFromData,
-								.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-								.mipLevels = 4u,
-								.name = meshName + L" occlusion texture",
-								.path = occlusionTexturePath,
-							};
-
-							unsigned char* data{};
-							uint32_t componentCount{ 4u };
-
-							LoadTexture(data, componentCount, occlusionTextureCreationDesc);
-							std::lock_guard<std::mutex> mutexGuard(textureCreationMutexLock);
-							mesh.pbrMaterial.aoTexture = std::make_shared<gfx::Texture>(device->CreateTexture(occlusionTextureCreationDesc, data));
-						}
-					}
-				});
-				
-				std::thread emmisiveTextureThread([&]()
-				{
-					if (gltfPBRMaterial.emissiveTexture.index >= 0)
-					{
-						tinygltf::Texture& emissiveTexture = model.textures[gltfPBRMaterial.emissiveTexture.index];
-						tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
-
-						std::wstring emissiveTexturePath = mModelDirectory + StringToWString(emissiveImage.uri);
-						if (!emissiveImage.uri.empty())
-						{
-							gfx::TextureCreationDesc emissiveTextureCreationDesc
-							{
-								.usage = gfx::TextureUsage::TextureFromData,
-								.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-								.mipLevels = 4u,
-								.name = meshName + L" emissive texture",
-								.path = emissiveTexturePath ,
-							};
-
-							unsigned char* data{};
-							uint32_t componentCount{ 4u };
-
-							LoadTexture(data, componentCount, emissiveTextureCreationDesc);
-							std::lock_guard<std::mutex> mutexGuard(textureCreationMutexLock);
-							mesh.pbrMaterial.emissiveTexture = std::make_shared<gfx::Texture>(device->CreateTexture(emissiveTextureCreationDesc, data));
-						}
-					}	
-				});
-
-				albedoTextureThread.join();
-				normalTextureThread.join();
-				metallicRoughnessTextureThread.join();
-				occlusionTextureThread.join();
-				emmisiveTextureThread.join();
-			});
-				
-			// DOnt create tangent buffer if no tangent data exist.
-			bool tangentDataExist = false;
-
-			std::thread bufferDataLoadingThread([&]()
-			{
-				// Position data.
-				tinygltf::Accessor& positionAccesor = model.accessors[primitive.attributes["POSITION"]];
-				tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccesor.bufferView];
-				tinygltf::Buffer& positionBuffer = model.buffers[positionBufferView.buffer];
-
-				int positionByteStride = positionAccesor.ByteStride(positionBufferView);
-				uint8_t const* const positions = &positionBuffer.data[positionBufferView.byteOffset + positionAccesor.byteOffset];
-
-				// TextureCoord data.
-				tinygltf::Accessor& textureCoordAccesor = model.accessors[primitive.attributes["TEXCOORD_0"]];
-				tinygltf::BufferView& textureCoordBufferView = model.bufferViews[textureCoordAccesor.bufferView];
-				tinygltf::Buffer& textureCoordBuffer = model.buffers[textureCoordBufferView.buffer];
-				int textureCoordBufferStride = textureCoordAccesor.ByteStride(textureCoordBufferView);
-				uint8_t const* const texcoords = &textureCoordBuffer.data[textureCoordBufferView.byteOffset + textureCoordAccesor.byteOffset];
-
-				// Normal data.
-				tinygltf::Accessor& normalAccesor = model.accessors[primitive.attributes["NORMAL"]];
-				tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccesor.bufferView];
-				tinygltf::Buffer& normalBuffer = model.buffers[normalBufferView.buffer];
-				int normalByteStride = normalAccesor.ByteStride(normalBufferView);
-				uint8_t const* const normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
-
-				// Tangent data.
-				tinygltf::Accessor& tangentAccesor = model.accessors[primitive.attributes["TANGENT"]];
-				tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccesor.bufferView];
-				tinygltf::Buffer& tangentBuffer = model.buffers[tangentBufferView.buffer];
-				int tangentByteStride = tangentAccesor.ByteStride(tangentBufferView);
-				uint8_t  const* const tangents = &tangentBuffer.data[tangentBufferView.byteOffset + tangentAccesor.byteOffset];
-
-				tangentDataExist = tangentAccesor.bufferView;
-
-				// Fill in the vertices array.
-				for (size_t i : std::views::iota(0u, positionAccesor.count))
-				{
-					math::XMFLOAT3 position
-					{
-						 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0],
-						 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1],
-						 (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2]
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2],
+						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3],
 					};
-
-					math::XMFLOAT2 textureCoord
-					{
-						(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
-						(reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
-					};
-
-					math::XMFLOAT3 normal
-					{
-						(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0],
-						(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1],
-						(reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2],
-					};
-
-					math::XMFLOAT4 tangent{};
-
-					// Required as a model need not have tangents.
-					if (tangentAccesor.bufferView)
-					{
-						tangent =
-						{
-							(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[0],
-							(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[1],
-							(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[2],
-							(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3],
-						};
-					}
-
-					modelPositions.emplace_back(position);
-					modelTextureCoords.emplace_back(textureCoord);
-					modelNormals.emplace_back(normal);
-					modelTangents.emplace_back(tangent);
 				}
 
-				// Get the index buffer data.
-				tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccesor.bufferView];
-				tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
-				int indexByteStride = indexAccesor.ByteStride(indexBufferView);
-				uint8_t const* const indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
+				modelPositions.emplace_back(position);
+				modelTextureCoords.emplace_back(textureCoord);
+				modelNormals.emplace_back(normal);
+				modelTangents.emplace_back(tangent);
+			}
 
-				// Fill indices array.
-				for (size_t i : std::views::iota(0u, indexAccesor.count))
+			// Get the index buffer data.
+			tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccesor.bufferView];
+			tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
+			int indexByteStride = indexAccesor.ByteStride(indexBufferView);
+			uint8_t const* const indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
+
+			// Fill indices array.
+			for (size_t i : std::views::iota(0u, indexAccesor.count))
+			{
+				if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 				{
-					if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-					{
-						indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
-					}
-					else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-					{
-						indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
-					}
+					indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
 				}
-			});
-
-
-			// Create all the buffers (wait for buffer data loading thread and material loading thread before proceeding).
-			bufferDataLoadingThread.join();
-			materialLoadingThread.join();
+				else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+				{
+					indices.push_back(static_cast<uint32_t>((reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
+				}
+			}
 
 			gfx::BufferCreationDesc positionBufferCreationDesc
 			{
@@ -414,7 +243,7 @@ namespace helios::scene
 
 			mesh.normalBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT3>(normalBufferCreationDesc, modelNormals));
 
-			if (tangentDataExist)
+			if (tangentAccesor.bufferView)
 			{
 				gfx::BufferCreationDesc tangentBufferCreationDesc
 				{
@@ -435,6 +264,8 @@ namespace helios::scene
 
 			mesh.indicesCount = static_cast<uint32_t>(indices.size());
 
+			mesh.materialIndex = primitive.material;
+
 			mMeshes.push_back(mesh);
 		}
 
@@ -443,25 +274,279 @@ namespace helios::scene
 			LoadNode(device, modelCreationDesc, childrenNodeIndex, model);
 		}
 	}
-	
-	// Function for loading texture from path (so that texture's can be loaded in parallel).
-	// The textureCreationDesc will be filled with appropirate dimensions in this function as well.
-	void Model::LoadTexture(unsigned char*& data, uint32_t& componentCount, gfx::TextureCreationDesc& textureCreationDesc)
+
+	// Reference : https://github.com/syoyo/tinygltf/blob/master/examples/dxview/src/Viewer.cc
+	void Model::LoadSamplers(const gfx::Device* device, tinygltf::Model& model)
 	{
-		int width{}, height{};
+		mSamplers.reserve(model.samplers.size());
 
-		data = stbi_load(WstringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
-		if (!data)
+		for (tinygltf::Sampler& sampler : model.samplers) 
 		{
-			ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
-		}
+			gfx::SamplerCreationDesc samplerCreationDesc{};
 
-		textureCreationDesc.dimensions.x = width;
-		textureCreationDesc.dimensions.y = height;
+			switch (sampler.minFilter) 
+			{
+				case TINYGLTF_TEXTURE_FILTER_NEAREST:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+					}
+				}break;
+
+				case TINYGLTF_TEXTURE_FILTER_LINEAR:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+					}
+				}break;
+
+				case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+					}
+				}break;
+
+		
+				case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+					}
+				}break;
+
+				case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+					}
+				}break;
+
+				case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+				{
+					if (sampler.magFilter == TINYGLTF_TEXTURE_FILTER_NEAREST)
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+					}
+					else
+					{
+						samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+					}
+				}break;
+				
+				default:
+				{
+					samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
+				}
+				break;
+			}
+
+			auto toTextureAddressMode = [](int wrap) 
+			{
+				switch (wrap) 
+				{
+					case TINYGLTF_TEXTURE_WRAP_REPEAT:
+					{
+						return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+					}break;
+					case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+					{
+						return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+					}break;
+					case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+					{
+						return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+					}break;
+					default:
+					{
+						return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+					}break;
+				}
+			};
+
+			samplerCreationDesc.samplerDesc.AddressU = toTextureAddressMode(sampler.wrapS);
+			samplerCreationDesc.samplerDesc.AddressV = toTextureAddressMode(sampler.wrapT);
+			samplerCreationDesc.samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			samplerCreationDesc.samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+			samplerCreationDesc.samplerDesc.MinLOD = 0.0f;
+			samplerCreationDesc.samplerDesc.MipLODBias = 0.0f;
+			samplerCreationDesc.samplerDesc.MaxAnisotropy =16;
+			samplerCreationDesc.samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+			
+			uint32_t samplerIndex = device->CreateSampler(samplerCreationDesc);
+			mSamplers.push_back(samplerIndex);
+		}
 	}
 
+
+
+	void Model::LoadMaterials(const gfx::Device* device, tinygltf::Model& model)
+	{
+		std::mutex deviceAccessMutex{};
+
+		auto CreateTexture = [&](tinygltf::Image& image, gfx::TextureCreationDesc& textureCreationDesc)
+		{
+			std::string texturePath = WstringToString(mModelDirectory) + image.uri;
+
+			int width{}, height{};
+			unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, nullptr, 4);
+			if (!data)
+			{
+				ErrorMessage(L"Failed to load texture from path : " + StringToWString(texturePath));
+			}
+
+			// Create max mip levels possible.
+			textureCreationDesc.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))) + 1);
+
+			textureCreationDesc.dimensions = { (uint32_t)width, (uint32_t)height };
+
+			std::lock_guard<std::mutex> mutexGuard(deviceAccessMutex);
+			return std::move(std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc, data)));
+		};
+
+		for (const tinygltf::Material& material : model.materials)
+		{
+			PBRMaterial pbrMaterial{};
+
+			std::thread albedoTextureThread([&]() 
+			{
+				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
+				{
+					gfx::TextureCreationDesc albedoTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromData,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+						.mipLevels = 6u,
+						.name = mModelName + L" albedo texture"
+					};
+
+					tinygltf::Texture& albedoTexture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+					tinygltf::Image& albedoImage = model.images[albedoTexture.source];
+
+					pbrMaterial.albedoTexture = CreateTexture(albedoImage, albedoTextureCreationDesc);
+					pbrMaterial.albedoTextureSamplerIndex = mSamplers[albedoTexture.sampler];
+				}
+
+			});
+			
+			std::thread metalRoughnessTextureThread([&]()
+			{
+				if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
+				{
+					gfx::TextureCreationDesc metalRoughnessTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromData,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 4u,
+						.name = mModelName + L" metal roughness texture"
+					};
+
+					tinygltf::Texture& metalRoughnessTexture = model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+					tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
+
+					pbrMaterial.metalRoughnessTexture = CreateTexture(metalRoughnessImage, metalRoughnessTextureCreationDesc);
+					pbrMaterial.metalRoughnessTextureSamplerIndex = mSamplers[metalRoughnessTexture.sampler];
+				}
+			});
+
+			std::thread normalTextureThread([&]()
+			{
+				if (material.normalTexture.index >= 0)
+				{
+					gfx::TextureCreationDesc normalTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromData,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 4u,
+						.name = mModelName + L" normal texture",
+					};
+
+					tinygltf::Texture& normalTexture = model.textures[material.normalTexture.index];
+					tinygltf::Image& normalImage = model.images[normalTexture.source];
+
+					pbrMaterial.normalTexture = CreateTexture(normalImage, normalTextureCreationDesc);
+					pbrMaterial.normalTextureSamplerIndex = mSamplers[normalTexture.sampler];
+				}
+			});
+
+			std::thread occlusionTextureThread([&]()
+			{
+				if (material.occlusionTexture.index >= 0)
+				{
+					gfx::TextureCreationDesc occlusionTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromData,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
+						.mipLevels = 4u,
+						.name = mModelName + L" occlusion texture",
+					};
+
+					tinygltf::Texture& aoTexture = model.textures[material.occlusionTexture.index];
+					tinygltf::Image& aoImage = model.images[aoTexture.source];
+
+					pbrMaterial.aoTexture = CreateTexture(aoImage, occlusionTextureCreationDesc);
+					pbrMaterial.aoTextureSamplerIndex = mSamplers[aoTexture.sampler];
+				}
+			});
+			
+			std::thread emissiveTextureThread([&]()
+			{
+				if (material.emissiveTexture.index >= 0)
+				{
+					gfx::TextureCreationDesc emissiveTextureCreationDesc
+					{
+						.usage = gfx::TextureUsage::TextureFromData,
+						.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+						.mipLevels = 4u,
+						.name = mModelName + L" emissive texture",
+					};
+
+					tinygltf::Texture& emissiveTexture = model.textures[material.emissiveTexture.index];
+					tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
+
+					pbrMaterial.emissiveTexture = CreateTexture(emissiveImage, emissiveTextureCreationDesc);
+					pbrMaterial.emissiveTextureSamplerIndex = mSamplers[emissiveTexture.sampler];
+				}
+			});
+
+			albedoTextureThread.join();
+			metalRoughnessTextureThread.join();
+			normalTextureThread.join();
+			occlusionTextureThread.join();
+			emissiveTextureThread.join();
+
+			mMaterials.push_back(std::move(pbrMaterial));
+		}
+	}
+	
 	void Model::Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources)
 	{
+		
 		for (const Mesh& mesh : mMeshes)
 		{
 			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
@@ -471,22 +556,30 @@ namespace helios::scene
 				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
 				.textureBufferIndex = gfx::Buffer::GetSrvIndex(mesh.textureCoordsBuffer.get()),
 				.normalBufferIndex = gfx::Buffer::GetSrvIndex(mesh.normalBuffer.get()),
-				.tangetBufferIndex = gfx::Buffer::GetSrvIndex(mesh.tangentBuffer.get()),
+				.tangentBufferIndex = gfx::Buffer::GetSrvIndex(mesh.tangentBuffer.get()),
 
 				.transformBufferIndex = gfx::Buffer::GetCbvIndex(mTransform.transformBuffer.get()),
 				.sceneBufferIndex = sceneRenderResources.sceneBufferIndex,
 				.lightBufferIndex = sceneRenderResources.lightBufferIndex,
 
-				.albedoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.albedoTexture.get()),
-				.metalRoughnessTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.metalRoughnessTexture.get()),
-				.normalTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.normalTexture.get()),
-				.aoTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.aoTexture.get()),
-				.emissiveTextureIndex = gfx::Texture::GetSrvIndex(mesh.pbrMaterial.emissiveTexture.get()),
+				.albedoTextureIndex = gfx::Texture::GetSrvIndex(mMaterials[mesh.materialIndex].albedoTexture.get()),
+				.albedoTextureSamplerIndex = mMaterials[mesh.materialIndex].albedoTextureSamplerIndex,
+
+				.metalRoughnessTextureIndex = gfx::Texture::GetSrvIndex(mMaterials[mesh.materialIndex].metalRoughnessTexture.get()),
+				.metalRoughnessTextureSamplerIndex = mMaterials[mesh.materialIndex].metalRoughnessTextureSamplerIndex,
+				
+				.normalTextureIndex = gfx::Texture::GetSrvIndex(mMaterials[mesh.materialIndex].normalTexture.get()),
+				.normalTextureSamplerIndex = mMaterials[mesh.materialIndex].normalTextureSamplerIndex,
+
+				.aoTextureIndex = gfx::Texture::GetSrvIndex(mMaterials[mesh.materialIndex].aoTexture.get()),
+				.aoTextureSamplerIndex = mMaterials[mesh.materialIndex].aoTextureSamplerIndex,
+
+				.emissiveTextureIndex = gfx::Texture::GetSrvIndex(mMaterials[mesh.materialIndex].emissiveTexture.get()),
+				.emissiveTextureSamplerIndex = mMaterials[mesh.materialIndex].emissiveTextureSamplerIndex
 			};
 
 
 			graphicsContext->Set32BitGraphicsConstants(&pbrRenderResources);
-
 			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
 		}
 	}

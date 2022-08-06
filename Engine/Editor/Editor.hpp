@@ -28,7 +28,9 @@ namespace helios::editor
 		void SetCustomDarkTheme() const;
 
 		void RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const;
-		void RenderCameraProperties(scene::Camera* camera) const;
+		
+		// Handles camera and other scene related properties.
+		void RenderSceneProperties(scene::Scene* scene) const;
 		void RendererProperties(std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData) const;
 
 		void RenderLightProperties(std::vector<std::unique_ptr<helios::scene::Light>>& lights) const;
