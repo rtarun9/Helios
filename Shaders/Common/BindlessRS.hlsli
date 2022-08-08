@@ -77,6 +77,7 @@ struct PBRRenderResources
     uint textureBufferIndex;
     uint normalBufferIndex;
     uint tangentBufferIndex;
+    uint biTangentBufferIndex;
 
     uint transformBufferIndex;
 

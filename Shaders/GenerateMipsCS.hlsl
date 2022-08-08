@@ -55,7 +55,7 @@ float4 PackColor(float4 color, bool isSRGB)
 ConstantBuffer<MipMapGenerationRenderResources> renderResources : register(b0);
 
 [RootSignature(BindlessRootSignature)]
-[numthreads(GROUP_THREAD_COUNT, GROUP_THREAD_COUNT, 1)]
+[numthreads(8, 8, 1)]
 void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
     ConstantBuffer<MipMapGenerationBuffer> mipMapBuffer = ResourceDescriptorHeap[renderResources.mipMapGenerationBufferIndex];

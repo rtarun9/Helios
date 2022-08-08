@@ -167,7 +167,7 @@ namespace helios::gfx
 		{
 			if (texture == nullptr)
 			{
-				return -1;
+				return UINT_MAX;
 			}
 
 			return texture->srvIndex;

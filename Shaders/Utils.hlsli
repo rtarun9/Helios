@@ -7,22 +7,19 @@ static const float PI = 3.14159265359;
 static const float TWO_PI = 2.0f * PI;
 static const float INV_PI = 1.0f / PI;
 static const float INV_TWO_PI = 1.0f / TWO_PI;
+static const float INVALID_INDEX = 4294967295; // UINT_MAX;
 
-float4 GetAlbedo(float2 texCoord, uint albedoTextureIndex, uint albedoTextureSamplerIndex)
+float4 GetAlbedo(float2 textureCoords, uint albedoTextureIndex, uint albedoTextureSamplerIndex)
 {
-    if (albedoTextureIndex == -1)
+    if (albedoTextureIndex == INVALID_INDEX)
     {
         return float4(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
-    if (!albedoTextureSamplerIndex)
-    {
-        return albedoTexture.Sample(linearWrapSampler, texCoord);
-    }
 
     SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(albedoTextureSamplerIndex)];
-    return albedoTexture.Sample(samplerState, texCoord);
+    return albedoTexture.Sample(samplerState, textureCoords);
 }
 
 
@@ -61,40 +58,27 @@ float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
     return samplingVector;
 }
 
-float3 GetNormal(float3 inputNormal, float2 texCoord, float4 tangent, float3x3 modelMatrix, uint normalTextureIndex, uint normalTextureSamplerIndex)
+float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3 biTangent, float3 tangent, float3x3 tbnMatrix)
 {
-    if (normalTextureIndex != -1)
+    float3 inputNormal = normal;
+
+    if (normalTextureIndex != INVALID_INDEX)
     {
         Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
 
-        inputNormal = normalize(inputNormal);
-        
-        float3 normal = float3(0.0f, 0.0f, 0.0f);
-
-        if (!normalTextureSamplerIndex)
-        {
-            normal = normalize(2.0f * normalTexture.Sample(anisotropicSampler, texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
-        }
-        else
-        {
-            SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
-            normal = normalize(2.0f * normalTexture.Sample(samplerState, texCoord).xyz - float3(1.0f, 1.0f, 1.0f));
-        }
-
-        tangent.xyz = normalize(tangent.xyz);
-
-        float3 bitangent = normalize(cross(inputNormal, tangent.xyz)) * tangent.w;
-        float3x3 tbn = float3x3(tangent.xyz, bitangent, inputNormal);
-
-        normal = mul(normal, tbn);
-        normal = normalize(mul(normal, modelMatrix));
-
+        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
+        normal = 2.0f * normalTexture.Sample(samplerState, textureCoord).xyz - float3(1.0f, 1.0f, 1.0f);
+        normal = normalize(mul(normal, tbnMatrix));
         return normal;
     }
-    else
-    {
-        return normalize(inputNormal);
-    }
+    
+    return normalize(inputNormal);
+}
+
+// Point light attenuation based on Cem Yuskel's "Point Light Attenuation without Singularity Siggraph 2022 Talk".
+float PointLightAttenuationWithoutSingularity(float distance, float radius)
+{
+    return 2.0f / (distance * distance + radius * radius + distance * sqrt(distance * distance + radius * radius));
 }
 
 float4 GenerateTangent(float3 normal)

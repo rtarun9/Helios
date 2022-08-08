@@ -2,6 +2,8 @@
 
 #include "Light.hpp"
 
+using namespace DirectX;
+
 namespace helios::scene
 {
 	void Light::CreateLightResources(const gfx::Device* device)
@@ -54,6 +56,7 @@ namespace helios::scene
 		else
 		{
 			sLightBufferData.lightPosition[mLightNumber] = math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			sLightBufferData.radius[mLightNumber] = 0.02f;
 		}
 	}
 
@@ -63,9 +66,22 @@ namespace helios::scene
 		if (mLightType == LightTypes::PointLightData)
 		{
 			math::XMVECTOR translationVector = math::XMLoadFloat4(&sLightBufferData.lightPosition[mLightNumber]);
-			sLightInstanceData.modelMatrix[mLightNumber] = math::XMMatrixScaling(0.02f, 0.02f, 0.02f) *  math::XMMatrixTranslationFromVector(translationVector);
+
+			static float angle = 0.0f;
+
+			math::XMFLOAT4 inverseLightPosition = { sLightBufferData.lightPosition[mLightNumber].x * -1, 0.0f, sLightBufferData.lightPosition[mLightNumber].z * -1, 1.0f };
+			math::XMVECTOR inverseTranslationVector = math::XMLoadFloat4(&inverseLightPosition);
+			
+			//math::XMFLOAT4 rotationLightPosition = {sin(angle) * 10, 0.0f, cos(angle) * 10, 1.0f};
+			//math::XMVECTOR rotationTranslationVector = math::XMLoadFloat4(&rotationLightPosition);
+
+			//sLightBufferData.lightPosition[mLightNumber] = rotationLightPosition;
+			sLightInstanceData.modelMatrix[mLightNumber] = math::XMMatrixTranslationFromVector(inverseTranslationVector) * math::XMMatrixScaling(sLightBufferData.radius[mLightNumber], sLightBufferData.radius[mLightNumber], sLightBufferData.radius[mLightNumber]) *  math::XMMatrixTranslationFromVector(translationVector);
+			//sLightInstanceData.modelMatrix[mLightNumber] =  math::XMMatrixScaling(sLightBufferData.radius[mLightNumber], sLightBufferData.radius[mLightNumber], sLightBufferData.radius[mLightNumber]) *  math::XMMatrixTranslationFromVector(rotationTranslationVector);
 
 			sLightInstanceBuffer->Update(&sLightInstanceData);
+
+			//angle += 0.01f;
 		}
 	}
 

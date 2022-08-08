@@ -66,7 +66,7 @@ void SandBox::OnInit()
 	};
 	
 	auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
-	sponza->GetTransform()->data.scale = { 0.2f, 0.2f, 0.2f};
+	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f};
 	mScene->AddModel(std::move(sponza));
 
 	// Load lights.
@@ -82,8 +82,8 @@ void SandBox::OnInit()
 
 		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
 
-		lightPos.x = static_cast<float>((i) % 10);
-		lightPos.z = static_cast<float>((i) / 10);
+		lightPos.x = static_cast<float>((i) % 10) + 3;
+		lightPos.z = static_cast<float>((i) / 10) + 3;
 
 		scene::Light::GetLightBufferData()->lightColor[i].x += lightPos.x / 255.0f;
 		scene::Light::GetLightBufferData()->lightColor[i].z += lightPos.z / 255.0f;
@@ -123,73 +123,7 @@ void SandBox::OnInit()
 		.exposure = 1.0f
 	};
 
-	// Load pipeline states.
-
-	gfx::GraphicsPipelineStateCreationDesc pbrGraphicsPipelineStateCreationDesc
-	{
-		.shaderModule
-		{
-			.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
-			.psShaderPath = L"Shaders/OffscreenRTPS.cso",
-		},
-		.pipelineName = L"Mesh Viewer Pipeline"
-	};
-
-	mPostProcessingStaet = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrGraphicsPipelineStateCreationDesc));
-	
-	gfx::GraphicsPipelineStateCreationDesc pbrPipelineStateCreationDesc
-	{
-		.shaderModule
-		{
-			.vsShaderPath = L"Shaders/Shading/PBRVS.cso",
-			.psShaderPath = L"Shaders/Shading/PBRPS.cso",
-		},
-		.pipelineName = L"PBR Pipeline"
-	};
-
-	mPBRPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrPipelineStateCreationDesc));
-	
-	gfx::GraphicsPipelineStateCreationDesc lightPipelineStateCreationDesc
-	{
-		.shaderModule
-		{
-			.vsShaderPath = L"Shaders/Light/LightVS.cso",
-			.psShaderPath = L"Shaders/Light/LightPS.cso",
-		},
-		.pipelineName = L"Light Pipeline"
-	};
-
-	mLightPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(lightPipelineStateCreationDesc));
-
-	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
-	{
-		.shaderModule
-		{
-			.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
-			.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
-		},
-		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
-		.depthFormat = DXGI_FORMAT_D32_FLOAT,
-		.pipelineName = L"Final Render Target Pipeline"
-	};
-
-	mFinalPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(finalRenderPassPipelineStateCreationDesc));
-	
-	gfx::GraphicsPipelineStateCreationDesc skyBoxPipelineStateCreationDesc
-	{
-		.shaderModule
-		{
-			.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
-			.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
-		},
-		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
-		.depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		.frontFaceWindingOrder = gfx::FrontFaceWindingOrder::CounterClockWise,
-		.pipelineName = L"Sky Box Pipeline"
-	};
-
-
-	mSkyBoxPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(skyBoxPipelineStateCreationDesc));
+	CreatePipelineStates();
 
 	// Load depth stencil texture.
 	gfx::TextureCreationDesc depthStencilTextureCreationDesc
@@ -258,13 +192,13 @@ void SandBox::OnRender()
 	};
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-	
+
 	// RenderPass 1 : Render the model's to the offscreen render target.
 	{
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		graphicsContext->ExecuteResourceBarriers();
 
-		graphicsContext->SetGraphicsPipelineState(mPBRPipelineState.get());
+		graphicsContext->SetGraphicsPipelineState(mBlinnPhongPipelineState.get());
 		graphicsContext->SetRenderTarget(renderTargets, mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -381,6 +315,14 @@ void SandBox::OnKeyAction(uint8_t keycode, bool isKeyDown)
 		mDevice->DisableVSync();
 	}
 
+	if (isKeyDown && keycode == 'R')
+	{
+		mDevice->GetComputeCommandQueue()->FlushQueue();
+		mDevice->GetGraphicsCommandQueue()->FlushQueue();
+
+		CreatePipelineStates();
+	}
+
 	mScene->mCamera->HandleInput(keycode, isKeyDown);
 }
 
@@ -401,4 +343,75 @@ void SandBox::OnResize()
 
 		mEditor->OnResize(core::Application::GetClientDimensions());
 	}
+}
+
+void SandBox::CreatePipelineStates()
+{
+	// Load pipeline states.
+
+	gfx::GraphicsPipelineStateCreationDesc pbrGraphicsPipelineStateCreationDesc
+	{
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
+			.psShaderPath = L"Shaders/OffscreenRTPS.cso",
+		},
+		.pipelineName = L"Mesh Viewer Pipeline"
+	};
+
+	mPostProcessingStaet = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrGraphicsPipelineStateCreationDesc));
+
+	gfx::GraphicsPipelineStateCreationDesc blinnPhongPipelineStateCreationDesc
+	{
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/Shading/BlinnPhongVS.cso",
+			.psShaderPath = L"Shaders/Shading/BlinnPhongPS.cso",
+		},
+		.pipelineName = L"Blinn Phong Pipeline"
+	};
+
+	mBlinnPhongPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(blinnPhongPipelineStateCreationDesc));
+
+	gfx::GraphicsPipelineStateCreationDesc lightPipelineStateCreationDesc
+	{
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/Light/LightVS.cso",
+			.psShaderPath = L"Shaders/Light/LightPS.cso",
+		},
+		.pipelineName = L"Light Pipeline"
+	};
+
+	mLightPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(lightPipelineStateCreationDesc));
+
+	gfx::GraphicsPipelineStateCreationDesc finalRenderPassPipelineStateCreationDesc
+	{
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
+			.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
+		},
+		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
+		.depthFormat = DXGI_FORMAT_D32_FLOAT,
+		.pipelineName = L"Final Render Target Pipeline"
+	};
+
+	mFinalPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(finalRenderPassPipelineStateCreationDesc));
+
+	gfx::GraphicsPipelineStateCreationDesc skyBoxPipelineStateCreationDesc
+	{
+		.shaderModule
+		{
+			.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
+			.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
+		},
+		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		.depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		.frontFaceWindingOrder = gfx::FrontFaceWindingOrder::CounterClockWise,
+		.pipelineName = L"Sky Box Pipeline"
+	};
+
+
+	mSkyBoxPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(skyBoxPipelineStateCreationDesc));
 }

@@ -145,6 +145,7 @@ namespace helios::scene
 			std::vector<math::XMFLOAT2> modelTextureCoords{};
 			std::vector<math::XMFLOAT3> modelNormals{};
 			std::vector<math::XMFLOAT4> modelTangents{};
+			std::vector<math::XMFLOAT3> modelBiTangents{};
 
 			std::vector<uint32_t> indices{};
 
@@ -207,6 +208,7 @@ namespace helios::scene
 				};
 
 				math::XMFLOAT4 tangent{};
+				math::XMFLOAT3 biTangent{};
 
 				// Required as a model need not have tangents.
 				if (tangentAccesor.bufferView)
@@ -219,11 +221,29 @@ namespace helios::scene
 						(reinterpret_cast<float const*>(tangents + (i * tangentByteStride)))[3],
 					};
 				}
+				else
+				{
+					// note(rtarun9) : This code works, but looks very pixelated in shaders. Utils.hlsli calculates tangents instead.
+					math::XMVECTOR normalVector = math::XMLoadFloat3(&normal);
+					math::XMVECTOR tangentVector = math::XMVector3Cross(normalVector, math::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+					tangentVector = math::XMVectorLerp(math::XMVector3Cross(normalVector, math::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)), tangentVector, math::XMVectorGetX(math::XMVector3Dot(tangentVector, tangentVector)));
+					tangentVector = math::XMVector3Normalize(tangentVector);
+					math::XMFLOAT3 tangent3Vector{};
+					math::XMStoreFloat3(&tangent3Vector, tangentVector);
+					tangent = { tangent3Vector.x, tangent3Vector.y, tangent3Vector.z, 1.0f };
+				}
+
+				// Calculate tangent.
+				// tangent.z is just a constant (-1 or 1) to indicate the handedness.
+				math::XMFLOAT3 tangent3Vector = { tangent.x, tangent.y, tangent.z };
+				math::XMVECTOR biTangentVector = math::XMVectorScale(math::XMVector3Cross(XMLoadFloat3(&normal), XMLoadFloat3(&tangent3Vector)), tangent.z);
+				math::XMStoreFloat3(&biTangent, biTangentVector);
 
 				modelPositions.emplace_back(position);
 				modelTextureCoords.emplace_back(textureCoord);
 				modelNormals.emplace_back(normal);
 				modelTangents.emplace_back(tangent);
+				modelBiTangents.emplace_back(biTangent);
 			}
 
 			// Get the index buffer data.
@@ -269,16 +289,15 @@ namespace helios::scene
 
 			mesh.normalBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT3>(normalBufferCreationDesc, modelNormals));
 
-			if (tangentAccesor.bufferView)
+			
+			gfx::BufferCreationDesc tangentBufferCreationDesc
 			{
-				gfx::BufferCreationDesc tangentBufferCreationDesc
-				{
-					.usage = gfx::BufferUsage::StructuredBuffer,
-					.name = meshName + L" tangent buffer",
-				};
+				.usage = gfx::BufferUsage::StructuredBuffer,
+				.name = meshName + L" tangent buffer",
+			};
 
-				mesh.tangentBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT4>(tangentBufferCreationDesc, modelTangents));
-			}
+			mesh.tangentBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT4>(tangentBufferCreationDesc, modelTangents));
+			
 
 			gfx::BufferCreationDesc indexBufferCreationDesc
 			{
@@ -389,7 +408,7 @@ namespace helios::scene
 				
 				default:
 				{
-					samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
+					samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 				}
 				break;
 			}
@@ -447,7 +466,9 @@ namespace helios::scene
 			}
 
 			// Create max mip levels possible.
+
 			textureCreationDesc.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))) + 1);
+	
 
 			textureCreationDesc.dimensions = { (uint32_t)width, (uint32_t)height };
 
@@ -511,7 +532,7 @@ namespace helios::scene
 					{
 						.usage = gfx::TextureUsage::TextureFromData,
 						.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-						.mipLevels = 4u,
+						.mipLevels = 2u,
 						.name = mModelName + L" normal texture",
 					};
 
@@ -585,6 +606,7 @@ namespace helios::scene
 				.textureBufferIndex = gfx::Buffer::GetSrvIndex(mesh.textureCoordsBuffer.get()),
 				.normalBufferIndex = gfx::Buffer::GetSrvIndex(mesh.normalBuffer.get()),
 				.tangentBufferIndex = gfx::Buffer::GetSrvIndex(mesh.tangentBuffer.get()),
+				.biTangentBufferIndex = gfx::Buffer::GetSrvIndex(mesh.biTangentBuffer.get()),
 
 				.transformBufferIndex = gfx::Buffer::GetCbvIndex(mTransform.transformBuffer.get()),
 				.sceneBufferIndex = sceneRenderResources.sceneBufferIndex,

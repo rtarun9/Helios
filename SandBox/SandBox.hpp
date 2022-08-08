@@ -18,6 +18,9 @@ public:
 	void OnKeyAction(uint8_t keycode, bool isKeyDown) override;
 	void OnResize() override;
 
+	// Keep seperated from OnInit() so shader hotreloading can be used.
+	void CreatePipelineStates();
+
 private:
 	std::unique_ptr<helios::scene::Scene> mScene{};
 
@@ -32,7 +35,7 @@ private:
 	// Contains the final image that is to be rendered to the swapchain.
 	std::unique_ptr<helios::gfx::RenderTarget> mFinalRT{};
 
-	std::unique_ptr<helios::gfx::PipelineState> mPBRPipelineState{};
+	std::unique_ptr<helios::gfx::PipelineState> mBlinnPhongPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mLightPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mPostProcessingStaet{};

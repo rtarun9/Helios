@@ -77,6 +77,7 @@ namespace helios::scene
 		std::shared_ptr<gfx::Buffer> textureCoordsBuffer{};
 		std::shared_ptr<gfx::Buffer> normalBuffer{};
 		std::shared_ptr<gfx::Buffer> tangentBuffer{};
+		std::shared_ptr<gfx::Buffer> biTangentBuffer{};
 		std::shared_ptr<gfx::Buffer> indexBuffer{};
 		uint32_t indicesCount{};
 

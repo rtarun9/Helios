@@ -77,7 +77,7 @@ namespace helios::editor
 				ImGui::EndMainMenuBar();
 			}
 
-			ImGui::ShowDemoWindow();
+			ImGui::ShowMetricsWindow();
 
 			// Set clear color & other scene properties.
 			RendererProperties(clearColor, postProcessBufferData);
@@ -240,7 +240,7 @@ namespace helios::editor
 				{
 					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[pointLightIndex].x, ImGuiColorEditFlags_PickerHueWheel);
 
-					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[pointLightIndex].x, -10.0f, 10.0f);
+					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[pointLightIndex].x, -40.0f, 40.0f);
 
 					ImGui::TreePop();
 				}

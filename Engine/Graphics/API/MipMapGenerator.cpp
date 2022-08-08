@@ -116,7 +116,7 @@ namespace helios::gfx
 
 			MipMapGenerationBuffer mipMapGenerationBufferData
 			{
-				.isSRGB = sourceResourceDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? true : false,
+				.isSRGB = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? true : false,
 				.sourceMipLevel = srcMipLevel,
 				.texelSize = {1.0f / destinationWidth, 1.0f / destinationHeight},
 				.numberMipLevels = static_cast<uint32_t>(mipCount),
@@ -140,7 +140,7 @@ namespace helios::gfx
 			computeContext->SetComputePipelineState(mMipMapPipelineState.get());
 			computeContext->Set32BitComputeConstants(&renderResources);
 
-			computeContext->Dispatch(std::max((uint32_t)destinationWidth / 8u, 1u), std::max((uint32_t)destinationHeight/ 8u, 1u), 1);
+			computeContext->Dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u), std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1);
 
 			mDevice.GetComputeCommandQueue()->ExecuteAndFlush(computeContext->GetCommandList());
 
