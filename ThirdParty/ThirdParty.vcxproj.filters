@@ -4,20 +4,11 @@
     <Filter Include="D3D12MemoryAllocator">
       <UniqueIdentifier>{7DE1D868-6970-6232-128F-762DFEFC72D8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="D3DX12">
+      <UniqueIdentifier>{DB773FAA-C719-6A80-B0D4-7DD49C15F1D0}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ImGUI">
       <UniqueIdentifier>{80FB640D-EC0F-8DBE-B591-301E216589EF}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="RapidJSON">
-      <UniqueIdentifier>{AF368E70-1BA1-42E7-64DF-F38CD088203C}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="RapidJSON\error">
-      <UniqueIdentifier>{48D5F4FF-B460-62C4-BD71-E5B8297CBEC4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="RapidJSON\internal">
-      <UniqueIdentifier>{DBCD7D61-C7B1-3EB7-3012-390A1C152939}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="RapidJSON\msinttypes">
-      <UniqueIdentifier>{1E53DDA1-0AE2-666B-B300-7B669F6E7711}</UniqueIdentifier>
     </Filter>
     <Filter Include="STB">
       <UniqueIdentifier>{0E1F880B-7A28-887C-03A4-9E7C6FAC937C}</UniqueIdentifier>
@@ -29,6 +20,9 @@
   <ItemGroup>
     <ClInclude Include="D3D12MemoryAllocator\D3D12MemAlloc.h">
       <Filter>D3D12MemoryAllocator</Filter>
+    </ClInclude>
+    <ClInclude Include="D3DX12\d3dx12.h">
+      <Filter>D3DX12</Filter>
     </ClInclude>
     <ClInclude Include="ImGUI\imconfig.h">
       <Filter>ImGUI</Filter>
@@ -60,7 +54,6 @@
     <ClInclude Include="TinyGLTF\tiny_gltf.h">
       <Filter>TinyGLTF</Filter>
     </ClInclude>
-    <ClInclude Include="STB\stb_image_write.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D3D12MemoryAllocator\D3D12MemAlloc.cpp">

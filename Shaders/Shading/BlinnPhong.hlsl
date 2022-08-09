@@ -1,53 +1,28 @@
 #include "../Common/BindlessRS.hlsli"
 #include "../Common/ConstantBuffers.hlsli"
-#include "../Utils.hlsli"
-
-#include "../Common/Resources.hlsli"
+#include "../Common/Utils.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
-    float3 normal : NORMAL;
-    float3 tangent : TANGENT;
-    float3 biTangent : BITANGENT;
-    float3 worldSpacePosition : WORLD_SPACE_POSITION;
-    float3x3 tbnMatrix : TBN_MATRIX;
 };
 
-ConstantBuffer<PBRRenderResources> renderResource : register(b0);
+ConstantBuffer<DeferredLightingPassRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
-    StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
-    StructuredBuffer<float2> textureCoordBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
-    StructuredBuffer<float3> normalBuffer = ResourceDescriptorHeap[renderResource.normalBufferIndex];
-
-    ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
-    ConstantBuffer<TransformBuffer> transformBuffer = ResourceDescriptorHeap[renderResource.transformBufferIndex];
-
-    matrix mvpMatrix = mul(mul(transformBuffer.modelMatrix, sceneBuffer.viewMatrix), sceneBuffer.projectionMatrix);
-    float3x3 normalMatrix = (float3x3)transpose(transformBuffer.inverseModelMatrix);
+    StructuredBuffer<float2> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
 
     VSOutput output;
-    output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-    output.textureCoord = textureCoordBuffer[vertexID];
-    output.normal = normalBuffer[vertexID];
-    output.tangent = GenerateTangent(output.normal).xyz;
-    output.biTangent = normalize(cross(output.normal, output.tangent));
-    output.worldSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), transformBuffer.modelMatrix).xyz;
-    
-    // Calculation of tbn matrix.
-    float3 t = normalize(mul(output.tangent, normalMatrix));
-    float3 b = normalize(mul(output.biTangent, normalMatrix));
-    float3 n = normalize(mul(output.normal, normalMatrix));
 
-    output.tbnMatrix = float3x3(t, b, n);
+    output.position = float4(positionBuffer[vertexID].xy, 0.0f, 1.0f);
+    output.textureCoord = textureCoordsBuffer[vertexID];
 
     return output;
 }
-
 
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput psInput) : SV_Target
@@ -55,23 +30,51 @@ float4 PsMain(VSOutput psInput) : SV_Target
     ConstantBuffer<LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResource.lightBufferIndex];
     ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
 
-    float4 albedoColor = GetAlbedo(psInput.textureCoord, renderResource.albedoTextureIndex, renderResource.albedoTextureSamplerIndex);
-    if (albedoColor.a < 0.9f)
-    {
-        discard;
-    }
+    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
+    Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalGBufferIndex];
+    Texture2D<float4> positionTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
+
+    float4 albedoColor = albedoTexture.Sample(linearClampSampler, psInput.textureCoord);
+
+    float3 normal = normalTexture.Sample(linearClampSampler, psInput.textureCoord).xyz;
+    float3 position = normalTexture.Sample(linearClampSampler, psInput.textureCoord).xyz;
 
     float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
 
-    float3 normal = GetNormal(psInput.textureCoord, renderResource.normalTextureIndex, renderResource.normalTextureSamplerIndex, psInput.normal, psInput.biTangent, psInput.tangent, psInput.tbnMatrix);
-   
     for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
     {
-        float3 pixelToLightDirection = normalize(lightBuffer.lightPosition[i].xyz - psInput.worldSpacePosition);
-        float3 viewDirection = normalize(sceneBuffer.cameraPosition - psInput.worldSpacePosition);
+        float3 pixelToLightDirection = normalize(lightBuffer.lightPosition[i].xyz - position);
+        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
 
         // Ambient light.
-        float ambientStrength = 0.005f;
+        float ambientStrength = 0.0001f;
+        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
+
+        // Diffuse light.
+        float diffuseStrength = max(dot(normal, pixelToLightDirection), 0.0f);
+        float3 diffuseColor =  diffuseStrength * lightBuffer.lightColor[i].xyz;
+        bool isDiffuseZero = diffuseStrength <= MIN_FLOAT_VALUE;
+
+        // Specular light.
+        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
+        float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
+        
+        float specularStrength = 0.6f;
+        float shininessValue = 32.0f;
+
+        float3 reflectionDirection = normalize(reflect(-pixelToLightDirection, normal));
+        float3 specularColor = isDiffuseZero == true ? 0.0f : specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
+
+        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz * GetSquareFalloffAttenuation(pixelToLightDirection, lightBuffer.radius[i].r);
+    }
+
+    for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
+    {
+        float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
+        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
+
+        // Ambient light.
+        float ambientStrength = 0.01f;
         float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
 
         // Diffuse light.
@@ -90,12 +93,10 @@ float4 PsMain(VSOutput psInput) : SV_Target
         float3 specularColor = isDiffuseZero == true ? 0.0f : specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
 
         // Calculate light attenuation.
-        float lightToPixelDistance = length(lightBuffer.lightPosition[i].xyz - psInput.worldSpacePosition.xyz);
+        float lightToPixelDistance = length(lightBuffer.lightPosition[i].xyz - position);
 
-        outgoingLight += ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz ;//* PointLightAttenuationWithoutSingularity(lightToPixelDistance, lightBuffer.radius[i]);
+        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz;
     }
 
-    outgoingLight /= (float)TOTAL_POINT_LIGHTS;
-
-    return float4(normal, 1.0f);
+    return float4(outgoingLight.xyz, 1.0f);
 }

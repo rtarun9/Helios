@@ -5,6 +5,8 @@
 
 #include "Scene/Scene.hpp"
 
+#include "Graphics/RenderPass/DeferredGeometryPass.hpp"
+
 #include "ImGUI/imgui.h"
 #include "ImGUI/imgui_impl_dx12.h"
 #include "ImGUI/imgui_impl_win32.h"
@@ -56,7 +58,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	void Editor::Render(const gfx::Device* device, scene::Scene* scene, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(gfx::Device* device, scene::Scene* scene, gfx::DeferredPassRTs* deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -90,6 +92,9 @@ namespace helios::editor
 
 			// Render Light property menu.
 			RenderLightProperties(scene->mLights);
+
+			// Render deferred pass rt's.
+			RenderDeferredGPass(device, deferredPassRTs);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
@@ -241,6 +246,8 @@ namespace helios::editor
 					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[pointLightIndex].x, ImGuiColorEditFlags_PickerHueWheel);
 
 					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[pointLightIndex].x, -40.0f, 40.0f);
+					
+					ImGui::SliderFloat("Radius", &scene::Light::GetLightBufferData()->radius[pointLightIndex].x, 0.01f, 10.0f);
 
 					ImGui::TreePop();
 				}
@@ -271,6 +278,25 @@ namespace helios::editor
 			ImGui::TreePop();
 		}
 
+		ImGui::End();
+	}
+
+	void Editor::RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const
+	{
+		gfx::DescriptorHandle positionDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->positionRT->renderTexture.get());
+		gfx::DescriptorHandle normalDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->normalRT->renderTexture.get());
+		gfx::DescriptorHandle albedoDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->albedoRT->renderTexture.get());
+
+		ImGui::Begin("Position RT");
+		ImGui::Image((ImTextureID)(positionDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::End();
+
+		ImGui::Begin("Normal RT");
+		ImGui::Image((ImTextureID)(normalDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::End();
+
+		ImGui::Begin("Albedo RT");
+		ImGui::Image((ImTextureID)(albedoDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
 		ImGui::End();
 	}
 

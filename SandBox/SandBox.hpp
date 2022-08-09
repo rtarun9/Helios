@@ -2,9 +2,6 @@
 
 #include "Helios.hpp"
 
-// File with all constant buffer structs shared between C++ and HLSL.
-#include "Common/ConstantBuffers.hlsli"
-
 class SandBox : public helios::core::Engine
 {
 public:
@@ -28,6 +25,9 @@ private:
 	PostProcessBuffer mPostProcessBufferData{};
 
 	std::unique_ptr<helios::gfx::Texture> mDepthStencilTexture{};
+
+	// mDepthStencilTexture's data is copied into this depth texture when doing foward rendering.
+	std::unique_ptr<helios::gfx::Texture> mForwardRenderingDepthStencilTexture{};
 	
 	// All post processing effects are processed and stored in here (final result of the main scene).
 	std::unique_ptr<helios::gfx::RenderTarget> mPostProcessingRT{};
@@ -38,8 +38,11 @@ private:
 	std::unique_ptr<helios::gfx::PipelineState> mBlinnPhongPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mLightPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mFinalPipelineState{};
-	std::unique_ptr<helios::gfx::PipelineState> mPostProcessingStaet{};
+	std::unique_ptr<helios::gfx::PipelineState> mPostProcessingPipelineState{};
 	std::unique_ptr<helios::gfx::PipelineState> mSkyBoxPipelineState{};
 
+	std::unique_ptr<helios::gfx::DeferredGeometryPass> mDeferredGPass{};
+
+	// Data for Deferred geometry pss
 	std::unique_ptr<helios::editor::Editor> mEditor{};
 };

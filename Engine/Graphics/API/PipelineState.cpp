@@ -43,8 +43,12 @@ namespace helios::gfx
 		{
 			.AlphaToCoverageEnable = TRUE,
 			.IndependentBlendEnable = TRUE,
-			.RenderTarget = renderTargetBlendDesc
 		};
+
+		for (uint32_t i : std::views::iota(0u, pipelineStateCreationDesc.rtvCount))
+		{
+			blendDesc.RenderTarget[i] = renderTargetBlendDesc;
+		}
 
 		// Setup depth stencil state.
 		D3D12_DEPTH_STENCIL_DESC depthStencilDesc
@@ -67,8 +71,7 @@ namespace helios::gfx
 			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState = depthStencilDesc,
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-			.NumRenderTargets = 1u,
-			.RTVFormats= pipelineStateCreationDesc.rtvFormat,
+			.NumRenderTargets = pipelineStateCreationDesc.rtvCount,
 			.DSVFormat = pipelineStateCreationDesc.depthFormat,
 			.SampleDesc
 			{
@@ -85,6 +88,11 @@ namespace helios::gfx
 
 		}
 
+		// Set RTV formats.
+		for (uint32_t i : std::views::iota(0u, pipelineStateCreationDesc.rtvCount))
+		{
+			psoDesc.RTVFormats[i] = pipelineStateCreationDesc.rtvFormat;
+		}
 
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 

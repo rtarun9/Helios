@@ -21,4 +21,5 @@ project "ThirdParty"
         "TinyGLTF/tiny_gltf.cpp",
         "TinyGLTF/tiny_gltf.h",
         "STB/stb_image.h",
+        "D3DX12/d3dx12.h"
     }

@@ -69,8 +69,18 @@ void SandBox::OnInit()
 	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f};
 	mScene->AddModel(std::move(sponza));
 
+	// Random generator.
+	std::mt19937_64 rng{};
+    
+	uint64_t timeSeed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	
+	std::seed_seq ss{ uint32_t(timeSeed & 0xffffffff), uint32_t(timeSeed >> 32) };
+	
+	rng.seed(ss);
+
+	std::uniform_real_distribution<double> uniformDistribution(0, 1);
+
 	// Load lights.
-	math::XMFLOAT4 lightPos = { 0.0f, 0.0f, 0.0f, 1.0f };
 	
 	for (uint32_t i : std::views::iota(0u, TOTAL_POINT_LIGHTS))
 	{
@@ -82,14 +92,9 @@ void SandBox::OnInit()
 
 		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
 
-		lightPos.x = static_cast<float>((i) % 10) + 3;
-		lightPos.z = static_cast<float>((i) / 10) + 3;
+		scene::Light::GetLightBufferData()->lightColor[i] = DirectX::XMFLOAT4(1.0f - (float)i/ TOTAL_POINT_LIGHTS, 1.0f, (float)i / TOTAL_POINT_LIGHTS, 1.0f);
 
-		scene::Light::GetLightBufferData()->lightColor[i].x += lightPos.x / 255.0f;
-		scene::Light::GetLightBufferData()->lightColor[i].z += lightPos.z / 255.0f;
-		scene::Light::GetLightBufferData()->lightPosition[i].x += lightPos.x;
-		scene::Light::GetLightBufferData()->lightPosition[i].z += lightPos.z;
-		scene::Light::GetLightBufferData()->lightPosition[i].y += 15.0f;
+		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(12.0f * (i % 10) - 22.0f, 2.0f, 6.0f * (i / 10) - 18.0f, 1.0f);
 	}
 
 	scene::LightCreationDesc directionalLightCreationDesc
@@ -135,6 +140,16 @@ void SandBox::OnInit()
 	};
 
 	mDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(depthStencilTextureCreationDesc));
+	
+	gfx::TextureCreationDesc fowardDepthStencilTextureCreationDesc
+	{
+		.usage = gfx::TextureUsage::DepthStencil,
+		.dimensions = mDimensions,
+		.format = DXGI_FORMAT_R32_FLOAT,
+		.name = L"Forward Depth Stencil Texture"
+	};
+
+	mForwardRenderingDepthStencilTexture = std::make_unique<gfx::Texture>(mDevice->CreateTexture(fowardDepthStencilTextureCreationDesc));
 
 	// Load render targets.
 	gfx::TextureCreationDesc offscreenRenderTargetTextureCreationDesc
@@ -151,7 +166,7 @@ void SandBox::OnInit()
 	{
 		.usage = gfx::TextureUsage::RenderTarget,
 		.dimensions = mDimensions,
-		.format = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		.format = gfx::Device::SWAPCHAIN_FORMAT,
 		.name = L"Post Process Render Texture"
 	};
 
@@ -166,6 +181,9 @@ void SandBox::OnInit()
 	};
 
 	mFinalRT = std::make_unique<gfx::RenderTarget>(mDevice->CreateRenderTarget(finalRenderTargetsTextureCreationDesc));
+
+	// Init render passes.
+	mDeferredGPass = std::make_unique<gfx::DeferredGeometryPass>(mDevice.get(), mDimensions);
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -193,7 +211,24 @@ void SandBox::OnRender()
 
 	static std::array<float, 4> clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 
-	// RenderPass 1 : Render the model's to the offscreen render target.
+	// Renderpass 0 : Deferred Geometry pass
+	{
+		mDeferredGPass->Render(mScene.get(), graphicsContext.get(), mDepthStencilTexture.get());
+
+		// Copying the depth stencil texture so it can be used for rendering lights (which is forward rendering).
+		graphicsContext->AddResourceBarrier(mDepthStencilTexture->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		graphicsContext->AddResourceBarrier(mForwardRenderingDepthStencilTexture->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_DEST);
+		graphicsContext->ExecuteResourceBarriers();
+
+		graphicsContext->CopyResource(mDepthStencilTexture->GetResource(), mForwardRenderingDepthStencilTexture->GetResource());
+
+		graphicsContext->AddResourceBarrier(mDepthStencilTexture->GetResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		graphicsContext->AddResourceBarrier(mForwardRenderingDepthStencilTexture->GetResource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+		graphicsContext->ExecuteResourceBarriers();
+	}
+
+	// RenderPass 1 : Do shading on offscreen RT (deferred lighting pass) and then render lights using forward rendering.
 	{
 		graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		graphicsContext->ExecuteResourceBarriers();
@@ -206,9 +241,22 @@ void SandBox::OnRender()
 		graphicsContext->ClearRenderTargetView(renderTargets, clearColor);
 		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
 
-		mScene->RenderModels(graphicsContext.get());
+		DeferredLightingPassRenderResources deferredLightingPassRenderResources
+		{
+			.lightBufferIndex = scene::Light::GetCbvIndex(),
+			.sceneBufferIndex = mScene->mSceneBuffer->cbvIndex,
+			
+			.albedoGBufferIndex = mDeferredGPass->mDeferredPassRTs.albedoRT->GetRenderTextureSRVIndex(),
+			.normalGBufferIndex = mDeferredGPass->mDeferredPassRTs.normalRT->GetRenderTextureSRVIndex(),
+			.positionGBufferIndex = mDeferredGPass->mDeferredPassRTs.positionRT->GetRenderTextureSRVIndex()
+		};
+
+		gfx::RenderTarget::Render(graphicsContext.get(), deferredLightingPassRenderResources);
+		
+		// Render lights and skybox using forward rendering.
 
 		graphicsContext->SetGraphicsPipelineState(mLightPipelineState.get());
+		graphicsContext->SetRenderTarget(renderTargets, mForwardRenderingDepthStencilTexture.get());
 
 		mScene->RenderLights(graphicsContext.get());
 
@@ -221,11 +269,10 @@ void SandBox::OnRender()
 	
 	// Render pass 2 : Render offscreen rt to post processed RT (after all processing has occured).
 	{
-
 		graphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		graphicsContext->ExecuteResourceBarriers();
 
-		graphicsContext->SetGraphicsPipelineState(mPostProcessingStaet.get());
+		graphicsContext->SetGraphicsPipelineState(mPostProcessingPipelineState.get());
 		graphicsContext->SetRenderTarget(mPostProcessingRT.get(), mDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -264,7 +311,7 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(graphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mScene.get(), clearColor, mPostProcessBufferData, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, clearColor, mPostProcessBufferData, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), graphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swapchain
@@ -341,6 +388,8 @@ void SandBox::OnResize()
 		mDevice->ResizeRenderTarget(mOffscreenRT.get());
 		mDevice->ResizeRenderTarget(mPostProcessingRT.get());
 
+		mDeferredGPass->Resize(mDevice.get(), mDimensions);
+
 		mEditor->OnResize(core::Application::GetClientDimensions());
 	}
 }
@@ -349,17 +398,18 @@ void SandBox::CreatePipelineStates()
 {
 	// Load pipeline states.
 
-	gfx::GraphicsPipelineStateCreationDesc pbrGraphicsPipelineStateCreationDesc
+	gfx::GraphicsPipelineStateCreationDesc postProcessGraphicsPipelineStateCreationDesc
 	{
 		.shaderModule
 		{
-			.vsShaderPath = L"Shaders/OffscreenRTVS.cso",
-			.psShaderPath = L"Shaders/OffscreenRTPS.cso",
+			.vsShaderPath = L"Shaders/RenderPass/PostProcessRenderPassVS.cso",
+			.psShaderPath = L"Shaders/RenderPass/PostProcessRenderPassPS.cso",
 		},
-		.pipelineName = L"Mesh Viewer Pipeline"
+		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
+		.pipelineName = L"Post Process RenderPass Pipeline"
 	};
 
-	mPostProcessingStaet = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrGraphicsPipelineStateCreationDesc));
+	mPostProcessingPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(postProcessGraphicsPipelineStateCreationDesc));
 
 	gfx::GraphicsPipelineStateCreationDesc blinnPhongPipelineStateCreationDesc
 	{

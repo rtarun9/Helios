@@ -114,6 +114,19 @@ struct RenderTargetRenderResources
     uint postProcessBufferIndex;
 };
 
+struct DeferredLightingPassRenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+
+    uint lightBufferIndex;
+    uint sceneBufferIndex;
+    
+    uint albedoGBufferIndex;
+    uint normalGBufferIndex;
+    uint positionGBufferIndex;
+};
+
 struct MipMapGenerationRenderResources
 {
     uint sourceMipIndex;

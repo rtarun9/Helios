@@ -3,71 +3,64 @@
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 32514,
+      "count": 1984,
       "max": [
-        10,
-        10,
-        20
+        1.0,
+        1.0,
+        1.0
       ],
       "min": [
-        -10,
-        -10,
-        0
+        -1.0,
+        -1.0,
+        -1.0
       ],
       "type": "VEC3"
     },
     {
       "bufferView": 1,
-      "byteOffset": 390168,
+      "byteOffset": 23808,
       "componentType": 5126,
-      "count": 32514,
+      "count": 1984,
       "max": [
-        1,
-        0.99994164705276489,
-        0.99994158744812012
+        0.9904383420944214,
+        0.9904383420944214,
+        0.9951387047767639
       ],
       "min": [
-        -1,
-        -0.99994164705276489,
-        -0.99994158744812012
+        -0.9904383420944214,
+        -0.9904383420944214,
+        -0.9951387047767639
       ],
       "type": "VEC3"
     },
     {
       "bufferView": 0,
       "componentType": 5125,
-      "count": 195072,
-      "max": [
-        32513
-      ],
-      "min": [
-        0
-      ],
+      "count": 2880,
       "type": "SCALAR"
     }
   ],
   "asset": {
     "extras": {
-      "author": "3DVarious (https://sketchfab.com/3DVarious)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/sphere-b31b12ffa93a40f48c9d991b6f168f4d",
+      "author": "oatmas64134 (https://sketchfab.com/oatmas64134)",
+      "license": "CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)",
+      "source": "https://sketchfab.com/3d-models/sphere-bb721dfff9594206aee62175e43c08b2",
       "title": "Sphere"
     },
-    "generator": "Sketchfab-4.44.0",
+    "generator": "Sketchfab-12.65.0",
     "version": "2.0"
   },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 780288,
-      "byteOffset": 0,
+      "byteLength": 11520,
       "name": "floatBufferViews",
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteLength": 780336,
-      "byteOffset": 780288,
+      "byteLength": 47616,
+      "byteOffset": 11520,
       "byteStride": 12,
       "name": "floatBufferViews",
       "target": 34962
@@ -75,28 +68,29 @@
   ],
   "buffers": [
     {
-      "byteLength": 1560624,
+      "byteLength": 59136,
       "uri": "scene.bin"
     }
   ],
   "materials": [
     {
       "doubleSided": true,
-      "name": "Scene_-_Root",
+      "name": "Root",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          1,
-          1,
-          1,
-          1
+          0.5,
+          0.5,
+          0.5,
+          1.0
         ],
-        "metallicFactor": 0,
-        "roughnessFactor": 0.59999999999999998
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
       }
     }
   ],
   "meshes": [
     {
+      "name": "Sphere",
       "primitives": [
         {
           "attributes": {
@@ -115,39 +109,124 @@
       "children": [
         1
       ],
-      "name": "RootNode (gltf orientation matrix)",
-      "rotation": [
-        -0.70710678118654746,
-        -0,
-        -0,
-        0.70710678118654757
-      ]
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
     },
     {
       "children": [
-        2
+        2,
+        4,
+        6
       ],
-      "name": "RootNode (model correction matrix)"
+      "name": "Root"
     },
     {
       "children": [
         3
       ],
-      "name": "spheree.stl.cleaner.materialmerger.gles"
+      "matrix": [
+        -0.29086000000000006,
+        0.9551700000000001,
+        -0.05519000000000001,
+        0.0,
+        -0.7711,
+        -0.19988000000000003,
+        0.6045200000000001,
+        0.0,
+        0.5663900000000001,
+        0.21839000000000003,
+        0.7946700000000001,
+        0.0,
+        4.076250000000001,
+        1.00545,
+        5.903860000000001,
+        1.0
+      ],
+      "name": "Lamp"
+    },
+    {
+      "name": "Lamp"
+    },
+    {
+      "children": [
+        5
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -0.7278800000000001,
+        0.0,
+        1.16609,
+        1.0
+      ],
+      "name": "Sphere"
     },
     {
       "mesh": 0,
-      "name": ""
+      "name": "Sphere"
+    },
+    {
+      "children": [
+        7
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -0.5439200000000001,
+        1.82107,
+        3.5685800000000003,
+        1.0
+      ],
+      "name": "Sun"
+    },
+    {
+      "name": "Sun"
     }
   ],
   "scene": 0,
   "scenes": [
     {
-      "name": "OSG_Scene",
+      "name": "Sketchfab_Scene",
       "nodes": [
         0
       ]
     }
   ]
 }
-

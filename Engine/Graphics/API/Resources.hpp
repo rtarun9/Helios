@@ -160,9 +160,19 @@ namespace helios::gfx
 		Uint2 dimensions{};
 		std::wstring textureName{};
 
+		ID3D12Resource* const GetResource() const
+		{
+			if (allocation)
+			{
+				return allocation->resource.Get();
+			}
+
+			return nullptr;
+		}
+
 		// In the model abstraction, the textures are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the pointer is nullptr.
-		// So, upon passing the texture to this function, it will return -1 is texture is null, or the srvIndex otherwise.
+		// So, upon passing the texture to this function, it will return UINT_MAX / INVALID_INDEX if texture is null, or the srvIndex otherwise.
 		static uint32_t GetSrvIndex(const Texture* texture)
 		{
 			if (texture == nullptr)
@@ -173,15 +183,8 @@ namespace helios::gfx
 			return texture->srvIndex;
 		}
 
-		ID3D12Resource* const GetResource() const
-		{
-			if (allocation)
-			{
-				return allocation->resource.Get();
-			}
-
-			return nullptr;
-		}
+		static bool IsTextureSRGB(const DXGI_FORMAT& format);
+		static DXGI_FORMAT GetNonSRGBFormat(const DXGI_FORMAT& format);
 	};
 
 	// Needs to passed to the memory allocator's create buffer function along with a buffer creation desc struct.
@@ -262,6 +265,7 @@ namespace helios::gfx
 		DXGI_FORMAT depthFormat{ DXGI_FORMAT_D32_FLOAT };
 		D3D12_COMPARISON_FUNC depthComparisonFunc{ D3D12_COMPARISON_FUNC_LESS };
 		FrontFaceWindingOrder frontFaceWindingOrder{ FrontFaceWindingOrder::ClockWise };
+		uint32_t rtvCount{ 1u };
 		std::wstring pipelineName{};
 	};
 	
@@ -303,7 +307,10 @@ namespace helios::gfx
 		static uint32_t GetPositionBufferIndex()  {return sPositionBuffer->srvIndex; }
 		static uint32_t GetTextureCoordsBufferIndex() { return sTextureCoordsBuffer->srvIndex; }
 
+		uint32_t GetRenderTextureSRVIndex() const { return renderTexture->srvIndex; }
+
 		static void Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
+		static void Render(const GraphicsContext* graphicsContext, DeferredLightingPassRenderResources& deferredLightingRenderResources);
 
 		static inline std::unique_ptr<Buffer> sIndexBuffer;
 		static inline std::unique_ptr<Buffer> sPositionBuffer;

@@ -33,8 +33,8 @@ namespace helios::scene
 		// Create pipeline states.
 		gfx::ComputePipelineStateCreationDesc cubeMapFromEquirectPipelineStateCreationDesc
 		{
-			.csShaderPath = L"Shaders/CubeMapFromEquirectTextureCS.cso",
-			.pipelineName = L"Final Render Target Pipeline"
+			.csShaderPath = L"Shaders/SkyBox/CubeMapFromEquirectTextureCS.cso",
+			.pipelineName = L"Cube Map From Equirect Pipeline"
 		};
 
 		mCubeMapFromEquirectPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(cubeMapFromEquirectPipelineStateCreationDesc));

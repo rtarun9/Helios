@@ -169,7 +169,7 @@ namespace helios::gfx
 			rtvHandles.emplace_back(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(rt->renderTexture->rtvIndex).cpuDescriptorHandle);
 		}
 
-		mCommandList->OMSetRenderTargets(static_cast<UINT>(renderTargets.size()), rtvHandles.data(), FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
+		mCommandList->OMSetRenderTargets(static_cast<UINT>(renderTargets.size()), rtvHandles.data(), TRUE, &dsvDescriptorHandle.cpuDescriptorHandle);
 	}
 
 	void GraphicsContext::SetRenderTarget(RenderTarget* renderTarget, const Texture* depthStencilTexture) const

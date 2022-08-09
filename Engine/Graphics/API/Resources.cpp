@@ -5,6 +5,74 @@
 
 namespace helios::gfx
 {
+	bool Texture::IsTextureSRGB(const DXGI_FORMAT& format)
+	{
+		switch (format)
+		{
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		case DXGI_FORMAT_BC1_UNORM_SRGB:
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+		{
+			return true;
+		}break;
+
+		default:
+		{
+			return false;
+		}break;
+		}
+	};
+
+	DXGI_FORMAT Texture::GetNonSRGBFormat(const DXGI_FORMAT& format)
+	{
+		switch (format)
+		{
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_R8G8B8A8_UNORM;
+		}break;
+
+		case DXGI_FORMAT_BC1_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_BC1_UNORM;
+		}break;
+
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_BC2_UNORM;
+		}break;
+
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_BC3_UNORM;
+		}break;
+
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_B8G8R8A8_UNORM;
+		}break;
+
+		case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_B8G8R8X8_UNORM;
+		}break;
+
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+		{
+			return DXGI_FORMAT_BC7_UNORM;
+		}break;
+
+		default:
+		{
+			return format;
+		}break;
+		}
+	}
+
 	void RenderTarget::CreateRenderTargetResources(const Device* device)
 	{
 		// Buffer data.
@@ -77,6 +145,19 @@ namespace helios::gfx
 		
 		graphicsContext->Set32BitGraphicsConstants(&renderTargetRenderResources);
 		
+		graphicsContext->DrawInstanceIndexed(6u);
+	}
+
+	void RenderTarget::Render(const GraphicsContext* graphicsContext, DeferredLightingPassRenderResources& deferredLightingRenderResources)
+	{
+		deferredLightingRenderResources.positionBufferIndex = sPositionBuffer->srvIndex;
+		deferredLightingRenderResources.textureBufferIndex = sTextureCoordsBuffer->srvIndex;
+
+		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		graphicsContext->SetIndexBuffer(RenderTarget::sIndexBuffer.get());
+
+		graphicsContext->Set32BitGraphicsConstants(&deferredLightingRenderResources);
+
 		graphicsContext->DrawInstanceIndexed(6u);
 	}
 }

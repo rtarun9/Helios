@@ -8,7 +8,6 @@
 #define float2 DirectX::XMFLOAT2
 
 #define uint uint32_t
-#define uint2 uint32_t 
 
 // Note : using the typedef of matrix (float4x4) and struct (ConstantBufferStruct) to prevent name collision on the cpp code side. 
 #define float4x4 DirectX::XMMATRIX
@@ -34,11 +33,6 @@ static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
 
 // Hold all Constant Buffer struct's in a common shared place (shared between C++ and hlsl).
 
-ConstantBufferStruct LUTCBuffer
-{
-    float lutIndex;
-};
-
 // Light resources that are used while instanced rendering.
 ConstantBufferStruct InstanceLightBuffer
 {
@@ -54,12 +48,15 @@ ConstantBufferStruct TransformBuffer
 ConstantBufferStruct PostProcessBuffer
 {
     float exposure;
+    float3 padding;
 };
 
 ConstantBufferStruct SceneBuffer
 {
     float3 cameraPosition;
+    float padding;
     float3 cameraTarget;
+    float padding2;
     float4x4 viewMatrix;
     float4x4 projectionMatrix;
 };
@@ -71,7 +68,9 @@ ConstantBufferStruct LightBuffer
     // if it is zero, then it is a light direction.
     float4 lightPosition[TOTAL_LIGHTS];
     float4 lightColor[TOTAL_LIGHTS];
-    float radius[TOTAL_LIGHTS];
+    
+    // float4 because of struct packing (16byte alignment).
+    float4 radius[TOTAL_LIGHTS];
 };
 
 enum class TextureDimensionType
@@ -84,7 +83,7 @@ enum class TextureDimensionType
 
 ConstantBufferStruct MipMapGenerationBuffer
 {
-    bool isSRGB;
+    int isSRGB;
 
     uint sourceMipLevel;
 

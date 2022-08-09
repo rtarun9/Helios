@@ -6,6 +6,8 @@
 
 #include "Scene/Scene.hpp"
 
+#include "Graphics/RenderPass/DeferredGeometryPass.hpp"
+
 namespace helios::editor
 {
 	// The editor handles all UI related task.
@@ -18,7 +20,7 @@ namespace helios::editor
 
 		// Goal is to call this single function from the engine which does all the UI internally, helps make the engine clean as well.
 		// This function is heavy WIP and not given as much importance as other abstractions.
-		void Render(const gfx::Device* device, scene::Scene* scene, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
+		void Render(gfx::Device* device, scene::Scene* scene, gfx::DeferredPassRTs* deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
 
 		void OnResize(Uint2 dimensions) const;
 
@@ -34,6 +36,8 @@ namespace helios::editor
 		void RendererProperties(std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData) const;
 
 		void RenderLightProperties(std::vector<std::unique_ptr<helios::scene::Light>>& lights) const;
+
+		void RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const;
 
 		// Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads the model (if path belongs to a .gltf file).
 		void RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, scene::Scene* scene) const;

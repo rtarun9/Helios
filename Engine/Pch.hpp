@@ -20,7 +20,7 @@
 #include <d3dcompiler.h>
 
 // D3D12 extension library.
-#include "Graphics/API/d3dx12.hpp"
+#include "D3DX12/d3dx12.h"
 
 // SIMD Math library.
 #include <DirectXMath.h>
@@ -43,6 +43,7 @@
 #include <exception>
 #include <chrono>
 #include <memory>
+#include <random>
 #include <array>
 #include <mutex>
 #include <utility>
