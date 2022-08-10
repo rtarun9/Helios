@@ -19,7 +19,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
     ConstantBuffer<TransformBuffer> transformBuffer = ResourceDescriptorHeap[renderResource.transformBufferIndex];
 
-    matrix mvpMatrix = mul(mul(transformBuffer.modelMatrix, sceneBuffer.viewMatrix), sceneBuffer.projectionMatrix);
+    matrix mvpMatrix = mul(transformBuffer.modelMatrix, sceneBuffer.viewProjectionMatrix);
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);

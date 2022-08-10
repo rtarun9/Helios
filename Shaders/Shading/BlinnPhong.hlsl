@@ -32,12 +32,12 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
     Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalGBufferIndex];
-    Texture2D<float4> positionTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
+    Texture2D<float4> positionTexture = ResourceDescriptorHeap[renderResource.positionGBufferIndex];
 
-    float4 albedoColor = albedoTexture.Sample(linearClampSampler, psInput.textureCoord);
+    float4 albedoColor = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    float3 normal = normalTexture.Sample(linearClampSampler, psInput.textureCoord).xyz;
-    float3 position = normalTexture.Sample(linearClampSampler, psInput.textureCoord).xyz;
+    float3 normal = normalTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
+    float3 position = positionTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
 
     float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
 
@@ -47,34 +47,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
         float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
 
         // Ambient light.
-        float ambientStrength = 0.0001f;
-        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
-
-        // Diffuse light.
-        float diffuseStrength = max(dot(normal, pixelToLightDirection), 0.0f);
-        float3 diffuseColor =  diffuseStrength * lightBuffer.lightColor[i].xyz;
-        bool isDiffuseZero = diffuseStrength <= MIN_FLOAT_VALUE;
-
-        // Specular light.
-        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
-        float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
-        
-        float specularStrength = 0.6f;
-        float shininessValue = 32.0f;
-
-        float3 reflectionDirection = normalize(reflect(-pixelToLightDirection, normal));
-        float3 specularColor = isDiffuseZero == true ? 0.0f : specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
-
-        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz * GetSquareFalloffAttenuation(pixelToLightDirection, lightBuffer.radius[i].r);
-    }
-
-    for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
-    {
-        float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
-        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
-
-        // Ambient light.
-        float ambientStrength = 0.01f;
+        float ambientStrength = 0.00003f;
         float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
 
         // Diffuse light.
@@ -94,6 +67,32 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
         // Calculate light attenuation.
         float lightToPixelDistance = length(lightBuffer.lightPosition[i].xyz - position);
+
+        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz * 1.0f / pow(lightToPixelDistance, 2);
+    }
+
+    for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
+    {
+        float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
+        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
+
+        // Ambient light.
+        float ambientStrength = 0.01f;
+        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
+
+        // Diffuse light.
+        float diffuseStrength = max(dot(normal, pixelToLightDirection), 0.0f);
+        float3 diffuseColor =  diffuseStrength * lightBuffer.lightColor[i].xyz;
+
+        // Specular light.
+        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
+        float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
+        
+        float specularStrength = 0.6f;
+        float shininessValue = 32.0f;
+
+        float3 reflectionDirection = normalize(reflect(-pixelToLightDirection, normal));
+        float3 specularColor =  specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
 
         outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz;
     }

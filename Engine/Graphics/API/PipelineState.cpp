@@ -41,8 +41,8 @@ namespace helios::gfx
 		// Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA Topology type.
 		D3D12_BLEND_DESC blendDesc
 		{
-			.AlphaToCoverageEnable = TRUE,
-			.IndependentBlendEnable = TRUE,
+			.AlphaToCoverageEnable = FALSE,
+			.IndependentBlendEnable = FALSE,
 		};
 
 		for (uint32_t i : std::views::iota(0u, pipelineStateCreationDesc.rtvCount))
@@ -91,7 +91,7 @@ namespace helios::gfx
 		// Set RTV formats.
 		for (uint32_t i : std::views::iota(0u, pipelineStateCreationDesc.rtvCount))
 		{
-			psoDesc.RTVFormats[i] = pipelineStateCreationDesc.rtvFormat;
+			psoDesc.RTVFormats[i] = pipelineStateCreationDesc.rtvFormats[i];
 		}
 
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));

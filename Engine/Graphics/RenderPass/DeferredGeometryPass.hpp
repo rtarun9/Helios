@@ -9,6 +9,7 @@
 
 namespace helios::gfx
 {
+	// The different RT's the GPass shader can output too.
 	struct DeferredPassRTs
 	{
 		std::unique_ptr<gfx::RenderTarget> positionRT{};
@@ -16,6 +17,7 @@ namespace helios::gfx
 		std::unique_ptr<gfx::RenderTarget> normalRT{};
 	};
 
+	// This abstraction produces MRT's for various attributes (positions, albedo, normal etc) for a given scene. Handles resizing of all RT's too.
 	class DeferredGeometryPass
 	{
 	public:

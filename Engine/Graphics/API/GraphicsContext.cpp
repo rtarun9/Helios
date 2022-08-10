@@ -20,6 +20,8 @@ namespace helios::gfx
 		};
 
 		SetDescriptorHeaps(descriptors);
+
+		mCommandList->SetGraphicsRootSignature(PipelineState::rootSignature.Get());
 	}
 
 	void GraphicsContext::AddResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) 
@@ -72,7 +74,6 @@ namespace helios::gfx
 
 	void GraphicsContext::SetGraphicsPipelineState(PipelineState* pipelineState) const
 	{
-		mCommandList->SetGraphicsRootSignature(pipelineState->rootSignature.Get());
 		mCommandList->SetPipelineState(pipelineState->pipelineStateObject.Get());
 	}
 

@@ -365,7 +365,7 @@ namespace helios::editor
 				ImGui::SetDragDropPayload("CONTENT_BROWSER_ASSET_ITEM", itemPath, (wcslen(itemPath) + 1) * sizeof(wchar_t));
 				ImGui::EndDragDropSource();
 			}
-
+		
 			if (directoryEntry.is_directory())
 			{
 				if (ImGui::Button(directoryEntry.path().string().c_str()))

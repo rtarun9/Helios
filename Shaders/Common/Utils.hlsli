@@ -58,7 +58,7 @@ float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
     return samplingVector;
 }
 
-float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3 biTangent, float3 tangent, float3x3 tbnMatrix)
+float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3x3 tbnMatrix)
 {
     float3 inputNormal = normal;
 
@@ -67,6 +67,8 @@ float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextur
         Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
 
         SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
+
+        // Make the normal into a -1 to 1 range.
         normal = 2.0f * normalTexture.Sample(samplerState, textureCoord).xyz - float3(1.0f, 1.0f, 1.0f);
         normal = normalize(mul(normal, tbnMatrix));
         return normal;
@@ -81,16 +83,6 @@ float4 GenerateTangent(float3 normal)
     tangent = normalize(lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), tangent, step(MIN_FLOAT_VALUE, dot(tangent, tangent))));
 
     return float4(tangent, 1.0f);
-}
-
-// Punctual lights attenuation based on: https://google.github.io/filament/Filament.html#lighting/directlighting/punctuallights.
-float GetSquareFalloffAttenuation(float3 pixelToLightDirection, float radius) 
-{
-    float lightInvRadius = 1.0f / radius;
-    float distanceSquare = dot(pixelToLightDirection, pixelToLightDirection);
-    float factor = distanceSquare * lightInvRadius * lightInvRadius;
-    float smoothFactor = max(1.0 - factor * factor, 0.0);
-    return (smoothFactor * smoothFactor) / max(distanceSquare, 1e-5);
 }
 
 #endif

@@ -19,45 +19,45 @@ void SandBox::OnInit()
 	// Load scene and its data.
 	mScene = std::make_unique<scene::Scene>(mDevice.get());
 
-	scene::ModelCreationDesc cubeCreationDesc
-	{
-		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
-		.modelName = L"Cube",
-	};
-	
-	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
-	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
-	mScene->AddModel(std::move(cube));
-	
-	scene::ModelCreationDesc DamagedHelmetCreationDesc
-	{
-		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-		.modelName = L"DamagedHelmet",
-	};
-	
-	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
-	damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
-	mScene->AddModel(std::move(damagedHelmet));
-	
-	scene::ModelCreationDesc sciFiHelmetCreationDesc
-	{
-		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
-		.modelName = L"SciFiHelmet",
-	};
-	
-	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
-	sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
-	mScene->AddModel(std::move(sciFiHelmet));
-	
-	scene::ModelCreationDesc metalRoughSpheresCreationDesc
-	{
-		.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-		.modelName = L"MetalRoughSpheres",
-	};
-	
-	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
-	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
-	mScene->AddModel(std::move(metalRoughSpheres));
+	//scene::ModelCreationDesc cubeCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
+	//	.modelName = L"Cube",
+	//};
+	//
+	//auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
+	//cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
+	//mScene->AddModel(std::move(cube));
+	//
+	//scene::ModelCreationDesc DamagedHelmetCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+	//	.modelName = L"DamagedHelmet",
+	//};
+	//
+	//auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
+	//damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+	//mScene->AddModel(std::move(damagedHelmet));
+	//
+	//scene::ModelCreationDesc sciFiHelmetCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
+	//	.modelName = L"SciFiHelmet",
+	//};
+	//
+	//auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
+	//sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
+	//mScene->AddModel(std::move(sciFiHelmet));
+	//
+	//scene::ModelCreationDesc metalRoughSpheresCreationDesc
+	//{
+	//	.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+	//	.modelName = L"MetalRoughSpheres",
+	//};
+	//
+	//auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
+	//metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
+	//mScene->AddModel(std::move(metalRoughSpheres));
 
 	scene::ModelCreationDesc sponzaCreationDesc
 	{
@@ -68,17 +68,6 @@ void SandBox::OnInit()
 	auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
 	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f};
 	mScene->AddModel(std::move(sponza));
-
-	// Random generator.
-	std::mt19937_64 rng{};
-    
-	uint64_t timeSeed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-	
-	std::seed_seq ss{ uint32_t(timeSeed & 0xffffffff), uint32_t(timeSeed >> 32) };
-	
-	rng.seed(ss);
-
-	std::uniform_real_distribution<double> uniformDistribution(0, 1);
 
 	// Load lights.
 	
@@ -94,7 +83,7 @@ void SandBox::OnInit()
 
 		scene::Light::GetLightBufferData()->lightColor[i] = DirectX::XMFLOAT4(1.0f - (float)i/ TOTAL_POINT_LIGHTS, 1.0f, (float)i / TOTAL_POINT_LIGHTS, 1.0f);
 
-		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(12.0f * (i % 10) - 22.0f, 2.0f, 6.0f * (i / 10) - 18.0f, 1.0f);
+		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(12.0f * (i % 20) - 150.0f, 2.0f, 6.0f * (i / 20) - 50.0f, 1.0f);
 	}
 
 	scene::LightCreationDesc directionalLightCreationDesc
@@ -273,12 +262,12 @@ void SandBox::OnRender()
 		graphicsContext->ExecuteResourceBarriers();
 
 		graphicsContext->SetGraphicsPipelineState(mPostProcessingPipelineState.get());
-		graphicsContext->SetRenderTarget(mPostProcessingRT.get(), mDepthStencilTexture.get());
+		graphicsContext->SetRenderTarget(mPostProcessingRT.get(), mForwardRenderingDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		graphicsContext->ClearRenderTargetView(mPostProcessingRT.get(), std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
-		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
+		graphicsContext->ClearDepthStencilView(mForwardRenderingDepthStencilTexture.get(), 1.0f);
 
 		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
 		RenderTargetRenderResources rtvRenderResources
@@ -297,11 +286,11 @@ void SandBox::OnRender()
 		graphicsContext->ExecuteResourceBarriers();
 
 		graphicsContext->SetGraphicsPipelineState(mFinalPipelineState.get());
-		graphicsContext->SetRenderTarget(mFinalRT.get(), mDepthStencilTexture.get());
+		graphicsContext->SetRenderTarget(mFinalRT.get(), mForwardRenderingDepthStencilTexture.get());
 		graphicsContext->SetDefaultViewportAndScissor();
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		graphicsContext->ClearDepthStencilView(mDepthStencilTexture.get(), 1.0f);
+		graphicsContext->ClearDepthStencilView(mForwardRenderingDepthStencilTexture.get(), 1.0f);
 
 		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
 		RenderTargetRenderResources rtvRenderResources
@@ -325,7 +314,6 @@ void SandBox::OnRender()
 		graphicsContext->AddResourceBarrier(backBuffer->GetResource(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
 		graphicsContext->ExecuteResourceBarriers();
 	}
-
 
 	mDevice->EndFrame();
 
@@ -405,7 +393,7 @@ void SandBox::CreatePipelineStates()
 			.vsShaderPath = L"Shaders/RenderPass/PostProcessRenderPassVS.cso",
 			.psShaderPath = L"Shaders/RenderPass/PostProcessRenderPassPS.cso",
 		},
-		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
+		.rtvFormats = {gfx::Device::SWAPCHAIN_FORMAT},
 		.pipelineName = L"Post Process RenderPass Pipeline"
 	};
 
@@ -442,7 +430,7 @@ void SandBox::CreatePipelineStates()
 			.vsShaderPath = L"Shaders/RenderPass/FinalRenderPassVS.cso",
 			.psShaderPath = L"Shaders/RenderPass/FinalRenderPassPS.cso",
 		},
-		.rtvFormat = gfx::Device::SWAPCHAIN_FORMAT,
+		.rtvFormats = {gfx::Device::SWAPCHAIN_FORMAT},
 		.depthFormat = DXGI_FORMAT_D32_FLOAT,
 		.pipelineName = L"Final Render Target Pipeline"
 	};
@@ -456,7 +444,7 @@ void SandBox::CreatePipelineStates()
 			.vsShaderPath = L"Shaders/SkyBox/SkyBoxVS.cso",
 			.psShaderPath = L"Shaders/SkyBox/SkyBoxPS.cso",
 		},
-		.rtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		.rtvFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT},
 		.depthComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
 		.frontFaceWindingOrder = gfx::FrontFaceWindingOrder::CounterClockWise,
 		.pipelineName = L"Sky Box Pipeline"
