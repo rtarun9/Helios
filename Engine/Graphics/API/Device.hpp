@@ -38,7 +38,7 @@ namespace helios::gfx
 		MemoryAllocator* GetMemoryAllocator() const { return mMemoryAllocator.get(); }
 		BackBuffer* GetCurrentBackBuffer() { return &mBackBuffers[mCurrentBackBufferIndex]; }
 		
-		std::unique_ptr<GraphicsContext> const  GetGraphicsContext() { return std::move(std::make_unique<GraphicsContext>(this)); }
+		std::unique_ptr<GraphicsContext> const  GetGraphicsContext(const gfx::PipelineState* pipelineState = nullptr) { return std::move(std::make_unique<GraphicsContext>(this, pipelineState)); }
 		std::unique_ptr<ComputeContext> const GetComputeContext() { return std::move(std::make_unique<ComputeContext>(this)); }
 		
 		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
@@ -59,6 +59,8 @@ namespace helios::gfx
 		void EndFrame();
 
 		void ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext);
+		void ExecuteContext(std::span<GraphicsContext*> graphicsContext);
+
 		void ExecuteContext(std::unique_ptr<ComputeContext> computeContext);
 		void Present();
 
@@ -159,7 +161,7 @@ namespace helios::gfx
 			uploadAllocation->Update(data.data(), buffer.sizeInBytes);
 
 			// Get a copy command and list and execute copy resource functions on the command queue.
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> copyCommandList = mCopyCommandQueue->GetCommandList();
 			copyCommandList->CopyResource(buffer.allocation->resource.Get(), uploadAllocation->resource.Get());
 			mCopyCommandQueue->ExecuteAndFlush(copyCommandList.Get());
 

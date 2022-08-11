@@ -2,6 +2,8 @@
 
 #include "Pch.hpp"
 
+#include "PipelineState.hpp"
+
 namespace helios::gfx
 {
 	// note(rtarun9) : since command allocators cannot be reset until they are no longer 'in flight', we store a fence value along with the command allocator,
@@ -21,16 +23,17 @@ namespace helios::gfx
 
 		// GetCommandList and GetCommandQueue returns ComPtr as the pointer is also passed to the contexts.
 		[[nodiscard]]
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList();
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> GetCommandList(const gfx::PipelineState* pipelineState = nullptr);
 
 		[[nodiscard]]
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const { return mCommandQueue; }
 
 		// Returns the fence value to wait for to notify when command list has finished execution.
 		[[nodiscard]]
-		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
+		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList1* commandList);
+		uint64_t ExecuteCommandLists(std::span<ID3D12GraphicsCommandList1*> commandList);
 
-		void ExecuteAndFlush(ID3D12GraphicsCommandList* commandList);
+		void ExecuteAndFlush(ID3D12GraphicsCommandList1* commandList);
 
 		// Return value that the fence will be signalled with when GPU commands finish executing.
 		[[nodiscard]]
@@ -43,7 +46,7 @@ namespace helios::gfx
 	private:
 		// Helper functions to create command list / command allocator if none are available in the queue.
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ID3D12CommandAllocator* commandAllocator);
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> CreateCommandList(ID3D12CommandAllocator* commandAllocator, const gfx::PipelineState* pipelineState = nullptr);
 
 	private:
 		D3D12_COMMAND_LIST_TYPE mCommandListType{D3D12_COMMAND_LIST_TYPE_DIRECT};
@@ -60,6 +63,6 @@ namespace helios::gfx
 		uint64_t mFenceValue{};
 
 		std::queue<CommandAllocator> mCommandAllocatorQueue{};
-		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> mCommandListQueue{};
+		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1>> mCommandListQueue{};
 	};
 }

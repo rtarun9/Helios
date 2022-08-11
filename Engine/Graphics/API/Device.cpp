@@ -247,6 +247,17 @@ namespace helios::gfx
 		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandList(graphicsContext->GetCommandList());
 	}
 
+	void Device::ExecuteContext(std::span<GraphicsContext*> graphicsContext)
+	{
+		std::vector<ID3D12GraphicsCommandList1*> commandList{};
+		for (auto list : graphicsContext)
+		{
+			commandList.push_back(list->GetCommandList());
+		}
+
+		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandLists(commandList);
+	}
+
 	void Device::ExecuteContext(std::unique_ptr<ComputeContext> computeContext)
 	{
 		// Execute commands recorded into the graphics context.
@@ -542,7 +553,7 @@ namespace helios::gfx
 			}
 			
 			// Get a copy command and list and execute UpdateSubresources functions on the command queue.
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> copyCommandList = mCopyCommandQueue->GetCommandList();
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> copyCommandList = mCopyCommandQueue->GetCommandList();
 
 			UpdateSubresources(copyCommandList.Get(), texture.allocation->resource.Get(), uploadAllocation->resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
 

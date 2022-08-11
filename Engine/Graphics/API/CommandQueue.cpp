@@ -34,12 +34,12 @@ namespace helios::gfx
 		}
 	}
 	
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandQueue::GetCommandList()
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> CommandQueue::GetCommandList(const gfx::PipelineState* pipelineState)
 	{
 		// Check if there is command allocator (that allocates the list) is not in flight -> if so it can be reused.
 		// Other wise a new command allocator has to be created.
 
-		wrl::ComPtr<ID3D12GraphicsCommandList> commandList;
+		wrl::ComPtr<ID3D12GraphicsCommandList1> commandList;
 		wrl::ComPtr<ID3D12CommandAllocator> commandAllocator;
 
 		if (!mCommandAllocatorQueue.empty() && IsFenceComplete(mCommandAllocatorQueue.front().fenceValue))
@@ -60,11 +60,18 @@ namespace helios::gfx
 			commandList = mCommandListQueue.front();
 			mCommandListQueue.pop();
 
-			ThrowIfFailed(commandList->Reset(commandAllocator.Get(), nullptr));
+			if (pipelineState)
+			{
+				ThrowIfFailed(commandList->Reset(commandAllocator.Get(), pipelineState->pipelineStateObject.Get()));
+			}
+			else
+			{
+				ThrowIfFailed(commandList->Reset(commandAllocator.Get(), nullptr));
+			}
 		}
 		else
 		{
-			commandList = CreateCommandList(commandAllocator.Get());
+			commandList = CreateCommandList(commandAllocator.Get(), pipelineState);
 		}
 
 		// Create association between the command list and allocator so we can find out which command allocater the list was
@@ -76,7 +83,7 @@ namespace helios::gfx
 	}
 
 	// Returns the fence value to wait for to notify when command list has finished execution.
-	uint64_t CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* const commandList)
+	uint64_t CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList1* const commandList)
 	{
 		commandList->Close();
 
@@ -102,7 +109,40 @@ namespace helios::gfx
 		return fenceValue;
 	}
 
-	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList* const commandList)
+	uint64_t CommandQueue::ExecuteCommandLists(std::span<ID3D12GraphicsCommandList1*> commandList)
+	{
+		for (auto& list : commandList)
+		{
+			list->Close();
+		}
+
+		std::vector<ID3D12CommandList*> commandListVec{};
+		for (auto& list : commandList)
+		{
+			commandListVec.push_back(list);
+		}
+
+		mCommandQueue->ExecuteCommandLists(static_cast<UINT>(commandListVec.size()), commandListVec.data());
+		uint64_t fenceValue = Signal();
+
+		ID3D12CommandAllocator* commandAllocator{ nullptr };
+		UINT dataSize = sizeof(ID3D12CommandAllocator);
+
+		for (auto& list : commandList)
+		{
+			ThrowIfFailed(list->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
+
+
+			mCommandAllocatorQueue.emplace(CommandAllocator{ .fenceValue = fenceValue, .commandAllocator = commandAllocator });
+			mCommandListQueue.emplace(list);
+
+			commandAllocator->Release();
+		}
+
+		return fenceValue;
+	}
+
+	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList1* const commandList)
 	{
 		uint64_t signalValue = ExecuteCommandList(commandList);
 		FlushQueue();
@@ -145,10 +185,10 @@ namespace helios::gfx
 		return commandAllocator;
 	}
 
-	wrl::ComPtr<ID3D12GraphicsCommandList> CommandQueue::CreateCommandList(ID3D12CommandAllocator* commandAllocator)
+	wrl::ComPtr<ID3D12GraphicsCommandList1> CommandQueue::CreateCommandList(ID3D12CommandAllocator* commandAllocator, const gfx::PipelineState* pipelineState)
 	{
-		wrl::ComPtr<ID3D12GraphicsCommandList> commandList;
-		ThrowIfFailed(mDevice->CreateCommandList(0u, mCommandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+		wrl::ComPtr<ID3D12GraphicsCommandList1> commandList;
+		ThrowIfFailed(mDevice->CreateCommandList(0u, mCommandListType, commandAllocator, pipelineState ? pipelineState->pipelineStateObject.Get() : nullptr, IID_PPV_ARGS(&commandList)));
 
 		return commandList;
 	}

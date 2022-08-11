@@ -17,7 +17,7 @@ namespace helios::gfx
 	{
 	public:
 		ComputeContext(Device* device);
-		ID3D12GraphicsCommandList* const GetCommandList() const { return mCommandList.Get(); }
+		ID3D12GraphicsCommandList1* const GetCommandList() const { return mCommandList.Get(); }
 
 		// Core functionalities.
 		void Dispatch(uint32_t threadGroupX, uint32_t threadGroupY, uint32_t threadGroupZ) const;
@@ -34,7 +34,7 @@ namespace helios::gfx
 	private:
 		static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;
 
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList{};
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> mCommandList{};
 
 		std::vector<CD3DX12_RESOURCE_BARRIER> mResourceBarriers{};
 

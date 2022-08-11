@@ -21,7 +21,6 @@ namespace helios::gfx
 
 	void MipMapGenerator::GenerateMips(gfx::Texture* texture)
 	{
-		
 		D3D12_RESOURCE_DESC sourceResourceDesc = texture->GetResource()->GetDesc();
 		if (sourceResourceDesc.MipLevels <= 1)
 		{

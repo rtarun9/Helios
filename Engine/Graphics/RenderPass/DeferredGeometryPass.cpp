@@ -17,7 +17,7 @@ namespace helios::gfx
 				.vsShaderPath = L"Shaders/RenderPass/DeferredGeometryPassVS.cso",
 				.psShaderPath = L"Shaders/RenderPass/DeferredGeometryPassPS.cso",
 			},
-			.rtvFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB},
+			.rtvFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM},
 			.rtvCount = 3u,
 			.pipelineName = L"Deferred Geometry Pass Pipeline"
 		};
@@ -49,7 +49,7 @@ namespace helios::gfx
 		{
 			.usage = gfx::TextureUsage::RenderTarget,
 			.dimensions = dimensions,
-			.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+			.format = DXGI_FORMAT_R8G8B8A8_UNORM,
 			.name = L"Deferred Pass Albedo Texture"
 		};
 

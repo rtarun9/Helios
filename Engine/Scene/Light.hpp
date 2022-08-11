@@ -52,7 +52,7 @@ namespace helios::scene
 		static constexpr float DIRECTIONAL_LIGHT_ANGLE{ -153.0f };
 	
 	private:
-		static constexpr inline const wchar_t*  LIGHT_MODEL_PATH = L"Assets/Models/Sphere/scene.gltf";
+		static constexpr inline const wchar_t*  LIGHT_MODEL_PATH = L"Assets/Models/Cube/glTF/Cube.gltf";
 
 		LightTypes mLightType{};
 		uint32_t mLightNumber{};

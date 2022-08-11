@@ -28,12 +28,12 @@ static const float GAMMA_CORRECTION = 0.454545455f;
 [RootSignature(BindlessRootSignature)]
 float4 PsMain(VSOutput input) : SV_Target
 {
-    Texture2D<float4> rtvTexture = ResourceDescriptorHeap[renderResource.textureIndex];
-    ConstantBuffer<PostProcessBuffer> postProcessBuffer = ResourceDescriptorHeap[renderResource.postProcessBufferIndex];
+    Texture2D<float4> rtvTexture = ResourceDescriptorHeap[NonUniformResourceIndex(renderResource.textureIndex)];
+    ConstantBuffer<PostProcessBuffer> postProcessBuffer = ResourceDescriptorHeap[NonUniformResourceIndex(renderResource.postProcessBufferIndex)];
 
     float exposure = postProcessBuffer.exposure;
 
-    float4 color = rtvTexture.Sample(pointWrapSampler, input.textureCoord);
+    float4 color = rtvTexture.SampleLevel(pointWrapSampler, input.textureCoord, 0u);
 
     // Exposure Tone mapping
     color.rgb = float3(1.0f, 1.0f, 1.0f) - exp(-color.rgb * exposure);

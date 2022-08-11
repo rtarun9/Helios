@@ -131,6 +131,7 @@ namespace helios::gfx
 			case TextureUsage::DepthStencil:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+				resourceCreationDesc.resourceDesc.Format = dsFormat;
 				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 				resourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 			}break;
@@ -149,13 +150,37 @@ namespace helios::gfx
 			case TextureUsage::CubeMap:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 				resourceState = D3D12_RESOURCE_STATE_COMMON;
 			}break;
 		};
 
-		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+		std::optional<D3D12_CLEAR_VALUE> optimizedClearValue{};
 
+		if (textureCreationDesc.usage == TextureUsage::RenderTarget)
+		{
+			optimizedClearValue = 
+			{
+					.Format = format,
+					.Color = { 0.0f, 0.0f, 0.0f, 1.0f },
+			};
+
+		}
+		else if (textureCreationDesc.usage == TextureUsage::DepthStencil)
+		{
+			D3D12_DEPTH_STENCIL_VALUE dsValue
+			{
+				.Depth = 1.0f,
+				.Stencil = 1u
+			};
+
+			optimizedClearValue =
+			{
+					.Format = dsFormat,
+					.DepthStencil = dsValue
+			};
+		}
+
+		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState,optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 		allocation.resource->SetName(textureCreationDesc.name.c_str());
 
 		return std::move(std::make_unique<Allocation>(allocation));

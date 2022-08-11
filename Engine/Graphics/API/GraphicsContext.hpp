@@ -16,8 +16,8 @@ namespace helios::gfx
 	class GraphicsContext
 	{
 	public:
-		GraphicsContext(Device* device);
-		ID3D12GraphicsCommandList* const GetCommandList() const { return mCommandList.Get(); }
+		GraphicsContext(Device* device, const gfx::PipelineState* pipelineState = nullptr);
+		ID3D12GraphicsCommandList1* const GetCommandList() const { return mCommandList.Get(); }
 
 		// Core functionalities.
 
@@ -53,6 +53,7 @@ namespace helios::gfx
 
 		// Draw functions.
 		void DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;
+		void DrawIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;
 
 		// Copy related calls.
 		void CopyResource(ID3D12Resource* source, ID3D12Resource* destination);
@@ -63,7 +64,7 @@ namespace helios::gfx
 	private:
 		static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;
 
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList{};
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> mCommandList{};
 
 		// Resource barriers are quite heavy, and executing them in a single call (batched) is very efficient.
 		// The resource barriers are executed when the ExecuteResourceBarriers() call is invoked, which must happen before command list is sent over to the

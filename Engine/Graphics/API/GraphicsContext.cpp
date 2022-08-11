@@ -8,9 +8,9 @@
 
 namespace helios::gfx
 {
-	GraphicsContext::GraphicsContext(Device* device) : mDevice(*device)
+	GraphicsContext::GraphicsContext(Device* device, const gfx::PipelineState* pipelineState) : mDevice(*device)
 	{
-		mCommandList = device->GetGraphicsCommandQueue()->GetCommandList();
+		mCommandList = device->GetGraphicsCommandQueue()->GetCommandList(pipelineState);
 
 		// As all graphics context's require to set the descriptor heap before hand, the user has option to set them manually (for explicitness) or just let the constructor take care of this.
 		std::array<gfx::Descriptor*, 2> descriptors
@@ -183,6 +183,11 @@ namespace helios::gfx
 	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount) const
 	{
 		mCommandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);
+	}
+
+	void GraphicsContext::DrawIndexed(uint32_t indicesCount, uint32_t instanceCount) const
+	{
+		mCommandList->DrawInstanced(indicesCount, instanceCount, 0u, 0u);
 	}
 	 
 	void GraphicsContext::CopyResource(ID3D12Resource* source, ID3D12Resource* destination)
