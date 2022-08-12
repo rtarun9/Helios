@@ -20,7 +20,7 @@ namespace helios::editor
 
 		// Goal is to call this single function from the engine which does all the UI internally, helps make the engine clean as well.
 		// This function is heavy WIP and not given as much importance as other abstractions.
-		void Render(gfx::Device* device, scene::Scene* scene, gfx::DeferredPassRTs* deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext);
+		void Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext);
 
 		void OnResize(Uint2 dimensions) const;
 
@@ -40,7 +40,7 @@ namespace helios::editor
 		void RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const;
 
 		// Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads the model (if path belongs to a .gltf file).
-		void RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, scene::Scene* scene) const;
+		void RenderSceneViewport(const gfx::Device* device, const gfx::RenderTarget* renderTarget, scene::Scene* scene) const;
 
 		// Handle drag and drop of models into viewport at run time.
 		void RenderContentBrowser();

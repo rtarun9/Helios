@@ -19,46 +19,59 @@ void SandBox::OnInit()
 	// Load scene and its data.
 	mScene = std::make_unique<scene::Scene>(mDevice.get());
 
-	//scene::ModelCreationDesc cubeCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
-	//	.modelName = L"Cube",
-	//};
-	//
-	//auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
-	//cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
-	//mScene->AddModel(std::move(cube));
-	//
-	//scene::ModelCreationDesc DamagedHelmetCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-	//	.modelName = L"DamagedHelmet",
-	//};
-	//
-	//auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
-	//damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
-	//mScene->AddModel(std::move(damagedHelmet));
-	//
-	//scene::ModelCreationDesc sciFiHelmetCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
-	//	.modelName = L"SciFiHelmet",
-	//};
-	//
-	//auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
-	//sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
-	//mScene->AddModel(std::move(sciFiHelmet));
-	//
-	//scene::ModelCreationDesc metalRoughSpheresCreationDesc
-	//{
-	//	.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-	//	.modelName = L"MetalRoughSpheres",
-	//};
-	//
-	//auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
-	//metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
-	//mScene->AddModel(std::move(metalRoughSpheres));
+#if 0
+	scene::ModelCreationDesc cubeCreationDesc
+	{
+		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
+		.modelName = L"Cube",
+	};
+	
+	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
+	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
+	mScene->AddModel(std::move(cube));
+#endif
 
+	scene::ModelCreationDesc sphereCreationDesc
+	{
+		.modelPath = L"Assets/Models/Sphere/scene.gltf",
+		.modelName = L"Sphere",
+	};
+
+	auto sphere = std::make_unique<scene::Model>(mDevice.get(), sphereCreationDesc);
+	sphere->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
+	mScene->AddModel(std::move(sphere));
+
+	scene::ModelCreationDesc DamagedHelmetCreationDesc
+	{
+		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+		.modelName = L"DamagedHelmet",
+	};
+	
+	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
+	damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+	mScene->AddModel(std::move(damagedHelmet));
+	
+	scene::ModelCreationDesc sciFiHelmetCreationDesc
+	{
+		.modelPath = L"Assets/Models/SciFiHelmet/glTF/SciFiHelmet.gltf",
+		.modelName = L"SciFiHelmet",
+	};
+	
+	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
+	sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
+	mScene->AddModel(std::move(sciFiHelmet));
+	
+	scene::ModelCreationDesc metalRoughSpheresCreationDesc
+	{
+		.modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+		.modelName = L"MetalRoughSpheres",
+	};
+	
+	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
+	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
+	mScene->AddModel(std::move(metalRoughSpheres));
+
+#if 0
 	scene::ModelCreationDesc sponzaCreationDesc
 	{
 		.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
@@ -68,6 +81,7 @@ void SandBox::OnInit()
 	auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
 	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f };
 	mScene->AddModel(std::move(sponza));
+#endif
 
 	// Load lights.
 
@@ -81,9 +95,14 @@ void SandBox::OnInit()
 
 		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
 
-		scene::Light::GetLightBufferData()->lightColor[i] = DirectX::XMFLOAT4(1.0f - (float)i / TOTAL_POINT_LIGHTS, 1.0f, (float)i / TOTAL_POINT_LIGHTS, 1.0f);
 
+		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+#if 0
+		// For deferred lighting visualization
+		scene::Light::GetLightBufferData()->lightColor[i] = DirectX::XMFLOAT4(1.0f - (float)i / TOTAL_POINT_LIGHTS, 1.0f, (float)i / TOTAL_POINT_LIGHTS, 1.0f);
 		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(12.0f * (i % 20) - 150.0f, 2.0f, 6.0f * (i / 20) - 50.0f, 1.0f);
+#endif
+
 	}
 
 	scene::LightCreationDesc directionalLightCreationDesc
@@ -188,7 +207,7 @@ void SandBox::OnUpdate()
 void SandBox::OnRender()
 {
 	std::unique_ptr<gfx::GraphicsContext> deferredGPassGraphicsContext = mDevice->GetGraphicsContext(mDeferredGPass->mDeferredPassPipelineState.get());
-	std::unique_ptr<gfx::GraphicsContext> shadingGraphicsContext = mDevice->GetGraphicsContext(mBlinnPhongPipelineState.get());
+	std::unique_ptr<gfx::GraphicsContext> shadingGraphicsContext = mDevice->GetGraphicsContext(mPBRPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> postProcessingGraphicsContext = mDevice->GetGraphicsContext(mPostProcessingPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalGraphicsContext = mDevice->GetGraphicsContext(mFinalPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalToSwapChainGraphicsContext = mDevice->GetGraphicsContext(nullptr);
@@ -240,8 +259,9 @@ void SandBox::OnRender()
 			.sceneBufferIndex = mScene->mSceneBuffer->cbvIndex,
 
 			.albedoGBufferIndex = mDeferredGPass->mDeferredPassRTs.albedoRT->GetRenderTextureSRVIndex(),
-			.normalGBufferIndex = mDeferredGPass->mDeferredPassRTs.normalRT->GetRenderTextureSRVIndex(),
-			.positionGBufferIndex = mDeferredGPass->mDeferredPassRTs.positionRT->GetRenderTextureSRVIndex()
+			.positionEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.positionEmissiveRT->GetRenderTextureSRVIndex(),
+			.normalEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.normalEmissiveRT->GetRenderTextureSRVIndex(),
+			.aoMetalRoughnessEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.aoMetalRoughnessEmissiveRT->GetRenderTextureSRVIndex(),
 		};
 
 		gfx::RenderTarget::Render(shadingGraphicsContext.get(), deferredLightingPassRenderResources);
@@ -303,7 +323,7 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(finalGraphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, clearColor, mPostProcessBufferData, mDevice->GetTextureSrvDescriptorHandle(mPostProcessingRT->renderTexture.get()), finalGraphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swapchain
@@ -412,17 +432,17 @@ void SandBox::CreatePipelineStates()
 
 	mPostProcessingPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(postProcessGraphicsPipelineStateCreationDesc));
 
-	gfx::GraphicsPipelineStateCreationDesc blinnPhongPipelineStateCreationDesc
+	gfx::GraphicsPipelineStateCreationDesc pbrPipelineStateCreationDesc
 	{
 		.shaderModule
 		{
-			.vsShaderPath = L"Shaders/Shading/BlinnPhongVS.cso",
-			.psShaderPath = L"Shaders/Shading/BlinnPhongPS.cso",
+			.vsShaderPath = L"Shaders/Shading/PBRVS.cso",
+			.psShaderPath = L"Shaders/Shading/PBRPS.cso",
 		},
-		.pipelineName = L"Blinn Phong Pipeline"
+		.pipelineName = L"PBR Pipeline"
 	};
 
-	mBlinnPhongPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(blinnPhongPipelineStateCreationDesc));
+	mPBRPipelineState = std::make_unique<gfx::PipelineState>(mDevice->CreatePipelineState(pbrPipelineStateCreationDesc));
 
 	gfx::GraphicsPipelineStateCreationDesc lightPipelineStateCreationDesc
 	{

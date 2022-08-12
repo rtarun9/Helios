@@ -22,6 +22,66 @@ float4 GetAlbedo(float2 textureCoords, uint albedoTextureIndex, uint albedoTextu
     return albedoTexture.Sample(samplerState, textureCoords);
 }
 
+float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3x3 tbnMatrix)
+{
+    float3 inputNormal = normal;
+
+    if (normalTextureIndex != INVALID_INDEX)
+    {
+        Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
+
+        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
+
+        // Make the normal into a -1 to 1 range.
+        normal = 2.0f * normalTexture.Sample(samplerState, textureCoord).xyz - float3(1.0f, 1.0f, 1.0f);
+        normal = normalize(mul(normal, tbnMatrix));
+        return normal;
+    }
+    
+    return normalize(inputNormal);
+}
+
+float3 GetEmissive(float2 textureCoord, uint emissiveTextureIndex, uint emissiveTextureSamplerIndex)
+{
+    if (emissiveTextureIndex != INVALID_INDEX)
+    {
+        Texture2D<float4> emissiveTexture = ResourceDescriptorHeap[NonUniformResourceIndex(emissiveTextureIndex)];
+
+        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(emissiveTextureSamplerIndex)];
+
+        return emissiveTexture.Sample(samplerState, textureCoord).xyz;
+    }
+
+    return float3(0.0f, 0.0f, 0.0f);
+}
+
+float GetAO(float2 textureCoord, uint aoTextureIndex, uint aoTextureSamplerIndex)
+{
+    if (aoTextureIndex != INVALID_INDEX)
+    {
+        Texture2D<float4> aoTexture = ResourceDescriptorHeap[NonUniformResourceIndex(aoTextureIndex)];
+
+        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(aoTextureSamplerIndex)];
+
+        return aoTexture.Sample(samplerState, textureCoord).x;
+    }
+
+    return 1.0f;
+}
+
+float2 GetMetalRoughness(float2 textureCoord, uint metalRoughnessTextureIndex, uint metalRoughnessTextureSamplerIndex)
+{
+    if (metalRoughnessTextureIndex != INVALID_INDEX)
+    {
+        Texture2D<float4> metalRoughnessTexture = ResourceDescriptorHeap[NonUniformResourceIndex(metalRoughnessTextureIndex)];
+
+        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(metalRoughnessTextureSamplerIndex)];
+
+        return metalRoughnessTexture.Sample(samplerState, textureCoord).bg;
+    }
+
+    return float2(0.5f, 0.5f);
+}
 
 float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
 {
@@ -56,25 +116,6 @@ float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
     samplingVector = normalize(samplingVector);
 
     return samplingVector;
-}
-
-float3 GetNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3x3 tbnMatrix)
-{
-    float3 inputNormal = normal;
-
-    if (normalTextureIndex != INVALID_INDEX)
-    {
-        Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
-
-        SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(normalTextureSamplerIndex)];
-
-        // Make the normal into a -1 to 1 range.
-        normal = 2.0f * normalTexture.Sample(samplerState, textureCoord).xyz - float3(1.0f, 1.0f, 1.0f);
-        normal = normalize(mul(normal, tbnMatrix));
-        return normal;
-    }
-    
-    return normalize(inputNormal);
 }
 
 float4 GenerateTangent(float3 normal)

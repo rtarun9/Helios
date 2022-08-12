@@ -75,7 +75,7 @@ struct DeferredExecutionQueue
 };
 
 template <typename T>
-static constexpr typename std::underlying_type<T>::type EnumClassValue(const T& value)
+static inline constexpr typename std::underlying_type<T>::type EnumClassValue(const T& value)
 {
 	return static_cast<std::underlying_type<T>::type>(value);
 }
@@ -96,7 +96,7 @@ struct Float2
 };
 
 // Read file to vector
-static void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
+static inline void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
 {
 	std::filesystem::path fPath{ filePath };
 
@@ -110,7 +110,7 @@ static void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
 	file.close();
 }
 
-static Uint2 GetDimensionFromRect(const RECT& rect)
+static inline Uint2 GetDimensionFromRect(const RECT& rect)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);
 	uint32_t height = static_cast<uint32_t>(rect.bottom - rect.top);
@@ -118,7 +118,7 @@ static Uint2 GetDimensionFromRect(const RECT& rect)
 	return  Uint2{.x =  width, .y = height };
 }
 
-static Uint2 GetMonitorDimensions(const MONITORINFOEXW& monitorInfo)
+static inline Uint2 GetMonitorDimensions(const MONITORINFOEXW& monitorInfo)
 {
 	uint32_t width = static_cast<uint32_t>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
 	uint32_t height = static_cast<uint32_t>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);

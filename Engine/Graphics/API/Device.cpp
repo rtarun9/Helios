@@ -561,6 +561,17 @@ namespace helios::gfx
 
 			uploadAllocation->Reset();
 		}
+		
+		// Now that data is copied / set into GPU memory, freeing it.
+		if (data)
+		{
+			stbi_image_free((void*)data);
+		}
+
+		if (hdrTextureData)
+		{
+			stbi_image_free(hdrTextureData);
+		}
 
 		// Generate mip maps.
 		texture.textureName = textureCreationDesc.name;

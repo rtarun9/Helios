@@ -58,7 +58,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	void Editor::Render(gfx::Device* device, scene::Scene* scene, gfx::DeferredPassRTs* deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, gfx::DescriptorHandle rtDescriptorHandle, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -98,7 +98,7 @@ namespace helios::editor
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
-			RenderSceneViewport(device, rtDescriptorHandle, scene);
+			RenderSceneViewport(device, renderTarget, scene);
 
 			// Render content browser panel.
 			RenderContentBrowser();
@@ -281,29 +281,39 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const
+	void Editor::RenderDeferredGPass(gfx::Device* const device, const gfx::DeferredPassRTs* deferredRTs) const
 	{
-		gfx::DescriptorHandle positionDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->positionRT->renderTexture.get());
-		gfx::DescriptorHandle normalDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->normalRT->renderTexture.get());
-		gfx::DescriptorHandle albedoDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->albedoRT->renderTexture.get());
-
-		ImGui::Begin("Position RT");
-		ImGui::Image((ImTextureID)(positionDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
-		ImGui::End();
-
-		ImGui::Begin("Normal RT");
-		ImGui::Image((ImTextureID)(normalDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
-		ImGui::End();
+		const gfx::DescriptorHandle& albedoEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->albedoRT->renderTexture.get());
+		const gfx::DescriptorHandle& positionEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->positionEmissiveRT->renderTexture.get());
+		const gfx::DescriptorHandle& normalEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->normalEmissiveRT->renderTexture.get());
+		const gfx::DescriptorHandle& aoMetalRoughnessDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->aoMetalRoughnessEmissiveRT->renderTexture.get());
 
 		ImGui::Begin("Albedo RT");
-		ImGui::Image((ImTextureID)(albedoDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
 		ImGui::End();
+
+		// Normal can be negative, which the RT cannot display, hence commenting out this code.
+		// ImGui::Begin("Normal RT");
+		// ImGui::Image((ImTextureID)(normalDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		// ImGui::End();
+
+		/// Position, ao metal roughness rt's have the emissive component in thier fouth comp (.a / .w), so not visualizing that either.
+		// ImGui::Begin("AO Metal Roughness RT");
+		// ImGui::Image((ImTextureID)(aoMetalRoughnessDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		// ImGui::End();
+
+		// ImGui::Begin("Position RT");
+		// ImGui::Image((ImTextureID)(positionEmissiveDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		// ImGui::End();
+
 	}
 
-	void Editor::RenderSceneViewport(const gfx::Device* device, gfx::DescriptorHandle rtDescriptorHandle, scene::Scene* scene) const
+	void Editor::RenderSceneViewport(const gfx::Device* device, const gfx::RenderTarget* renderTarget, scene::Scene* scene) const
 	{
+		const gfx::DescriptorHandle& rtvSrvHandle = device->GetSrvCbvUavDescriptor()->GetDescriptorHandleFromIndex(renderTarget->renderTexture->srvIndex);
+
 		ImGui::Begin("View Port");
-		ImGui::Image((ImTextureID)(rtDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
 
 		if (ImGui::BeginDragDropTarget())
 		{

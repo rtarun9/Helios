@@ -31,13 +31,13 @@ float4 PsMain(VSOutput psInput) : SV_Target
     ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
-    Texture2D<float4> normalTexture = ResourceDescriptorHeap[renderResource.normalGBufferIndex];
-    Texture2D<float4> positionTexture = ResourceDescriptorHeap[renderResource.positionGBufferIndex];
+    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResource.normalEmissiveGBufferIndex];
+    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResource.positionEmissiveGBufferIndex];
 
     float4 albedoColor = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    float3 normal = normalTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
-    float3 position = positionTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
+    float3 normal = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
+    float3 position = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
 
     float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
 

@@ -45,11 +45,15 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     return output;
 }
 
+// positionEmissive : .xyz is position, .w is emissive.r
+// normal emissive : .xyz is normal, .w is emissive.g
+// aoMetalRoughness : .x is ao, .y is metallic factor, .z is roughness factor, .w is emissive.b 
 struct PsOutput
 {
-    float4 position : SV_Target0;
-    float4 normal : SV_Target1;
-    float4 albedo : SV_Target2;
+    float4 albedo : SV_Target0;
+    float4 positionEmissive : SV_Target1;
+    float4 normalEmissive : SV_Target2;
+    float4 aoMetalRoughnessEmissive : SV_Target3;
 };
 
 [RootSignature(BindlessRootSignature)]
@@ -57,15 +61,22 @@ PsOutput PsMain(VSOutput psInput)
 {
     PsOutput output;
 
-    output.position = float4(psInput.worldSpacePosition, 1.0f);
     output.albedo = GetAlbedo(psInput.textureCoord, renderResource.albedoTextureIndex, renderResource.albedoTextureSamplerIndex);
-
     if (output.albedo.a < 0.9f)
     {
         discard;
     }
     
-    output.normal = float4(GetNormal(psInput.textureCoord, renderResource.normalTextureIndex, renderResource.normalTextureSamplerIndex, psInput.normal, psInput.tbnMatrix), 0.0f);
+    float3 emissive = GetEmissive(psInput.textureCoord, renderResource.emissiveTextureIndex, renderResource.emissiveTextureSamplerIndex);
+
+    output.positionEmissive = float4(psInput.worldSpacePosition, emissive.r);
+    
+    output.normalEmissive = float4(GetNormal(psInput.textureCoord, renderResource.normalTextureIndex, renderResource.normalTextureSamplerIndex, psInput.normal, psInput.tbnMatrix), emissive.g);
+
+    float ao = GetAO(psInput.textureCoord, renderResource.aoTextureIndex, renderResource.aoTextureSamplerIndex);
+    float2 metalRoughness = GetMetalRoughness(psInput.textureCoord, renderResource.metalRoughnessTextureIndex, renderResource.metalRoughnessTextureSamplerIndex);
+
+    output.aoMetalRoughnessEmissive = float4(ao, metalRoughness, emissive.b);
 
     return output;
 }

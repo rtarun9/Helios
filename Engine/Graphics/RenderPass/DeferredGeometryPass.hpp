@@ -10,11 +10,18 @@
 namespace helios::gfx
 {
 	// The different RT's the GPass shader can output too.
+
+	// For reference : 
+	// float4 albedo : SV_Target0;
+	// float4 positionEmissive : SV_Target1;
+	// float4 normalEmissive : SV_Target2;
+	// float4 aoMetalRoughnessEmissive : SV_Target3;
 	struct DeferredPassRTs
 	{
-		std::unique_ptr<gfx::RenderTarget> positionRT{};
 		std::unique_ptr<gfx::RenderTarget> albedoRT{};
-		std::unique_ptr<gfx::RenderTarget> normalRT{};
+		std::unique_ptr<gfx::RenderTarget> positionEmissiveRT{};
+		std::unique_ptr<gfx::RenderTarget> normalEmissiveRT{};
+		std::unique_ptr<gfx::RenderTarget> aoMetalRoughnessEmissiveRT{};
 	};
 
 	// This abstraction produces MRT's for various attributes (positions, albedo, normal etc) for a given scene. Handles resizing of all RT's too.

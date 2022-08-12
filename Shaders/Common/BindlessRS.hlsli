@@ -123,8 +123,9 @@ struct DeferredLightingPassRenderResources
     uint sceneBufferIndex;
     
     uint albedoGBufferIndex;
-    uint normalGBufferIndex;
-    uint positionGBufferIndex;
+    uint positionEmissiveGBufferIndex;
+    uint normalEmissiveGBufferIndex;
+    uint aoMetalRoughnessEmissiveGBufferIndex;
 };
 
 struct MipMapGenerationRenderResources

@@ -44,7 +44,7 @@ namespace helios::gfx
 		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
 		
 		// Misc getters for resources and thier contents.
-		DescriptorHandle GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
+		DescriptorHandle const GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
 
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
 		// Swapchain resources are kept seperate for resources with depended upon the window.
