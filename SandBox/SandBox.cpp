@@ -87,13 +87,13 @@ void SandBox::OnInit()
 
 	for (uint32_t i : std::views::iota(0u, TOTAL_POINT_LIGHTS))
 	{
-		scene::LightCreationDesc pointLightcreationDesc2
+		scene::LightCreationDesc pointLightcreationDesc
 		{
 			.lightNumber = i,
 			.lightType = scene::LightTypes::PointLightData
 		};
 
-		mScene->AddLight(mDevice.get(), pointLightcreationDesc2);
+		mScene->AddLight(mDevice.get(), pointLightcreationDesc);
 
 
 		scene::Light::GetLightBufferData()->lightPosition[i] = DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);

@@ -126,4 +126,15 @@ float4 GenerateTangent(float3 normal)
     return float4(tangent, 1.0f);
 }
 
+// Given 3 vectors, compute a orthonormal basis using them.
+// Will be used for diffuse irradiance cube map calculation to create a set of basis vectors
+// to convert from the shading / tangent space to world space.
+// Reference : https://github.com/Nadrin/PBR/blob/cd61a5d59baa15413c7b0aff4a7da5ed9cc57f61/data/shaders/hlsl/irmap.hlsl#L73
+void ComputeBasisVectors(float3 normal, out float3 s, out float3 t)
+{
+    t = cross(normal, float3(0.0f, 1.0f, 0.0f));
+    t = lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), t, step(MIN_FLOAT_VALUE, dot(t, t)));
+    s = normalize(cross(normal, t));
+}
+
 #endif

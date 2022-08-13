@@ -11,7 +11,8 @@ namespace helios::scene
 		{
 			.usage = gfx::TextureUsage::HDRTextureFromPath,
 			.format = skyBoxCreationDesc.format,
-			.name = skyBoxCreationDesc.name + L"skyboxEquirect Texture",
+			.mipLevels = 6u,
+			.name = skyBoxCreationDesc.name + L" Skybox Equirect Texture",
 			.path = skyBoxCreationDesc.equirectangularTexturePath
 		};
 
@@ -30,6 +31,19 @@ namespace helios::scene
 
 		mSkyBoxTexture = std::make_unique<gfx::Texture>(device->CreateTexture(environmentCubeMapTextureCreationDesc));
 
+		// Create irradiance map texture.
+		gfx::TextureCreationDesc diffuseIrradianceCubeMapTextureCreationDesc
+		{
+			.usage = gfx::TextureUsage::CubeMap,
+			.dimensions = {DIFFUSE_IRRADIANCE_MAP_TEXTURE_DIMENSION, DIFFUSE_IRRADIANCE_MAP_TEXTURE_DIMENSION},
+			.format = skyBoxCreationDesc.format,
+			.mipLevels = 1u,
+			.depthOrArraySize = 6u,
+			.name = skyBoxCreationDesc.name + L" Irradiance Map",
+		};
+
+		mDiffuseIrradianceMapTexture = std::make_unique<gfx::Texture>(device->CreateTexture(diffuseIrradianceCubeMapTextureCreationDesc));
+
 		// Create pipeline states.
 		gfx::ComputePipelineStateCreationDesc cubeMapFromEquirectPipelineStateCreationDesc
 		{
@@ -38,6 +52,14 @@ namespace helios::scene
 		};
 
 		mCubeMapFromEquirectPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(cubeMapFromEquirectPipelineStateCreationDesc));
+
+		gfx::ComputePipelineStateCreationDesc diffuseIrradianceMapPipelineStateCreationDesc
+		{
+			.csShaderPath = L"Shaders/IBL/DiffuseIrradianceCS.cso",
+			.pipelineName = L"Diffuse IrradiancePipeline"
+		};
+
+		mDiffuseIrradianceMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(diffuseIrradianceMapPipelineStateCreationDesc));
 
 		// Generate cube map.
 		auto computeContext = device->GetComputeContext();
@@ -86,8 +108,27 @@ namespace helios::scene
 
 		// Generate mips for all the cube faces.
 		device->GetMipMapGenerator()->GenerateMips(mSkyBoxTexture.get());
-
 		device->ExecuteContext(std::move(computeContext));	
+
+		// Run compute shader to generate irradiance map from sky box texture.
+		auto irradianceMapComputeContext = device->GetComputeContext();
+		irradianceMapComputeContext->AddResourceBarrier(mDiffuseIrradianceMapTexture->GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		irradianceMapComputeContext->ExecuteResourceBarriers();
+
+		irradianceMapComputeContext->SetComputePipelineState(mDiffuseIrradianceMapPipelineState.get());
+		DiffuseIrradianceRenderResources diffuseIrradianceRenderResources
+		{
+			.cubeMapTextureIndex = mSkyBoxTexture->srvIndex,
+			.ouputIrradianceMapIndex = mDiffuseIrradianceMapTexture->uavIndex
+		};
+
+		irradianceMapComputeContext->Set32BitComputeConstants(&diffuseIrradianceRenderResources);
+
+		irradianceMapComputeContext->Dispatch(DIFFUSE_IRRADIANCE_MAP_TEXTURE_DIMENSION / 32u, DIFFUSE_IRRADIANCE_MAP_TEXTURE_DIMENSION / 32u, 6u);
+		irradianceMapComputeContext->AddResourceBarrier(mDiffuseIrradianceMapTexture->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
+		irradianceMapComputeContext->ExecuteResourceBarriers();
+
+		device->ExecuteContext(std::move(irradianceMapComputeContext));
 
 		// Create skybox model.
 
@@ -102,7 +143,7 @@ namespace helios::scene
 
 	void SkyBox::Render(const gfx::GraphicsContext* graphicsContext, SkyBoxRenderResources& renderResources)
 	{
-		renderResources.textureIndex = mSkyBoxTexture->srvIndex;
+		renderResources.textureIndex = mDiffuseIrradianceMapTexture->srvIndex;
 
 		mSkyBoxModel->Render(graphicsContext, renderResources);
 	}

@@ -153,4 +153,10 @@ struct SkyBoxRenderResources
     uint textureIndex;
 };
 
+struct DiffuseIrradianceRenderResources
+{
+    uint cubeMapTextureIndex;
+    uint ouputIrradianceMapIndex;
+};
+
 #endif

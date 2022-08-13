@@ -147,6 +147,7 @@ namespace helios::gfx
 			// Note : All resource loaded from path must be able to be used by UAVs.
 			case TextureUsage::TextureFromPath:
 			case TextureUsage::TextureFromData:
+			case TextureUsage::HDRTextureFromPath:
 			case TextureUsage::CubeMap:
 			{
 				resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
