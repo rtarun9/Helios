@@ -113,9 +113,7 @@ float3 GetSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)
         break;
     }
 
-    samplingVector = normalize(samplingVector);
-
-    return samplingVector;
+    return normalize(samplingVector);
 }
 
 float4 GenerateTangent(float3 normal)
@@ -134,6 +132,8 @@ void ComputeBasisVectors(float3 normal, out float3 s, out float3 t)
 {
     t = cross(normal, float3(0.0f, 1.0f, 0.0f));
     t = lerp(cross(normal, float3(1.0f, 0.0f, 0.0f)), t, step(MIN_FLOAT_VALUE, dot(t, t)));
+    
+    t = normalize(t);
     s = normalize(cross(normal, t));
 }
 

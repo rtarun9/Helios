@@ -10,6 +10,16 @@ static const float3 BASE_DIELECTRIC_REFLECTIVITY = float3(0.04f, 0.04f, 0.04f);
 // Most dielectrics have a value of 0.04 as f0, but depending on how metallic a surface is it will be between 0.04 (metalness = 0) and the surface color (metalness = 1).
 // cosTheta here is the angle between the halfway vector and the view direction. If the angle is 0.0, then said ratio is 1, and the light will be brightest here.
 // Also acts as the kS term (where kS + kD = 1, due to energy conservation).
+
+
+float3 FresnelSchlickApproximation(float vDotH, float3 f0)
+{
+    return f0 + (1.0f - f0) * pow(clamp(1.0f - vDotH, 0.0f, 1.0f), 5.0f);
+}
+
+// Note : When using IBL, there is no single halfway vector to determine fresnel effect, as we account for all directions within the hemisphere oriented towards normal from point p.
+// So, the dot product is nDotV (and roughness is also accounted for).
+// Reference : https://seblagarde.wordpress.com/2011/08/17/hello-world/
 float3 FresnelSchlickApproximation(float3 f0, float vDotN, float roughnessFactor)
 {
     return f0 + (max(float3(1.0 - roughnessFactor, 1.0 - roughnessFactor, 1.0 - roughnessFactor), f0) - f0) * pow(1.0 - vDotN, 5.0);
@@ -58,7 +68,7 @@ float3 BRDF(float3 normal, float3 viewDirection, float3 pixelToLightDirection, f
     float3 f0 = lerp(BASE_DIELECTRIC_REFLECTIVITY, albedo.xyz, metallicFactor);
 
     // Using cook torrance BRDF for specular lighting.
-    float3 fresnel = FresnelSchlickApproximation(f0, saturate(dot(viewDirection, halfWayVector)), roughnessFactor);
+    float3 fresnel = FresnelSchlickApproximation(saturate(dot(viewDirection, halfWayVector)), f0);
     float normalDistribution = NormalDistribution(normal, halfWayVector, roughnessFactor);
     float geometryShadowing = GeometryShadowingFunction(normal, viewDirection, pixelToLightDirection, roughnessFactor);
         

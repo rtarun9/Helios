@@ -37,6 +37,8 @@ float4 PsMain(VSOutput psInput) : SV_Target
     Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResource.normalEmissiveGBufferIndex];
     Texture2D<float4> aoMetalRoughnessEmissiveTexture = ResourceDescriptorHeap[renderResource.aoMetalRoughnessEmissiveGBufferIndex];
 
+    TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMapIndex];
+
     float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
     float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
     float4 normalEmissive = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
@@ -88,7 +90,15 @@ float4 PsMain(VSOutput psInput) : SV_Target
         lo += brdf *  radiance * saturate(dot(pixelToLightDirection, normal));
     }
 
-    lo += emissive;
+    // Calculate ambient lighting from irradiance map.
+    float3 f0 = lerp(BASE_DIELECTRIC_REFLECTIVITY, albedo.xyz, metallicFactor);
+    float3 kS = FresnelSchlickApproximation(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
+    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+
+    float3 irradiance = irradianceMap.Sample(linearWrapSampler, normal).rgb;
+    float3 ambient = (kD * ao * irradiance * albedo.xyz);
+
+    lo += emissive + ambient;
 
     return float4(lo, albedo.w);
 }
