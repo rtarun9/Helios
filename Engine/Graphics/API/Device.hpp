@@ -143,7 +143,7 @@ namespace helios::gfx
 
 		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
 
-		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
+		buffer.allocation = std::make_unique<gfx::Allocation>(mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc));
 
 		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
 		// and then copy data from upload buffer -> GPU only buffer.
@@ -156,7 +156,7 @@ namespace helios::gfx
 				.name = L"Upload buffer - " + bufferCreationDesc.name,
 			};
 
-			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+			std::unique_ptr<Allocation> uploadAllocation = std::make_unique<gfx::Allocation>(mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc));
 
 			uploadAllocation->Update(data.data(), buffer.sizeInBytes);
 

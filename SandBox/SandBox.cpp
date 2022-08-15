@@ -116,7 +116,7 @@ void SandBox::OnInit()
 	// Load skybox.
 	scene::SkyBoxCreationDesc skyBoxCreationDesc
 	{
-		.equirectangularTexturePath = L"Assets/Textures/noon_grass_4k.hdr",
+		.equirectangularTexturePath = L"Assets/Textures/SkyOnFire.hdr",
 		.format = DXGI_FORMAT_R32G32B32A32_FLOAT,
 		.name = L"Sky Box"
 	};
@@ -263,7 +263,9 @@ void SandBox::OnRender()
 			.normalEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.normalEmissiveRT->GetRenderTextureSRVIndex(),
 			.aoMetalRoughnessEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.aoMetalRoughnessEmissiveRT->GetRenderTextureSRVIndex(),
 
-			.irradianceMapIndex = mScene->mSkyBox->mIrradianceMapTexture->srvIndex
+			.irradianceMapIndex = mScene->mSkyBox->mIrradianceMapTexture->srvIndex,
+			.prefilterMapIndex = mScene->mSkyBox->mPreFilterTexture->srvIndex,
+			.brdfLutIndex = mScene->mSkyBox->mBRDFLutTexture->srvIndex
 		};
 
 		gfx::RenderTarget::Render(shadingGraphicsContext.get(), deferredLightingPassRenderResources);

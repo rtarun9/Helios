@@ -52,13 +52,26 @@ namespace helios::scene
 			.usage = gfx::TextureUsage::CubeMap,
 			.dimensions = {PREFILTER_MAP_TEXTURE_DIMENSION, PREFILTER_MAP_TEXTURE_DIMENSION},
 			.format = skyBoxCreationDesc.format,
-			.mipLevels = 6u,
+			.mipLevels = 7u,
 			.depthOrArraySize = 6u,
 			.name = skyBoxCreationDesc.name + L" Pre Filter Map",
 		};
 
 		mPreFilterTexture = std::make_unique<gfx::Texture>(device->CreateTexture(preFilterMapTextureCreationDesc));
 		
+		// Create BRDF LUT map texture.
+		gfx::TextureCreationDesc brdfLutTextureCreationDesc
+		{
+			.usage = gfx::TextureUsage::CubeMap,
+			.dimensions = {BRDF_LUT_TEXTURE_DIMENSION, BRDF_LUT_TEXTURE_DIMENSION},
+			.format = skyBoxCreationDesc.format,
+			.mipLevels = 1u,
+			.depthOrArraySize = 1u,
+			.name = skyBoxCreationDesc.name + L" Pre Filter Map",
+		};
+
+		mBRDFLutTexture = std::make_unique<gfx::Texture>(device->CreateTexture(brdfLutTextureCreationDesc));
+
 		// Create pipeline states.
 		gfx::ComputePipelineStateCreationDesc cubeMapFromEquirectPipelineStateCreationDesc
 		{
@@ -82,8 +95,15 @@ namespace helios::scene
 			.pipelineName = L"Pre Filter Pipeline"
 		};
 
-		mPrefilterMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(diffuseIrradianceMapPipelineStateCreationDesc));
+		mPrefilterMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(preFilterMapPipelineStateCreationDesc));
 
+		gfx::ComputePipelineStateCreationDesc brdfLutPipelineStateCreationDesc
+		{
+			.csShaderPath = L"Shaders/IBL/BRDFLutCS.cso",
+			.pipelineName = L" BRDF LUT Pipeline"
+		};
+
+		mBRDFLutPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(brdfLutPipelineStateCreationDesc));
 
 		// Generate cube map from single equirectangular texture
 		{
@@ -171,7 +191,7 @@ namespace helios::scene
 			computeContext->SetComputePipelineState(mPrefilterMapPipelineState.get());
 			
 			uint32_t size{ PREFILTER_MAP_TEXTURE_DIMENSION };
-			for (uint32_t i = 0; i < 6u; i++)
+			for (uint32_t i = 0; i < 7u; i++)
 			{
 				gfx::UavCreationDesc uavCreationDesc
 				{
@@ -206,6 +226,30 @@ namespace helios::scene
 			}
 
 			computeContext->AddResourceBarrier(mPreFilterTexture->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
+			computeContext->ExecuteResourceBarriers();
+
+			device->ExecuteContext(std::move(computeContext));
+		}
+
+		// Run compute shader to generate BRDF Lut.
+		{
+			auto computeContext = device->GetComputeContext();
+
+			computeContext->AddResourceBarrier(mBRDFLutTexture->GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			computeContext->ExecuteResourceBarriers();
+
+			computeContext->SetComputePipelineState(mBRDFLutPipelineState.get());
+
+			BRDFLutRenderResources brdfLutRenderResources
+			{
+				.lutTextureIndex = mBRDFLutTexture->uavIndex
+			};
+
+			computeContext->Set32BitComputeConstants(&brdfLutRenderResources);
+
+			computeContext->Dispatch(BRDF_LUT_TEXTURE_DIMENSION / 32u, BRDF_LUT_TEXTURE_DIMENSION / 32u, 1u);
+
+			computeContext->AddResourceBarrier(mBRDFLutTexture->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
 			computeContext->ExecuteResourceBarriers();
 
 			device->ExecuteContext(std::move(computeContext));

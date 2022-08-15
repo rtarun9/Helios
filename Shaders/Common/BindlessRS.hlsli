@@ -71,6 +71,7 @@ struct LightRenderResources
     uint sceneBufferIndex;
 };
 
+// Its technically the Deferred GPass render resources, but as it contains all details for PBR stuff its named as such.
 struct PBRRenderResources
 {
     uint positionBufferIndex;
@@ -128,6 +129,8 @@ struct DeferredLightingPassRenderResources
     uint aoMetalRoughnessEmissiveGBufferIndex;
 
     uint irradianceMapIndex;
+    uint prefilterMapIndex;
+    uint brdfLutIndex;
 };
 
 struct MipMapGenerationRenderResources
@@ -166,6 +169,11 @@ struct PreFilterCubeMapRenderResources
     uint skyBoxTextureIndex;
     uint outputPreFilteredCubeMapIndex;
     uint mipLevel;
+};
+
+struct BRDFLutRenderResources
+{
+    uint lutTextureIndex;
 };
 
 #endif

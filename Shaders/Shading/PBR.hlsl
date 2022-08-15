@@ -38,6 +38,8 @@ float4 PsMain(VSOutput psInput) : SV_Target
     Texture2D<float4> aoMetalRoughnessEmissiveTexture = ResourceDescriptorHeap[renderResource.aoMetalRoughnessEmissiveGBufferIndex];
 
     TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMapIndex];
+    TextureCube<float4> prefilterMap = ResourceDescriptorHeap[renderResource.prefilterMapIndex];
+    Texture2D<float2> brdfLutMap = ResourceDescriptorHeap[renderResource.brdfLutIndex];
 
     float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
     float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
@@ -94,9 +96,22 @@ float4 PsMain(VSOutput psInput) : SV_Target
     float3 f0 = lerp(BASE_DIELECTRIC_REFLECTIVITY, albedo.xyz, metallicFactor);
     float3 kS = FresnelSchlickApproximation(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
     float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
-
     float3 irradiance = irradianceMap.Sample(linearWrapSampler, normal).rgb;
-    float3 ambient = (kD * ao * irradiance * albedo.xyz);
+    float3 diffuseIBL = kD * irradiance * albedo.xyz;
+
+    // Calculate specular IBL.
+    float3 lr = reflect(-viewDirection, normal);
+    float cosLo = saturate(dot(viewDirection, normal));
+    
+    uint prefilterTextureWidth, prefilterTextureHeight, levels;
+    prefilterMap.GetDimensions(0u, prefilterTextureWidth, prefilterTextureHeight, levels);
+
+    float3 specularPrefilter = prefilterMap.SampleLevel(linearWrapSampler, lr, roughnessFactor * 6.0f).rgb;
+    float2 brdfLut = brdfLutMap.Sample(pointWrapSampler, float2(cosLo, roughnessFactor), 0.0f).rg;
+
+    float3 specularIBL = specularPrefilter * (f0 * brdfLut.x + brdfLut.y);
+
+    float3 ambient = (diffuseIBL + specularIBL) * ao;
 
     lo += emissive + ambient;
 

@@ -30,8 +30,10 @@ namespace helios::gfx
 		
 		Allocation() = default;
 
-		Allocation(const Allocation& other) : allocation(other.allocation), resource(other.resource)
+		Allocation(const Allocation& other) : resource(other.resource)
 		{
+			allocation = other.allocation;
+
 			if (other.mappedPointer.has_value())
 			{
 				mappedPointer = other.mappedPointer;

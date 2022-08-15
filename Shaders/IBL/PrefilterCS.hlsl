@@ -15,7 +15,7 @@ ConstantBuffer<PreFilterCubeMapRenderResources> renderResources : register(b0);
 // This shader will convolute the environment cube map taking roughness levels into account. More rough the surface, more blurrier the reflections would be.
 // Sample vectors are generated at random and scattered using the NDF. As the NDF takes both normal and viewdirection, we approximate by taking view direction to be equal to output sample direction.
 
-static const uint NUM_SAMPLES = 1024u;
+static const uint NUM_SAMPLES = 2048u;
 static const float INV_NUM_SAMPLES = 1.0f / (float)NUM_SAMPLES;
 static const uint PREFILTER_MIP_LEVELS = 6u;
 
@@ -110,7 +110,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     float weight = 0.0f;
     float3 preFilteredColor = float3(0.0f, 0.0f, 0.0f);
     
-    float roughness = renderResources.mipLevel / (PREFILTER_MIP_LEVELS - 1u);
+    float roughness = (float)renderResources.mipLevel / (float)(PREFILTER_MIP_LEVELS);
 
     for (uint i = 0u; i < NUM_SAMPLES; ++i)
     {
@@ -137,7 +137,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
             // Solid angle for this sample.
             float ws = 1.0f / (NUM_SAMPLES * pdf);
             
-            float mipLevel = max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
+            float mipLevel = roughness == 0.0f ? 0.0f : max(0.5f * log2(ws / wt) + 1.0f, 0.0f);
                        
             preFilteredColor += textureCubeMap.SampleLevel(linearWrapSampler, li, mipLevel).rgb * cosTheta;
             weight += cosTheta;
