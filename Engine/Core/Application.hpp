@@ -4,7 +4,7 @@
 
 #include "Timer.hpp"
 
-namespace helios
+namespace helios::core
 {
 	class Engine;
 
@@ -15,34 +15,44 @@ namespace helios
 	public:
 		static int Run(Engine* engine, HINSTANCE instance);
 		
-		static inline HWND GetWindowHandle() { return s_WindowHandle; };
-		static inline uint32_t GetClientWidth() { return s_ClientWidth; }
-		static inline uint32_t GetClientHeight() { return s_ClientHeight; }
+		static inline HWND GetWindowHandle() { return sWindowHandle; }
 
-		static inline RECT& GetWindowRect() { return s_WindowRect; };
+		static inline Uint2 GetClientDimensions() { return sClientDimensions; }
 
-		static inline Timer& GetTimer() { return s_Timer; };
+		static inline RECT& GetWindowRect() { return sWindowRect; }
 
+
+		static inline Timer& GetTimer() { return sTimer; }
+
+		static bool IsFullScreen() { return sIsFullScreen; }
 	private:
 		// The Application class is only accesible via its static member functions.
 		Application() = default;
 
 		static void ToggleFullScreenMode();
 
+		// Returns the x and y coords of the top left corner of window where if placed the window will be centered.
+		static Uint2 CenterWindow();
+
 		static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
 	private:
 		static constexpr inline const wchar_t* WINDOW_CLASS_NAME{L"Base Window Class"};
 		
-		static inline HWND s_WindowHandle{};
+		static inline HWND sWindowHandle{};
 
-		static inline uint32_t s_ClientWidth{};
-		static inline uint32_t s_ClientHeight{};
+		static inline Uint2 sClientDimensions{};
+		
+		// When toggling to fullscreen mode, we keep track of the current window dimension, so that when toggling back to non full screen mode
+		// we can revert to the previous window dimension.
+		static inline RECT sPreviousWindowRect{};
 
-		static inline RECT s_WindowRect{};
-		static inline bool s_IsFullScreen{ false };
+		static inline RECT sWindowRect{};
+	
 
-		static inline Timer s_Timer{};
+		static inline bool sIsFullScreen{ false };
+
+		static inline Timer sTimer{};
 	};
 
 

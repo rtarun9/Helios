@@ -2,13 +2,14 @@
 
 #include "Pch.hpp"
 
-namespace helios
+#include "Graphics/API/Device.hpp"
+
+namespace helios::core
 {
 	struct Config
 	{
 		std::wstring title{};
-		uint32_t width{};
-		uint32_t height{};
+		Uint2 dimensions{};
 	};
 
 	// The Base Engine class is passed into the Application static classe's Run method.
@@ -16,9 +17,6 @@ namespace helios
 	class Engine
 	{
 	public:
-		// Number of 32 bit root constants
-		static constexpr uint32_t NUMBER_32_BIT_ROOTCONSTANTS = 64u;
-
 		Engine(Config& config);
 		virtual ~Engine() = default;
 
@@ -27,20 +25,20 @@ namespace helios
 		virtual void OnRender() = 0;
 		virtual void OnDestroy() = 0;
 
-		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown);
-		virtual void OnResize();
+		virtual void OnKeyAction(uint8_t keycode, bool isKeyDown) = 0;
+		virtual void OnResize() = 0;
 
-		uint32_t GetWidth() const { return m_Width; }
-		uint32_t GetHeight() const { return m_Height; };
-		std::wstring GetTitle() const { return m_Title; };
+		Uint2 GetDimensions() const { return mDimensions; }
+		std::wstring GetTitle() const { return mTitle; };
 
-	public:
-		uint32_t m_Width{};
-		uint32_t m_Height{};
-		std::wstring m_Title{};
+	protected:
+		Uint2 mDimensions{};
+		std::wstring mTitle{};
 
-		float m_AspectRatio{};
+		float mAspectRatio{};
 
-		uint64_t m_FrameIndex{};
+		uint64_t mFrameIndex{};
+
+		std::unique_ptr<gfx::Device> mDevice{};
 	};
 }

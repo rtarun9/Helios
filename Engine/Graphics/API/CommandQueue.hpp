@@ -2,60 +2,67 @@
 
 #include "Pch.hpp"
 
+#include "PipelineState.hpp"
+
 namespace helios::gfx
 {
+	// note(rtarun9) : since command allocators cannot be reset until they are no longer 'in flight', we store a fence value along with the command allocator,
+	// to keep track if the commands have been executed by a command queue or not.
 	struct CommandAllocator
 	{
 		uint64_t fenceValue{};
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 	};
 
-	// Command Queue abstraction : has a circular queue for command list and allocators.
-	// Note : The command allocator and command list are not named since these are for internal use only.
-	// This might change in the future.
+	// Command Queue abstraction : has a  circular queue for command list and allocators.
+	// Has interfaces related to synchronization.
 	class CommandQueue
 	{
 	public:
-		void Init(ID3D12Device* const device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT, std::wstring_view commandQueueName = L"Main Command Queue");
+		CommandQueue(ID3D12Device5* const device, D3D12_COMMAND_LIST_TYPE commandListType = D3D12_COMMAND_LIST_TYPE_DIRECT, std::wstring_view commandQueueName = L"Main Command Queue");
+
+		// GetCommandList and GetCommandQueue returns ComPtr as the pointer is also passed to the contexts.
+		[[nodiscard]]
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> GetCommandList(const gfx::PipelineState* pipelineState = nullptr);
 
 		[[nodiscard]]
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList();
-
-		[[nodiscard]]
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const { return m_CommandQueue; }
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetCommandQueue() const { return mCommandQueue; }
 
 		// Returns the fence value to wait for to notify when command list has finished execution.
 		[[nodiscard]]
-		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
+		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList1* commandList);
+		uint64_t ExecuteCommandLists(std::span<ID3D12GraphicsCommandList1*> commandList);
 
-		void ExecuteAndFlush(ID3D12GraphicsCommandList* commandList);
+		void ExecuteAndFlush(ID3D12GraphicsCommandList1* commandList);
 
-		// Return fence value to for signal.
+		// Return value that the fence will be signalled with when GPU commands finish executing.
 		[[nodiscard]]
 		uint64_t Signal();
+
 		bool IsFenceComplete(uint64_t fenceValue);
 		void WaitForFenceValue(uint64_t fenceValue);
 		void FlushQueue();
 
 	private:
+		// Helper functions to create command list / command allocator if none are available in the queue.
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ID3D12CommandAllocator* commandAllocator);
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> CreateCommandList(ID3D12CommandAllocator* commandAllocator, const gfx::PipelineState* pipelineState = nullptr);
 
 	private:
-		D3D12_COMMAND_LIST_TYPE m_CommandListType{D3D12_COMMAND_LIST_TYPE_DIRECT};
+		D3D12_COMMAND_LIST_TYPE mCommandListType{D3D12_COMMAND_LIST_TYPE_DIRECT};
 
 		// Since the command queue will interact with the ID3D12Device interface, a reference to it is stored here.
 		// Because of ComPtr's ref counting mechanism, this should not cause any problems.
-		Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
+		Microsoft::WRL::ComPtr<ID3D12Device5> mDevice{};
 
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_CommandQueue;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue{};
 		
-		Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence;
-		HANDLE m_FenceEvent{};
-		uint64_t m_FenceValue{};
+		// Synchronization objects.
+		Microsoft::WRL::ComPtr<ID3D12Fence> mFence{};
+		HANDLE mFenceEvent{};
+		uint64_t mFenceValue{};
 
-		std::queue<CommandAllocator> m_CommandAllocatorQueue{};
-		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> m_CommandListQueue{};
-
+		std::queue<CommandAllocator> mCommandAllocatorQueue{};
+		std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1>> mCommandListQueue{};
 	};
 }

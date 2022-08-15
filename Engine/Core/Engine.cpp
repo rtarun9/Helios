@@ -2,20 +2,11 @@
 
 #include "Engine.hpp"
 
-namespace helios
+namespace helios::core
 {
 	Engine::Engine(Config& config)
-		: m_Width{ config.width }, m_Height{ config.height }, m_Title{ config.title }
+		:  mTitle{ config.title }, mDimensions{config.dimensions}
 	{
-		m_AspectRatio = static_cast<float>(m_Width) / static_cast<float>(m_Height);
-	}
-
-	// These two functions are empty for now, might be filled in the future.
-	void Engine::OnKeyAction(uint8_t keycode, bool isKeyDown)
-	{
-	}
-
-	void Engine::OnResize()
-	{
+		mAspectRatio = static_cast<float>(config.dimensions.x) / static_cast<float>(config.dimensions.y);
 	}
 }

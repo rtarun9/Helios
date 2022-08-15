@@ -1,10 +1,14 @@
 # Generated VS Files from premake.
-VsFiles/
+.vcxproj
+.vcxproj.filters
+.vcxproj.user
+
+*.sln
 
 .vs/
 
 # Shader bytecode
-Shaders/*.cso
+Shaders/**/*.cso
 
 # DXC Files copied into the shaders directory.
 Shaders/*.exe

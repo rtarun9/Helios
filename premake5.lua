@@ -1,6 +1,5 @@
 workspace "Helios"
     architecture "x64"
-    location "VsFiles"
 
     configurations
     {
@@ -34,21 +33,12 @@ project "Helios"
     objdir "Bin/Obj/%{cfg.buildcfg}"
 
     debugdir "."
-    
-    links 
-    { 
-        "d3d12", 
-        "dxgi",
-        "dxguid", 
-        "d3dcompiler",
-        "user32",
-        "gdi32"
-    }
 
     includedirs
     {
         "Engine",
         "SandBox",
+        "ThirdParty",
         "Shaders"
     }
 
@@ -59,7 +49,7 @@ project "Helios"
         "SandBox/**.hpp",   
         "SandBox/**.cpp",
         "Shaders/**.hlsl",
-        "Shaders/**.hlsli"
+        "Shaders/**.hlsli",
     }
 
     pchsource "Engine/Pch.cpp"
@@ -72,23 +62,23 @@ project "Helios"
     filter "options:copy_thirdparty_folders=Yes"
         prebuildcommands
         {
-            "{COPYDIR} ../ThirdParty/DirectXShaderCompiler/bin/x64 ../Shaders",
-            "{CHDIR} ../Shaders/",
+            "{COPYDIR} ThirdParty/DirectXShaderCompiler/bin/x64 Shaders",
+            "{CHDIR} Shaders/",
             "call CompileShaders.bat",
             "{CHDIR} ../"
         }
 
         postbuildcommands 
         {
-            "{COPYDIR} ../ThirdParty/DirectXAgilitySDK/build/native/bin/x64 ../Bin/%{cfg.buildcfg}/D3D12/",
+            "{COPYDIR} ThirdParty/DirectXAgilitySDK/build/native/bin/x64 Bin/%{cfg.buildcfg}/D3D12/",
         }
 
     filter "options:copy_thirdparty_folders=No"
         prebuildcommands
         {
-            "{CHDIR} ../Shaders/",
+            "{CHDIR} Shaders/",
             "call CompileShaders.bat",
-            "{CHDIR} ../"
+            "{CHDIR} .."
         }
 
     filter "configurations:Debug"
@@ -103,3 +93,30 @@ project "Helios"
 
     filter "files:**.hlsli"
         buildaction "None"
+
+    filter {}
+
+        -- link system libs.
+        libdirs {}
+
+        links 
+        {    
+            "d3d12", 
+            "dxgi",
+            "dxguid", 
+            "d3dcompiler",
+            "user32",
+            "gdi32",
+            "ThirdParty"
+        }
+
+        -- link thirdparty libs.
+        libdirs "Bin/%{cfg.buildcfg}"
+        links "ThirdParty"
+        
+        -- run thirdparty premake scripts.
+        group "ThirdParty"
+        include "ThirdParty/premake.lua"
+
+
+

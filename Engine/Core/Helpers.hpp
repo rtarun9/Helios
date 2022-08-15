@@ -3,14 +3,6 @@
 #include "Pch.hpp"
 
 // Reference : https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloWindow/DXSampleHelper.h.
-static inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw std::exception("Failed HRESULT.");
-	}
-}
-
 static inline std::string WstringToString(std::wstring_view inputWString)
 {
 	std::string result{};
@@ -27,11 +19,20 @@ static inline std::wstring StringToWString(std::string_view inputString)
 	return std::wstring(ca2w);
 }
 
-static inline std::wstring HresultToString(HRESULT hr)
+static inline std::string HresultToString(HRESULT hr)
 {
 	char str[128]{};
 	sprintf_s(str, "HRESULT : 0x%08X", static_cast<UINT>(hr));
-	return StringToWString(str);
+	return std::string(str);
+}
+
+static inline void ThrowIfFailed(HRESULT hr)
+{
+	if (FAILED(hr))
+	{
+		throw std::exception(HresultToString(hr).c_str());
+		exit(EXIT_FAILURE);
+	}
 }
 
 static inline void ErrorMessage(std::wstring_view message)
@@ -49,29 +50,10 @@ static inline void GetBlobMessage(ID3DBlob* blob)
 	}
 }
 
-// Currently unused.
-static inline std::wstring GetAssetsPath()
-{
-	WCHAR assetsPath[MAX_PATH]{};
-	DWORD size = GetModuleFileName(nullptr, assetsPath, sizeof(assetsPath));
-
-	if (size == 0)
-	{
-		throw std::exception("Invalid size = 0 in GetAssetsPath helper function.");
-	}
-
-	WCHAR* lastSlash = wcsrchr(assetsPath, L'\\');
-	if (lastSlash)
-	{
-		*(lastSlash + 1) = L'\0';
-	}
-
-	return std::wstring(assetsPath);
-}
-
 #define CREATE_LAMBDA_FUNCTION(function) ([&](){function;})
 
 // Deferred execution queue for templated functions.
+// note (rtarun9) : This is added here as currently there is no DX_TYPES / similar file.
 struct DeferredExecutionQueue
 {
 	std::vector<std::function<void()>> functionPointers;
@@ -93,24 +75,54 @@ struct DeferredExecutionQueue
 };
 
 template <typename T>
-static constexpr std::underlying_type<T>::type EnumClassValue(const T& value)
+static inline constexpr typename std::underlying_type<T>::type EnumClassValue(const T& value)
 {
 	return static_cast<std::underlying_type<T>::type>(value);
 }
 
-static std::pair<uint32_t, uint32_t> GetClientRegionDimentions(RECT rect, DWORD style = WS_OVERLAPPEDWINDOW)
+// Used for window dimensions.
+struct Uint2
+{
+	uint32_t x{};
+	uint32_t y{};
+
+	auto operator<=>(Uint2 const& other) const = default;
+};
+
+struct Float2
+{
+	float x{};
+	float y{};
+};
+
+// Read file to vector
+static inline void ReadFile(std::wstring_view filePath, std::vector<uint8_t>& data)
+{
+	std::filesystem::path fPath{ filePath };
+
+	std::ifstream file(WstringToString(filePath), std::ios::binary | std::ios::in);
+	size_t fileSizeBytes = std::filesystem::file_size(fPath);
+
+	data.resize(fileSizeBytes);
+
+	file.read((char*)data.data(), fileSizeBytes);
+
+	file.close();
+}
+
+static inline Uint2 GetDimensionFromRect(const RECT& rect)
 {
 	uint32_t width = static_cast<uint32_t>(rect.right - rect.left);
 	uint32_t height = static_cast<uint32_t>(rect.bottom - rect.top);
 
-	return { width, height };
+	return  Uint2{.x =  width, .y = height };
 }
 
-static std::pair<uint32_t, uint32_t> GetMonitorDimensions(MONITORINFOEXW& monitorInfo)
+static inline Uint2 GetMonitorDimensions(const MONITORINFOEXW& monitorInfo)
 {
 	uint32_t width = static_cast<uint32_t>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left);
 	uint32_t height = static_cast<uint32_t>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top);
 
-	return { width, height };
+	return Uint2{ .x = width, .y = height };
 }
 

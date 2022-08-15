@@ -3,15 +3,17 @@
 #include "Core/Application.hpp"
 #include "Core/Engine.hpp"
 
-#include "imgui_impl_win32.h"
+#include "ImGUI/imgui_impl_win32.h"
 
 // Forward declare message handler from imgui_impl_win32.cpp.
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-namespace helios
+namespace helios::core
 {
 	int Application::Run(Engine* engine, HINSTANCE instance)
 	{
+		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 		// Initialize Window class.
 
 		// Force window redraw when either width / height of client region changes or if movement adjustment happens.
@@ -36,60 +38,58 @@ namespace helios
 			ErrorMessage(L"Failed to register window class");
 		}
 
-		s_WindowRect = 
+		sWindowRect = 
 		{
 			.left = 0,
 			.top = 0,
-			.right = static_cast<LONG>(engine->GetWidth()),
-			.bottom = static_cast<LONG>(engine->GetHeight())
+			.right = static_cast<LONG>(engine->GetDimensions().x),
+			.bottom = static_cast<LONG>(engine->GetDimensions().y)
 		};
 
-		::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-		std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect, WS_OVERLAPPEDWINDOW);
-
-		// Get Screen width and height so as to center the window.
-		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
-
-		// Clamp value of client region so that it does not exceed the screen width / height.
-		s_ClientWidth = std::clamp<uint32_t>(s_ClientWidth, 0, screenWidth);
-		s_ClientHeight = std::clamp<uint32_t>(s_ClientHeight, 0, screenHeight);
-
-		int windowXPos = std::max<int>(0, (screenWidth - s_ClientWidth) / 2);
-		int windowYPos = std::max<int>(0, (screenHeight - s_ClientHeight) / 2);
+		Uint2 windowPosition = CenterWindow();
 
 		// Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc function by reinterpreting the lParam as a LPCREATESTRUCT.
-		s_WindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowXPos, windowYPos,
-			s_ClientWidth, s_ClientHeight, 0, 0, instance, engine);
+		sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.x, windowPosition.y,
+			sClientDimensions.x, sClientDimensions.y, 0, 0, instance, engine);
 
-		::GetWindowRect(s_WindowHandle, &s_WindowRect);
+		sClientDimensions = GetDimensionFromRect(sWindowRect);
+		sPreviousWindowRect = sWindowRect;
 
-		if (!s_WindowHandle)
+		if (!sWindowHandle)
 		{
 			ErrorMessage(L"Failed to create window");
 		}
 
 		engine->OnInit();
 
-		if (s_WindowHandle)
+		if (sWindowHandle)
 		{
-			::ShowWindow(s_WindowHandle, SW_SHOW);
+			//ShowWindow(sWindowHandle, SW_SHOW);
+			Application::ToggleFullScreenMode();
 		}
 
-		// Application initially starts in FullScreen mode by default.
-		Application::ToggleFullScreenMode();
-
 		// Main game loop
-		MSG message{};
-		while (message.message != WM_QUIT)
-		{
-			s_Timer.Tick();
+		bool quitLoop{ false };
 
-			if (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
+		MSG message{};
+		while (!quitLoop)
+		{
+			sTimer.Tick();
+
+			while (::PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
 			{
 				::TranslateMessage(&message);
 				::DispatchMessageW(&message);
+			
+				if (message.message == WM_QUIT)
+				{
+					quitLoop = true;
+				}
+			}
+
+			if (quitLoop)
+			{
+				break;
 			}
 
 			engine->OnUpdate();
@@ -105,46 +105,87 @@ namespace helios
 
 	void Application::ToggleFullScreenMode()
 	{
-		if (!s_IsFullScreen)
-		{
-			::GetWindowRect(s_WindowHandle, &s_WindowRect);
+		static bool firstToggle{ true };
 
-			// Set window style to borderless so entire screen is filled by the client region. The full screen window style is basically 0ed out by these flag's, done here explicitly.
-			UINT fullScreenWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-			::SetWindowLongW(s_WindowHandle, GWL_STYLE, fullScreenWindowStyle);
+		// Toggling to full screen mode.
+		if (!sIsFullScreen)
+		{
+			if (firstToggle)
+			{
+				sPreviousWindowRect = sWindowRect;
+				firstToggle = false;
+			}
+			else
+			{
+				::GetClientRect(sWindowHandle, &sPreviousWindowRect);
+			}
+
+			UINT fullScreenWindowStyle = 0u;
+			::SetWindowLongW(sWindowHandle, GWL_STYLE, fullScreenWindowStyle);
 
 			// Get info of the nearest display in case of multi monior setup or primary display in single monitor setup.
-			HMONITOR monitor = ::MonitorFromWindow(s_WindowHandle, MONITOR_DEFAULTTONEAREST);
+			HMONITOR monitor = ::MonitorFromWindow(sWindowHandle, MONITOR_DEFAULTTONEAREST);
 			MONITORINFOEXW monitorInfo{};
 			monitorInfo.cbSize = sizeof(MONITORINFOEXW);
 			::GetMonitorInfoW(monitor, &monitorInfo);
 
-			auto [width, height] = GetMonitorDimensions(monitorInfo);
+			Uint2 monitorDimensions = GetMonitorDimensions(monitorInfo);
 
-			::SetWindowPos(s_WindowHandle, HWND_TOP,
+			::SetWindowPos(sWindowHandle, HWND_TOP,
 				monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
-				width, height, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+				monitorDimensions.x, monitorDimensions.y, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
-			::ShowWindow(s_WindowHandle, SW_MAXIMIZE);
+			::ShowWindow(sWindowHandle, SW_MAXIMIZE);
+
+			::GetClientRect(sWindowHandle, &sWindowRect);
+			sClientDimensions = GetDimensionFromRect(sWindowRect);
 		}
 		else
 		{
-			::SetWindowLong(s_WindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+			// note(rtarun9) : Currently, all window rect operations are done with the same object, which can be confusing.
+			// Consider having multiple rects in the future to make things more clear.
+			sWindowRect = sPreviousWindowRect;
 
-			std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
+			// Full screen to non full screen mode (revert window rect to dimensions before going to full screen mode).
+			::SetWindowLong(sWindowHandle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
 
-			::SetWindowPos(s_WindowHandle, HWND_NOTOPMOST,
-				s_WindowRect.left, s_WindowRect.top,
-				s_ClientWidth, s_ClientWidth, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+			::AdjustWindowRect(&sWindowRect, WS_OVERLAPPEDWINDOW, FALSE);
+			sClientDimensions = GetDimensionFromRect(sWindowRect);
+
+			::SetWindowPos(sWindowHandle, HWND_NOTOPMOST,
+				sPreviousWindowRect.left, sPreviousWindowRect.top,
+				sClientDimensions.x, sClientDimensions.y, SWP_FRAMECHANGED | SWP_NOACTIVATE);
 			
-			::ShowWindow(s_WindowHandle, SW_NORMAL);
+			::ShowWindow(sWindowHandle, SW_NORMAL);
+
+			::GetClientRect(sWindowHandle, &sWindowRect);
+			sClientDimensions = GetDimensionFromRect(sWindowRect);
+			sPreviousWindowRect = sWindowRect;
 		}
 
-		s_IsFullScreen = !s_IsFullScreen;
+		sIsFullScreen = !sIsFullScreen;
+	}
+
+	Uint2 Application::CenterWindow()
+	{
+		// Get Screen width and height so as to center the window.
+		int screenWidth = ::GetSystemMetrics(SM_CXSCREEN);
+		int screenHeight = ::GetSystemMetrics(SM_CYSCREEN);
+
+		// Clamp value of client region so that it does not exceed the screen width / height.
+		sClientDimensions.x = std::clamp<uint32_t>(sClientDimensions.x, 0, screenWidth);
+		sClientDimensions.y = std::clamp<uint32_t>(sClientDimensions.y, 0, screenHeight);
+
+		uint32_t windowXPos = std::max<uint32_t>(0, (screenWidth - sClientDimensions.x) / 2);
+		uint32_t windowYPos = std::max<uint32_t>(0, (screenHeight - sClientDimensions.y) / 2);
+
+		return Uint2{ .x = windowXPos, .y = windowYPos };
 	}
 
 	LRESULT CALLBACK Application::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 	{
+		static bool resizingWindow{ false };
+
 		Engine* engine= reinterpret_cast<Engine*>(GetWindowLongPtr(windowHandle, GWLP_USERDATA));
 
 		// Handle ImGUI messages.
@@ -160,8 +201,7 @@ namespace helios
 				// Save the Engine* passed in to CreateWindow.
 				LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
 				SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
-				break;
-			}
+			}break;
 
 			case WM_KEYDOWN:
 			{
@@ -170,46 +210,50 @@ namespace helios
 
 				if (wParam == VK_ESCAPE)
 				{
-					::DestroyWindow(s_WindowHandle);
+					::DestroyWindow(sWindowHandle);
 				}
 
 				if (wParam == VK_F11)
 				{
 					ToggleFullScreenMode();
 				}
-
-				break;
-			}
+			}break;
 
 			case WM_KEYUP:
 			{
 				engine->OnKeyAction(static_cast<uint8_t>(wParam), false);
-				break;
-			}
+			}break;
 
 			case WM_DESTROY:
 			{
 				::PostQuitMessage(0);
-				break;
-			}
+				return 0;
+			}break;
 
 			case WM_SIZE:
 			{
-				// Dont save current window dimensions while switching from FullScreen -> Normal mode.
-				if (s_IsFullScreen)
+				if (engine && !resizingWindow)
 				{
-					::GetClientRect(s_WindowHandle, &s_WindowRect);
+					::GetClientRect(sWindowHandle, &sWindowRect);
+					sClientDimensions = { (UINT)LOWORD(lParam), (UINT)HIWORD(lParam) };
 
-					std::tie<uint32_t, uint32_t>(s_ClientWidth, s_ClientHeight) = GetClientRegionDimentions(s_WindowRect);
+					engine->OnResize();
 				}
+			}break;
 
-				break;
-			}
+			case WM_ENTERSIZEMOVE:
+			{
+				resizingWindow = true;
+			}break;
+			
+			case WM_EXITSIZEMOVE:
+			{
+				resizingWindow = false;
+			}break;
 
 			default:
 			{
-				break;
-			}
+			}break;
 		}
 
 		// Handle any messages the switch statement didn't.
