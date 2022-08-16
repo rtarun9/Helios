@@ -39,6 +39,9 @@ namespace helios::scene
 		void RenderLights(const gfx::GraphicsContext* graphicsContext);
 		void RenderSkyBox(const gfx::GraphicsContext* graphicsContext);
 
+		// Get buffer indices.
+		uint32_t GetSceneBufferIndex() { return gfx::Buffer::GetCbvIndex(mSceneBuffer.get()); }
+
 	public:
 		std::vector<std::unique_ptr<Model>> mModels{};
 		std::vector<std::unique_ptr<Light>> mLights{};

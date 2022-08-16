@@ -27,8 +27,9 @@ A Experimental, C++20 & DX12 renderer made for learning and trying out various g
 ![](Assets/Screenshots/Editor1.png)
 
 # Building
-+ This project uses VCPKG for package managment and premake as a build system.
++ This project uses premake as a build system.
 + After cloning the project, use the command `premake5.exe vs2022` to build (if vs2019 or other is used, replace vs2022 with that). 
-+ If the output directory already contains the DirectX Agility SDK & DirectX Shader Compiler files, then you can use the flag `--copy_thirdparty_folders=No` to prevent repeatedly copying those files after each build.
-+ Shaders are automatically compiled after build process.
++ Run the setup.bat file, which will install the DirectXAgility SDK. 
++ Ensure you have installed the DirectXShaderCompiler (must support atleast SM 6.6).
++ Shaders are automatically compiled after build process, but for manual shader compilation run the CompileShaders.bat (or alternatively the .py file).
 

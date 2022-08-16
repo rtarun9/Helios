@@ -77,8 +77,8 @@ namespace helios::scene
 
 	void Light::Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources)
 	{
-		lightRenderResources.lightBufferIndex = sLightBuffer->cbvIndex;
-		lightRenderResources.transformBufferIndex = sLightInstanceBuffer->cbvIndex;
+		lightRenderResources.lightBufferIndex = gfx::Buffer::GetCbvIndex(sLightBuffer.get());
+		lightRenderResources.transformBufferIndex = gfx::Buffer::GetCbvIndex(sLightInstanceBuffer.get());
 
 		sLightModel->Render(graphicsContext, lightRenderResources);
 	}

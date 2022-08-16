@@ -46,17 +46,17 @@ namespace helios::gfx
 	{
 		for (const auto& rt : renderTargets)
 		{
-			mCommandList->ClearRenderTargetView(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(rt->renderTexture->rtvIndex).cpuDescriptorHandle, color.data(), 0u, nullptr);
+			mCommandList->ClearRenderTargetView(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(RenderTarget::GetRenderTextureRTVIndex(rt)).cpuDescriptorHandle, color.data(), 0u, nullptr);
 		}
 	}
 
 	void GraphicsContext::ClearRenderTargetView(RenderTarget* renderTargets, std::span<const float, 4> color)
 	{
-			mCommandList->ClearRenderTargetView(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(renderTargets->renderTexture->rtvIndex).cpuDescriptorHandle, color.data(), 0u, nullptr);
+			mCommandList->ClearRenderTargetView(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(RenderTarget::GetRenderTextureRTVIndex(renderTargets)).cpuDescriptorHandle, color.data(), 0u, nullptr);
 	}
 	void GraphicsContext::ClearDepthStencilView(Texture* const depthStencilTexture, float depth)
 	{
-		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(gfx::Texture::GetDsvIndex((depthStencilTexture)));
 
 		mCommandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 1, 0u, nullptr);
 	}
@@ -139,7 +139,7 @@ namespace helios::gfx
 		mCommandList->RSSetScissorRects(1u, &scissorRect);
 	}
 
-	// Specifies how the pipeline interprets vertex data bound to the input assember stage.
+	// Specifies how the pipeline interprets vertex data bound to the input assembler stage.
 	// i.e if topology type is POINTLIST, vertex data is interpreted as list of points.
 	void GraphicsContext::SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const
 	{
@@ -155,19 +155,19 @@ namespace helios::gfx
 		}
 		else
 		{
-			DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+			DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(Texture::GetDsvIndex(depthStencilTexture));
 			mCommandList->OMSetRenderTargets(1u, &renderTarget->backBufferDescriptorHandle.cpuDescriptorHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
 		}
 	}
 
 	void GraphicsContext::SetRenderTarget(std::span<const RenderTarget*> renderTargets, const Texture* depthStencilTexture) const
 	{
-		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(Texture::GetDsvIndex(depthStencilTexture));
 
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles{};
 		for (const auto& rt : renderTargets)
 		{
-			rtvHandles.emplace_back(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(rt->renderTexture->rtvIndex).cpuDescriptorHandle);
+			rtvHandles.emplace_back(mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(RenderTarget::GetRenderTextureRTVIndex(rt)).cpuDescriptorHandle);
 		}
 
 		mCommandList->OMSetRenderTargets(static_cast<UINT>(renderTargets.size()), rtvHandles.data(), TRUE, &dsvDescriptorHandle.cpuDescriptorHandle);
@@ -175,8 +175,8 @@ namespace helios::gfx
 
 	void GraphicsContext::SetRenderTarget(RenderTarget* renderTarget, const Texture* depthStencilTexture) const
 	{
-		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(depthStencilTexture->dsvIndex);
-		D3D12_CPU_DESCRIPTOR_HANDLE rtHandle = mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(renderTarget->renderTexture->rtvIndex).cpuDescriptorHandle;
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(Texture::GetDsvIndex(depthStencilTexture));
+		D3D12_CPU_DESCRIPTOR_HANDLE rtHandle = mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(RenderTarget::GetRenderTextureRTVIndex(renderTarget)).cpuDescriptorHandle;
 		mCommandList->OMSetRenderTargets(1u, &rtHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
 
 	}

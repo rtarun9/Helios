@@ -41,11 +41,6 @@ namespace helios::scene
 			
 			transformBuffer->Update(&updatedTransformBuffer);
 		}
-
-		Transform() = default;
-		Transform(const Transform& other) : data(other.data), transformBuffer(std::move(other.transformBuffer.get()))
-		{
-		}
 	};
 
 

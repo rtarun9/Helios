@@ -310,7 +310,7 @@ namespace helios::editor
 
 	void Editor::RenderSceneViewport(const gfx::Device* device, const gfx::RenderTarget* renderTarget, scene::Scene* scene) const
 	{
-		const gfx::DescriptorHandle& rtvSrvHandle = device->GetSrvCbvUavDescriptor()->GetDescriptorHandleFromIndex(renderTarget->renderTexture->srvIndex);
+		const gfx::DescriptorHandle& rtvSrvHandle = device->GetSrvCbvUavDescriptor()->GetDescriptorHandleFromIndex(gfx::RenderTarget::GetRenderTextureSRVIndex(renderTarget));
 
 		ImGui::Begin("View Port");
 		ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);

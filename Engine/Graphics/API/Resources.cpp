@@ -5,6 +5,168 @@
 
 namespace helios::gfx
 {
+	Allocation::Allocation(const Allocation& other) : resource(other.resource), allocation(other.allocation)
+	{
+		if (other.mappedPointer.has_value())
+		{
+			mappedPointer = other.mappedPointer;
+		}
+	}
+
+	Allocation& Allocation::operator=(const Allocation& other)
+	{
+		if (&other == this)
+		{
+			return *this;
+		}
+
+		// Clear state of current object.
+		resource->Release();
+		allocation->Release();
+
+		if (other.mappedPointer.has_value())
+		{
+			mappedPointer = other.mappedPointer;
+		}
+
+		resource = other.resource;		
+		allocation = other.allocation;
+
+		return *this;
+	}
+
+	Allocation::Allocation(Allocation&& other) noexcept
+		: resource(std::move(other.resource)), allocation(std::move(other.allocation))
+	{
+		if (other.mappedPointer.has_value())
+		{
+			mappedPointer = other.mappedPointer;
+		}
+	}
+
+	Allocation& Allocation::operator=(Allocation&& other) noexcept
+	{
+		resource = std::move(other.resource); 
+		allocation = std::move(other.allocation);
+	
+		if (other.mappedPointer.has_value())
+		{
+			mappedPointer = other.mappedPointer;
+		}
+
+		return *this;
+	}
+
+	void Allocation::Update(const void* data, size_t size)
+	{
+		if (!data || !mappedPointer.has_value())
+		{
+			throw std::exception("Trying to update resource that is not placed in CPU visible memory, or the data is null");
+		}
+
+		memcpy(mappedPointer.value(), data, size);
+	}
+
+	void Allocation::Reset()
+	{
+		resource.Reset();
+		allocation.Reset();
+	}
+
+	// To be used primarily for constant buffers.
+	void Buffer::Update(const void* data)
+	{
+		// Allocation's update function will take care if data is null or not.
+		allocation->Update(data, sizeInBytes);
+	}
+
+	// In the model abstraction, the buffers are wrapped in unique pointers.
+	// Due to this, we cant access any of the indices if the buffer is nullptr.
+	// So, upon passing the buffer to this function, it will return -1 is buffer is null, or the index otherwise.
+	uint32_t Buffer::GetSrvIndex(const Buffer* buffer)
+	{
+		if (buffer == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return buffer->srvIndex;
+	}
+
+	uint32_t Buffer::GetCbvIndex(const Buffer* buffer)
+	{
+		if (buffer == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return buffer->cbvIndex;
+	}
+
+	uint32_t Buffer::GetUavIndex(const Buffer* buffer)
+	{
+		if (buffer == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return buffer->uavIndex;
+	}
+
+
+	ID3D12Resource* const Texture::GetResource() const
+	{
+		if (allocation)
+		{
+			return allocation->resource.Get();
+		}
+
+		return nullptr;
+	}
+
+	// In the model abstraction, the textures are wrapped in unique pointers.
+	// Due to this, we cant access any of the indices if the pointer is nullptr.
+	// So, upon passing the texture to this function, it will return UINT32_MAX / INVALID_INDEX if texture is null, or the srvIndex otherwise.
+	uint32_t Texture::GetSrvIndex(const Texture* texture)
+	{
+		if (texture == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return texture->srvIndex;
+	}
+
+	uint32_t Texture::GetUavIndex(const Texture* texture)
+	{
+		if (texture == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return texture->uavIndex;
+	}
+
+	uint32_t Texture::GetDsvIndex(const Texture* texture)
+	{
+		if (texture == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return texture->dsvIndex;
+	}
+
+	uint32_t Texture::GetRtvIndex(const Texture* texture)
+	{
+		if (texture == nullptr)
+		{
+			return UINT32_MAX;
+		}
+
+		return texture->rtvIndex;
+	}
+
 	bool Texture::IsTextureSRGB(const DXGI_FORMAT& format)
 	{
 		switch (format)
@@ -137,8 +299,8 @@ namespace helios::gfx
 
 	void RenderTarget::Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources)
 	{
-		renderTargetRenderResources.positionBufferIndex = sPositionBuffer->srvIndex;
-		renderTargetRenderResources.textureBufferIndex = sTextureCoordsBuffer->srvIndex;
+		renderTargetRenderResources.positionBufferIndex = Buffer::GetSrvIndex(sPositionBuffer.get());
+		renderTargetRenderResources.textureBufferIndex = Buffer::GetSrvIndex(sTextureCoordsBuffer.get());
 
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		graphicsContext->SetIndexBuffer(RenderTarget::sIndexBuffer.get());
@@ -150,8 +312,8 @@ namespace helios::gfx
 
 	void RenderTarget::Render(const GraphicsContext* graphicsContext, DeferredLightingPassRenderResources& deferredLightingRenderResources)
 	{
-		deferredLightingRenderResources.positionBufferIndex = sPositionBuffer->srvIndex;
-		deferredLightingRenderResources.textureBufferIndex = sTextureCoordsBuffer->srvIndex;
+		deferredLightingRenderResources.positionBufferIndex = Buffer::GetSrvIndex(sPositionBuffer.get());
+		deferredLightingRenderResources.textureBufferIndex = Buffer::GetSrvIndex(sTextureCoordsBuffer.get());
 
 		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		graphicsContext->SetIndexBuffer(RenderTarget::sIndexBuffer.get());
@@ -159,5 +321,25 @@ namespace helios::gfx
 		graphicsContext->Set32BitGraphicsConstants(&deferredLightingRenderResources);
 
 		graphicsContext->DrawInstanceIndexed(6u);
+	}
+
+	uint32_t RenderTarget::GetRenderTextureRTVIndex(const RenderTarget* renderTarget)
+	{
+		if (!renderTarget)
+		{
+			return UINT32_MAX;
+		}
+
+		return Texture::GetRtvIndex(renderTarget->renderTexture.get());
+	}
+
+	uint32_t RenderTarget::GetRenderTextureSRVIndex(const RenderTarget* renderTarget)
+	{
+		if (!renderTarget)
+		{
+			return UINT32_MAX;
+		}
+
+		return Texture::GetSrvIndex(renderTarget->renderTexture.get());
 	}
 }

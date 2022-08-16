@@ -131,7 +131,7 @@ namespace helios::gfx
 				.outputMip2Index = mipUavs[1],
 				.outputMip3Index = mipUavs[2],
 				.outputMip4Index = mipUavs[3],
-				.mipMapGenerationBufferIndex = mipMapBuffer->cbvIndex,
+				.mipMapGenerationBufferIndex = Buffer::GetCbvIndex(mipMapBuffer.get()),
 			};
 
 			std::unique_ptr<ComputeContext> computeContext = mDevice.GetComputeContext();

@@ -86,7 +86,7 @@ namespace helios::scene
 	{
 		SceneRenderResources sceneRenderResources
 		{
-			.sceneBufferIndex = mSceneBuffer->cbvIndex,
+			.sceneBufferIndex = gfx::Buffer::GetCbvIndex(mSceneBuffer.get()),
 			.lightBufferIndex = scene::Light::GetCbvIndex()
 		};
 
@@ -100,7 +100,7 @@ namespace helios::scene
 	{
 		LightRenderResources lightRenderResources
 		{
-			.sceneBufferIndex = mSceneBuffer->cbvIndex
+			.sceneBufferIndex = gfx::Buffer::GetCbvIndex(mSceneBuffer.get()),
 		};
 
 		Light::Render(graphicsContext, lightRenderResources);
@@ -110,7 +110,7 @@ namespace helios::scene
 	{
 		SkyBoxRenderResources skyBoxRenderResources
 		{
-			.sceneBufferIndex = mSceneBuffer->cbvIndex,
+			.sceneBufferIndex = gfx::Buffer::GetCbvIndex(mSceneBuffer.get()),
 		};
 
 		mSkyBox->Render(graphicsContext, skyBoxRenderResources);

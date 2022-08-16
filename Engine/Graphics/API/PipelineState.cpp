@@ -67,7 +67,7 @@ namespace helios::gfx
 			.VS = CD3DX12_SHADER_BYTECODE(vertexBlob.Get()),
 			.PS = CD3DX12_SHADER_BYTECODE(pixelBlob.Get()),
 			.BlendState = blendDesc,
-			.SampleMask= UINT_MAX,
+			.SampleMask= UINT32_MAX,
 			.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
 			.DepthStencilState = depthStencilDesc,
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,

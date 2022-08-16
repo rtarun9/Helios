@@ -21,7 +21,6 @@ namespace helios::core
 
 		static inline RECT& GetWindowRect() { return sWindowRect; }
 
-
 		static inline Timer& GetTimer() { return sTimer; }
 
 		static bool IsFullScreen() { return sIsFullScreen; }

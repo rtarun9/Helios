@@ -256,21 +256,21 @@ void SandBox::OnRender()
 		DeferredLightingPassRenderResources deferredLightingPassRenderResources
 		{
 			.lightBufferIndex = scene::Light::GetCbvIndex(),
-			.sceneBufferIndex = mScene->mSceneBuffer->cbvIndex,
+			.sceneBufferIndex = mScene->GetSceneBufferIndex(),
 
-			.albedoGBufferIndex = mDeferredGPass->mDeferredPassRTs.albedoRT->GetRenderTextureSRVIndex(),
-			.positionEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.positionEmissiveRT->GetRenderTextureSRVIndex(),
-			.normalEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.normalEmissiveRT->GetRenderTextureSRVIndex(),
-			.aoMetalRoughnessEmissiveGBufferIndex = mDeferredGPass->mDeferredPassRTs.aoMetalRoughnessEmissiveRT->GetRenderTextureSRVIndex(),
+			.albedoGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.albedoRT.get()),
+			.positionEmissiveGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.positionEmissiveRT.get()),
+			.normalEmissiveGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.normalEmissiveRT.get()),
+			.aoMetalRoughnessEmissiveGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.aoMetalRoughnessEmissiveRT.get()),
 
-			.irradianceMapIndex = mScene->mSkyBox->mIrradianceMapTexture->srvIndex,
-			.prefilterMapIndex = mScene->mSkyBox->mPreFilterTexture->srvIndex,
-			.brdfLutIndex = mScene->mSkyBox->mBRDFLutTexture->srvIndex
+			.irradianceMapIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mIrradianceMapTexture.get()),
+			.prefilterMapIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mPreFilterTexture.get()),
+			.brdfLutIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mBRDFLutTexture.get())
 		};
 
 		gfx::RenderTarget::Render(shadingGraphicsContext.get(), deferredLightingPassRenderResources);
 
-		// Render lights and skybox using forward rendering.
+		// Render lights and sky box using forward rendering.
 
 		shadingGraphicsContext->SetGraphicsPipelineState(mLightPipelineState.get());
 		shadingGraphicsContext->SetRenderTarget(renderTargets, mForwardRenderingDepthStencilTexture.get());
@@ -300,14 +300,14 @@ void SandBox::OnRender()
 		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
 		RenderTargetRenderResources rtvRenderResources
 		{
-			.textureIndex = mOffscreenRT->renderTexture->srvIndex,
-			.postProcessBufferIndex = mPostProcessBuffer->cbvIndex
+			.textureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mOffscreenRT.get()),
+			.postProcessBufferIndex = gfx::Buffer::GetCbvIndex(mPostProcessBuffer.get())
 		};
 
 		gfx::RenderTarget::Render(postProcessingGraphicsContext.get(), rtvRenderResources);
 	}
 
-	// Render pass 3 : The RT that is to be displayed to swapchain is processed. For now, UI is rendered in this RT as well.
+	// Render pass 3 : The RT that is to be displayed to swap chain is processed. For now, UI is rendered in this RT as well.
 	{
 		finalGraphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		finalGraphicsContext->AddResourceBarrier(mFinalRT->GetResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -322,7 +322,7 @@ void SandBox::OnRender()
 		// Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
 		RenderTargetRenderResources rtvRenderResources
 		{
-			.textureIndex = mPostProcessingRT->renderTexture->srvIndex,
+			.textureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mPostProcessingRT.get()),
 		};
 
 		gfx::RenderTarget::Render(finalGraphicsContext.get(), rtvRenderResources);
@@ -330,7 +330,7 @@ void SandBox::OnRender()
 		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
 	}
 
-	// Render pass 3 : Copy the final RT to the swapchain
+	// Render pass 3 : Copy the final RT to the swap chain
 	{
 		finalToSwapChainGraphicsContext->AddResourceBarrier(mFinalRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
 		finalToSwapChainGraphicsContext->AddResourceBarrier(backBuffer->GetResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);

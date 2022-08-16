@@ -136,7 +136,7 @@ namespace helios::scene
 
 				CubeFromEquirectRenderResources cubeFromEquirectRenderResources
 				{
-					.textureIndex = equirectTexture->srvIndex,
+					.textureIndex = gfx::Texture::GetSrvIndex(equirectTexture.get()),
 					.outputTextureIndex = uavIndex
 				};
 
@@ -168,8 +168,8 @@ namespace helios::scene
 
 			IrradianceRenderResources diffuseIrradianceRenderResources
 			{
-				.skyBoxTextureIndex = mSkyBoxTexture->srvIndex,
-				.ouputIrradianceMapIndex = mIrradianceMapTexture->uavIndex
+				.skyBoxTextureIndex = gfx::Texture::GetSrvIndex(mSkyBoxTexture.get()),
+				.ouputIrradianceMapIndex = gfx::Texture::GetUavIndex(mIrradianceMapTexture.get())
 			};
 
 			computeContext->Set32BitComputeConstants(&diffuseIrradianceRenderResources);
@@ -212,7 +212,7 @@ namespace helios::scene
 
 				PreFilterCubeMapRenderResources preFilterCubeMapRenderResources
 				{
-					.skyBoxTextureIndex = mSkyBoxTexture->srvIndex,
+					.skyBoxTextureIndex = gfx::Texture::GetSrvIndex(mSkyBoxTexture.get()),
 					.outputPreFilteredCubeMapIndex = uavIndex,
 					.mipLevel = i
 				};
@@ -242,7 +242,7 @@ namespace helios::scene
 
 			BRDFLutRenderResources brdfLutRenderResources
 			{
-				.lutTextureIndex = mBRDFLutTexture->uavIndex
+				.lutTextureIndex = gfx::Texture::GetUavIndex(mBRDFLutTexture.get())
 			};
 
 			computeContext->Set32BitComputeConstants(&brdfLutRenderResources);
@@ -268,7 +268,7 @@ namespace helios::scene
 
 	void SkyBox::Render(const gfx::GraphicsContext* graphicsContext, SkyBoxRenderResources& renderResources)
 	{
-		renderResources.textureIndex = mSkyBoxTexture->srvIndex;
+		renderResources.textureIndex = gfx::Texture::GetSrvIndex(mSkyBoxTexture.get());
 
 		mSkyBoxModel->Render(graphicsContext, renderResources);
 	}

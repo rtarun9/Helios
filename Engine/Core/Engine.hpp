@@ -12,13 +12,13 @@ namespace helios::core
 		Uint2 dimensions{};
 	};
 
-	// The Base Engine class is passed into the Application static classe's Run method.
+	// The Base Engine class is passed into the Application static classes Run method.
 	// All SandBoxes / Test Environment's are to derive from the Engine class.
 	class Engine
 	{
 	public:
+		Engine() = delete;
 		Engine(Config& config);
-		virtual ~Engine() = default;
 
 		virtual void OnInit() = 0;
 		virtual void OnUpdate() = 0;

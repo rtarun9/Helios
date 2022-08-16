@@ -13,13 +13,19 @@
 namespace helios::gfx
 {
 	// Abstraction for creating / destroying various graphics resources.
-	// Encapsulates most renderer resources / objects in use : the swapchain, descriptor heaps, command queue's, etc.
+	// Encapsulates most renderer resources / objects in use : the swap chain, descriptor heaps, command queue's, etc.
 	// Inspired from : https://alextardif.com/DX12Tutorial.html.
 	class Device
 	{
 	public:
 		Device();
 		~Device();
+
+		Device(const Device& other) = delete;
+		Device& operator=(const Device& other) = delete;
+
+		Device(Device&& other) = delete;
+		Device& operator=(Device&& other) = delete;
 
 		// Getters
 		ID3D12Device5* GetDevice() const { return mDevice.Get(); }
@@ -43,11 +49,11 @@ namespace helios::gfx
 		
 		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
 		
-		// Misc getters for resources and thier contents.
+		// Misc getters for resources and their contents.
 		DescriptorHandle const GetTextureSrvDescriptorHandle(const Texture* texture) { return mSrvCbvUavDescriptor->GetDescriptorHandleFromIndex(texture->srvIndex); }
 
 		// Device resources are the device, adapters, queues, descriptor heaps, etc.
-		// Swapchain resources are kept seperate for resources with depended upon the window.
+		// Swap chain resources are kept separate for resources with depended upon the window.
 		void InitDeviceResources();
 		void InitSwapChainResources();
 
@@ -76,7 +82,7 @@ namespace helios::gfx
 		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
 
 		
-		// note(rtarun9) : The creation descs are not passed as const T&, as the contents (the dimensions) are not set by user if the texture is being loaded from file.
+		// note(rtarun9) : The creation desc are not passed as const T&, as the contents (the dimensions) are not set by user if the texture is being loaded from file.
 		// Because of this, its passed as reference and not const reference.
 		Texture CreateTexture(TextureCreationDesc& textureCreationDesc, const unsigned char *data = nullptr) const;
 		RenderTarget CreateRenderTarget(TextureCreationDesc& textureCreationDesc) const;
@@ -91,7 +97,7 @@ namespace helios::gfx
 		void EnableVSync() { mVSync = true; }
 		void DisableVSync() { mVSync = false; }
 	public:
-		// Number of SwapChain backbuffers.
+		// Number of SwapChain back buffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
 		static constexpr DXGI_FORMAT SWAPCHAIN_FORMAT = DXGI_FORMAT_R10G10B10A2_UNORM;
 	private:
@@ -143,7 +149,7 @@ namespace helios::gfx
 
 		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
 
-		buffer.allocation = std::make_unique<gfx::Allocation>(mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc));
+		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 
 		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
 		// and then copy data from upload buffer -> GPU only buffer.
@@ -156,7 +162,7 @@ namespace helios::gfx
 				.name = L"Upload buffer - " + bufferCreationDesc.name,
 			};
 
-			std::unique_ptr<Allocation> uploadAllocation = std::make_unique<gfx::Allocation>(mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc));
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
 
 			uploadAllocation->Update(data.data(), buffer.sizeInBytes);
 

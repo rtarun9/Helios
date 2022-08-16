@@ -23,38 +23,21 @@ namespace helios::gfx
 	// Note that the mapped pointer will only be used by constant buffers, which is why it is wrapped over std::optional.
 	// The memory allocator class provides methods to create an allocation.
 	struct Allocation
-	{
+	{		
+		Allocation() = default;
+
+		Allocation(const Allocation& other);
+		Allocation& operator=(const Allocation& other);
+
+		Allocation(Allocation&& other) noexcept;
+		Allocation& operator=(Allocation&& other) noexcept;
+
+		void Update(const void* data, size_t size);
+		void Reset();
+
 		Microsoft::WRL::ComPtr<D3D12MA::Allocation> allocation{};
 		std::optional<void*> mappedPointer{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> resource{};
-		
-		Allocation() = default;
-
-		Allocation(const Allocation& other) : resource(other.resource)
-		{
-			allocation = other.allocation;
-
-			if (other.mappedPointer.has_value())
-			{
-				mappedPointer = other.mappedPointer;
-			}
-		}
-
-		void Update(const void* data, size_t size)
-		{
-			if (!data || !mappedPointer.has_value())
-			{
-				throw std::exception("Trying to update resource that is not placed in CPU visible memory, or the data is null");
-			}
-
-			memcpy(mappedPointer.value(), data, size);
-		}
-
-		void Reset()
-		{
-			resource.Reset();
-			allocation.Reset();
-		}
 	};
 
 	// Buffer related functions / enum's.
@@ -75,58 +58,33 @@ namespace helios::gfx
 
 	struct Buffer
 	{
-		std::unique_ptr<Allocation> allocation{};
-		uint32_t srvIndex{};
-		uint32_t uavIndex{};
-		uint32_t cbvIndex{};
-		size_t sizeInBytes{};
-
-		std::wstring bufferName{};
-
 		// To be used primarily for constant buffers.
-		void Update(const void* data)
-		{
-			// Allocation's update function will take care if data is null or not.
-			allocation->Update(data, sizeInBytes);
-		}
+		void Update(const void* data);
 
 		// In the model abstraction, the buffers are wrapped in unique pointers.
 		// Due to this, we cant access any of the indices if the buffer is nullptr.
-		// So, upon passing the buffer to this function, it will return -1 is buffer is null, or the index otherwise.
-		static uint32_t GetSrvIndex(const Buffer* buffer)
-		{
-			if (buffer == nullptr)
-			{
-				return -1;
-			}
+		// So, upon passing the buffer to this function, it will return INVALID_INDEX (UINT32_MAX) is buffer is null, or the index otherwise.
+		static uint32_t GetSrvIndex(const Buffer* buffer);
+		static uint32_t GetCbvIndex(const Buffer* buffer);
+		static uint32_t GetUavIndex(const Buffer* buffer);
 
-			return buffer->srvIndex;
-		}
+		std::unique_ptr<Allocation> allocation{};
+		std::wstring bufferName{};
+		size_t sizeInBytes{};
 
-		static uint32_t GetCbvIndex(const Buffer* buffer)
-		{
-			if (buffer == nullptr)
-			{
-				return -1;
-			}
+	private:
+		// These are made private so that if a particular buffer does not exist, we set the index as INVALID_INDEX, which the shader recognizes and takes proper action.
+		// Access these using the GetXIndex calls.
+		uint32_t srvIndex{};
+		uint32_t uavIndex{};
+		uint32_t cbvIndex{};
 
-			return buffer->cbvIndex;
-		}
-
-		static uint32_t GetUavIndex(const Buffer* buffer)
-		{
-			if (buffer == nullptr)
-			{
-				return -1;
-			}
-
-			return buffer->uavIndex;
-		}
-
+		// Required as device sets all the indices.
+		friend class Device;
 	};
 
-	// Texture related functions / enums.
-	// The Depth stencil texture will not have a seperate abstraction and will be created using the common CreateTexture function.
+	// Texture related functions / enum's.
+	// The Depth stencil texture will not have a separate abstraction and will be created using the common CreateTexture function.
 	// Similarly, Render Targets will also be of type Texture.
 	// TextureUpload is used for intermediate buffers (as used in UpdateSubresources).
 	// If data is already loaded elsewhere, use the TextureFromData enum (this requires TextureCreateionDesc has all properties correctly set (specifically dimensions).
@@ -153,40 +111,30 @@ namespace helios::gfx
 	
 	struct Texture
 	{
+		ID3D12Resource* const GetResource() const;
+
+		// In the model abstraction, the textures are wrapped in unique pointers.
+		// Due to this, we cant access any of the indices if the pointer is nullptr.
+		// So, upon passing the texture to this function, it will return UINT32_MAX / INVALID_INDEX if texture is null, or the srvIndex otherwise.
+		static uint32_t GetSrvIndex(const Texture* texture);
+		static uint32_t GetUavIndex(const Texture* texture);
+		static uint32_t GetDsvIndex(const Texture* texture);
+		static uint32_t GetRtvIndex(const Texture* texture);
+
+		static bool IsTextureSRGB(const DXGI_FORMAT& format);
+		static DXGI_FORMAT GetNonSRGBFormat(const DXGI_FORMAT& format);
+
+		std::wstring textureName{};
+		Uint2 dimensions{};
 		std::unique_ptr<Allocation> allocation{};
+
+	private:
 		uint32_t srvIndex{};
 		uint32_t uavIndex{};
 		uint32_t dsvIndex{};
 		uint32_t rtvIndex{};
-		
-		Uint2 dimensions{};
-		std::wstring textureName{};
 
-		ID3D12Resource* const GetResource() const
-		{
-			if (allocation)
-			{
-				return allocation->resource.Get();
-			}
-
-			return nullptr;
-		}
-
-		// In the model abstraction, the textures are wrapped in unique pointers.
-		// Due to this, we cant access any of the indices if the pointer is nullptr.
-		// So, upon passing the texture to this function, it will return UINT_MAX / INVALID_INDEX if texture is null, or the srvIndex otherwise.
-		static uint32_t GetSrvIndex(const Texture* texture)
-		{
-			if (texture == nullptr)
-			{
-				return UINT_MAX;
-			}
-
-			return texture->srvIndex;
-		}
-
-		static bool IsTextureSRGB(const DXGI_FORMAT& format);
-		static DXGI_FORMAT GetNonSRGBFormat(const DXGI_FORMAT& format);
+		friend class Device;
 	};
 
 	// Needs to passed to the memory allocator's create buffer function along with a buffer creation desc struct.
@@ -245,14 +193,14 @@ namespace helios::gfx
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 	};
 
-	// Structs related to pipeline's.
+	// Struct's related to pipeline's.
 	struct ShaderModule
 	{
 		std::wstring vsShaderPath{};
 		std::wstring psShaderPath{};
 	};
 
-	// Winding order will always be clockwise except for cubemaps, where we want to see the inner faces of cube map.
+	// Winding order will always be clockwise except for cube maps, where we want to see the inner faces of cube map.
 	// So, the default winding order will be clockwise, and for cube maps it has to be set to counter clock wise.
 	enum class FrontFaceWindingOrder
 	{
@@ -291,12 +239,11 @@ namespace helios::gfx
 		std::wstring bufferName{};
 	};
 
-	// Render target abstraction is created so that all offscreen render targets can share the same index buffer / texture coords etc.
+	// Render target abstraction is created so that all off screen render targets can share the same index buffer / texture coords etc.
 	// Note : the destroy function has to be called from the device so that the D3D12MA::Allocation objects(s) can be cleared properly.
 	class Device;
 	class GraphicsContext;
 
-	// note(rtarun9) : TODO : HANDLE RESIZING.
 	struct RenderTarget
 	{
 		// Create all buffers.
@@ -306,10 +253,11 @@ namespace helios::gfx
 		static void DestroyResources();
 
 		// Getters.
-		static uint32_t GetPositionBufferIndex()  {return sPositionBuffer->srvIndex; }
-		static uint32_t GetTextureCoordsBufferIndex() { return sTextureCoordsBuffer->srvIndex; }
+		static uint32_t GetPositionBufferIndex() { return Buffer::GetSrvIndex(sPositionBuffer.get()); }
+		static uint32_t GetTextureCoordsBufferIndex() { return Buffer::GetSrvIndex(sTextureCoordsBuffer.get()); }
 
-		uint32_t GetRenderTextureSRVIndex() const { return renderTexture->srvIndex; }
+		static uint32_t GetRenderTextureRTVIndex(const RenderTarget* renderTarget);
+		static uint32_t GetRenderTextureSRVIndex(const RenderTarget* renderTarget);
 
 		static void Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
 		static void Render(const GraphicsContext* graphicsContext, DeferredLightingPassRenderResources& deferredLightingRenderResources);
@@ -320,11 +268,11 @@ namespace helios::gfx
 		
 		ID3D12Resource* const GetResource() const { return renderTexture->GetResource(); }
 
-		std::unique_ptr<Texture> renderTexture{};
 		std::wstring renderTargetName{};
+		std::unique_ptr<Texture> renderTexture{};
 	};
 
-	// Each texture (i.e loaded from a gltf file) will have a sampler associated with it.
+	// Each texture (i.e loaded from a GLTF file) will have a sampler associated with it.
 	struct SamplerCreationDesc
 	{
 		D3D12_SAMPLER_DESC samplerDesc{};

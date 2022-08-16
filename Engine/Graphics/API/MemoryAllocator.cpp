@@ -21,7 +21,7 @@ namespace helios::gfx
 		ThrowIfFailed(D3D12MA::CreateAllocator(&allocatorDesc, &mAllocator));
 	}
 
-	Allocation MemoryAllocator::CreateBufferResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc)
+	std::unique_ptr<Allocation> MemoryAllocator::CreateBufferResourceAllocation(const BufferCreationDesc& bufferCreationDesc, const ResourceCreationDesc& resourceCreationDesc)
 	{
 		Allocation allocation{};
 
@@ -65,10 +65,10 @@ namespace helios::gfx
 		allocation.resource->SetName(bufferCreationDesc.name.c_str());
 		allocation.allocation->SetResource(allocation.resource.Get());
 
-		return std::move((allocation));
+		return std::move(std::make_unique<Allocation>(allocation));
 	}
 
-	Allocation MemoryAllocator::CreateTextureResourceAllocation(TextureCreationDesc& textureCreationDesc)
+	std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(TextureCreationDesc& textureCreationDesc)
 	{
 		Allocation allocation{};
 
@@ -185,6 +185,6 @@ namespace helios::gfx
 		ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState,optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 		allocation.resource->SetName(textureCreationDesc.name.c_str());
 		allocation.allocation->SetResource(allocation.resource.Get());
-		return std::move((allocation));
+		return std::move(std::make_unique<Allocation>(allocation));
 	}
 }

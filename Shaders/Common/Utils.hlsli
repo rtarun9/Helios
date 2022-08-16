@@ -7,7 +7,7 @@ static const float PI = 3.14159265359;
 static const float TWO_PI = 2.0f * PI;
 static const float INV_PI = 1.0f / PI;
 static const float INV_TWO_PI = 1.0f / TWO_PI;
-static const float INVALID_INDEX = 4294967295; // UINT_MAX;
+static const float INVALID_INDEX = 4294967295; // UINT32_MAX;
 
 float4 GetAlbedo(float2 textureCoords, uint albedoTextureIndex, uint albedoTextureSamplerIndex)
 {

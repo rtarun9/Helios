@@ -36,7 +36,7 @@ namespace helios::scene
 		LightTypes GetLightType() const { return mLightType; }
 
 		static LightBuffer* GetLightBufferData() { return &sLightBufferData; }
-		static uint32_t GetCbvIndex() { return sLightBuffer->cbvIndex; }
+		static uint32_t GetCbvIndex() { return gfx::Buffer::GetCbvIndex(sLightBuffer.get()); }
 		
 		// Update light position (form the static b).
 		void Update();

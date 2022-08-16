@@ -387,7 +387,7 @@ namespace helios::gfx
 			};
 		}
 
-		texture.allocation = std::make_unique<Allocation>(mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc));
+		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
 		texture.dimensions = textureCreationDesc.dimensions;
 
@@ -528,7 +528,7 @@ namespace helios::gfx
 			
 			ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(uploadBufferSize);
 
-			std::unique_ptr<Allocation> uploadAllocation = std::make_unique<Allocation>(mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc));
+			std::unique_ptr<Allocation> uploadAllocation = mMemoryAllocator->CreateBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
 
 			// Specify data to copy.
 			D3D12_SUBRESOURCE_DATA textureSubresourceData{};
@@ -609,7 +609,7 @@ namespace helios::gfx
 		renderTarget->renderTexture->allocation->Reset();
 
 		// Recreate allocation.
-		renderTarget->renderTexture->allocation = std::make_unique<Allocation>(mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc));
+		renderTarget->renderTexture->allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
 		DescriptorHandle rtvHandle = mRtvDescriptor->GetDescriptorHandleFromIndex(renderTarget->renderTexture->rtvIndex);
 		mDevice->CreateRenderTargetView(renderTarget->renderTexture->GetResource(), nullptr, rtvHandle.cpuDescriptorHandle);
