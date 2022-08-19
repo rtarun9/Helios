@@ -31,5 +31,5 @@ A Experimental, C++20 & DX12 renderer made for learning and trying out various g
 + After cloning the project, use the command `premake5.exe vs2022` to build (if vs2019 or other is used, replace vs2022 with that). 
 + Run the setup.bat file, which will install the DirectXAgility SDK. 
 + Ensure you have installed the DirectXShaderCompiler (must support atleast SM 6.6).
-+ Shaders are automatically compiled after build process, but for manual shader compilation run the CompileShaders.bat (or alternatively the .py file).
++ Shaders are ~~automatically compiled after build process~~, to be compiled by running the CompileShaders.bat (or alternatively the .py file).
 

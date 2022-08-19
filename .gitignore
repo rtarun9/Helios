@@ -18,3 +18,8 @@ Shaders/*.lib
 # Bin folder.
 Bin/
  
+Build/
+CmakeFiles/
+Engine/ThirdParty/DirectXAgilitySDK
+_deps
+agility.zip

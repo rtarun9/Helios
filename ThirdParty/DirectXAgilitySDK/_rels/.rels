@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/Microsoft.Direct3D.D3D12.nuspec" Id="RE1C776F5B20ED38F" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/0a63f86302ac4777b145b610c7848eef.psmdcp" Id="RC42D79E5D6F430CB" />
-</Relationships>
