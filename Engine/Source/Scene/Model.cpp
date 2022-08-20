@@ -1,5 +1,3 @@
-#include "Core/Helpers.hpp"
-
 #include "Common/BindlessRS.hlsli"
 
 #include "Model.hpp"
@@ -14,7 +12,15 @@ namespace helios::scene
 {
 	Model::Model(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc)
 	{
-		mModelPath = modelCreationDesc.modelPath;
+		if (modelCreationDesc.modelPath.find(utility::ResourceManager::GetAssetPath(L"")) == std::wstring::npos)
+		{
+			mModelPath = utility::ResourceManager::GetAssetPath(modelCreationDesc.modelPath);
+		}
+		else
+		{
+			mModelPath = modelCreationDesc.modelPath;
+		};
+
 		mModelName = modelCreationDesc.modelName;
 
 		gfx::BufferCreationDesc transformBufferCreationDesc

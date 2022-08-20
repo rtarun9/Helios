@@ -7,6 +7,8 @@
 
 #include "stb_image.h"
 
+#include "Editor/Log.hpp"
+
 // For setting the Agility SDK paramters.
 extern "C"
 {
@@ -28,6 +30,8 @@ namespace helios::gfx
 		InitSwapChainResources();
 
 		mIsInitialized = true;
+
+		helios::editor::LogMessage(L"Initialized Device", editor::LogMessageTypes::Info);
 	}
 
 	Device::~Device()
@@ -139,7 +143,7 @@ namespace helios::gfx
 		mSamplerDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1000u, L"Sampler Descriptor");
 
 		// Create bindless root signature.
-		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
+		PipelineState::CreateBindlessRootSignature(mDevice.Get(), (L"Shaders/BindlessRS.cso"));
 
 		// Create render target resources.
 		RenderTarget::CreateRenderTargetResources(this);
@@ -351,6 +355,8 @@ namespace helios::gfx
 	{
 		Texture texture{};
 
+	    textureCreationDesc.path = utility::ResourceManager::GetAssetPath(textureCreationDesc.path);
+
 		int componentCount{ 4 }, width{}, height{};
 
 		// For use only by HDR textures (mostly for Cube Map equirectangular textures).
@@ -369,7 +375,7 @@ namespace helios::gfx
 
 		if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
 		{
-			hdrTextureData = stbi_loadf(WstringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+            hdrTextureData = stbi_loadf(WstringToString( textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
 			if (!hdrTextureData)
 			{
 				ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
@@ -384,7 +390,7 @@ namespace helios::gfx
 
 		if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
 		{
-			data = stbi_load(WstringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+            data = stbi_load(WstringToString( (textureCreationDesc.path)).c_str(), &width, &height, nullptr, componentCount);
 			if (!data)
 			{
 				ErrorMessage(L"Failed to load texture from path : " + textureCreationDesc.path);
@@ -587,6 +593,7 @@ namespace helios::gfx
 		texture.textureName = textureCreationDesc.name;
 		mMipMapGenerator->GenerateMips(&texture);
 
+		editor::LogMessage(L"Created texture : " + texture.textureName, editor::LogMessageTypes::Info);
 
 		return texture;
 	}
@@ -597,6 +604,8 @@ namespace helios::gfx
 
 		renderTarget.renderTexture = std::make_unique<gfx::Texture>(CreateTexture(textureCreationDesc));
 		renderTarget.renderTargetName = textureCreationDesc.name;
+
+	    editor::LogMessage(L"Created render target : " + renderTarget.renderTargetName, editor::LogMessageTypes::Info);
 
 		return renderTarget;
 	}
@@ -648,12 +657,16 @@ namespace helios::gfx
 	{
 		PipelineState pipelineState(mDevice.Get(), graphicsPipelineStateCreationDesc);
 
+        editor::LogMessage(L"Created compute pipeline state : " + graphicsPipelineStateCreationDesc.pipelineName, editor::LogMessageTypes::Info);
+
 		return pipelineState;
 	}
 
 	PipelineState Device::CreatePipelineState(const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const
 	{
 		PipelineState pipelineState(mDevice.Get(), computePipelineStateCreationDesc);
+
+	    editor::LogMessage(L"Created compute pipeline state : " + computePipelineStateCreationDesc.pipelineName, editor::LogMessageTypes::Info);
 
 		return pipelineState;
 	}

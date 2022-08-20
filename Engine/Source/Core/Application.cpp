@@ -53,7 +53,7 @@ namespace helios::core
         {
             ErrorMessage(L"Failed to create window");
         }
-
+        
         engine->OnInit();
 
         if (sWindowHandle)
@@ -61,6 +61,7 @@ namespace helios::core
             // ShowWindow(sWindowHandle, SW_SHOW);
             Application::ToggleFullScreenMode();
         }
+
 
         // Main game loop
         bool quitLoop{false};

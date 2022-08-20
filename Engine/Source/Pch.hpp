@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <iostream>
 #include <chrono>
 #include <exception>
 #include <filesystem>
@@ -59,7 +60,8 @@
 #include <variant>
 #include <vector>
 
-#include "Core/Helpers.hpp"
+#include "Utility/Helpers.hpp"
+#include "Utility/ResourceManager.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;

@@ -6,5 +6,7 @@ namespace helios::core
 		:  mTitle{ config.title }, mDimensions{config.dimensions}
 	{
 		mAspectRatio = static_cast<float>(config.dimensions.x) / static_cast<float>(config.dimensions.y);
+
+		helios::utility::ResourceManager::LocateAssetsDirectory();
 	}
 }

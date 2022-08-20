@@ -26,7 +26,7 @@ namespace helios::scene
 
 		ModelCreationDesc lightModelCreationDesc
 		{
-			.modelPath = LIGHT_MODEL_PATH,
+			.modelPath =  LIGHT_MODEL_PATH,
 			.modelName = L"Light Model",
 		};
 

@@ -13,7 +13,7 @@ namespace helios::scene
 			.format = skyBoxCreationDesc.format,
 			.mipLevels = 6u,
 			.name = skyBoxCreationDesc.name + L" Skybox Equirect Texture",
-			.path = skyBoxCreationDesc.equirectangularTexturePath
+			.path =  skyBoxCreationDesc.equirectangularTexturePath
 		};
 
 		std::unique_ptr<gfx::Texture> equirectTexture = std::make_unique<gfx::Texture>(device->CreateTexture(equirectTextureCreationDesc));
@@ -70,34 +70,40 @@ namespace helios::scene
 
 		mBRDFLutTexture = std::make_unique<gfx::Texture>(device->CreateTexture(brdfLutTextureCreationDesc));
 
+		auto csPath = utility::ResourceManager::GetAssetPath(L"Shaders/SkyBox/CubeMapFromEquirectTextureCS.cso");
+
 		// Create pipeline states.
 		gfx::ComputePipelineStateCreationDesc cubeMapFromEquirectPipelineStateCreationDesc
 		{
-			.csShaderPath = L"Shaders/SkyBox/CubeMapFromEquirectTextureCS.cso",
+			.csShaderPath =  csPath,
 			.pipelineName = L"Cube Map From Equirect Pipeline"
 		};
 
 		mCubeMapFromEquirectPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(cubeMapFromEquirectPipelineStateCreationDesc));
 
+		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/IrradianceCS.cso");
+
 		gfx::ComputePipelineStateCreationDesc diffuseIrradianceMapPipelineStateCreationDesc
 		{
-			.csShaderPath = L"Shaders/IBL/IrradianceCS.cso",
+			.csShaderPath =  csPath,
 			.pipelineName = L"Irradiance Pipeline"
 		};
 
 		mIrradianceMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(diffuseIrradianceMapPipelineStateCreationDesc));
 
+		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/PrefilterCS.cso");
 		gfx::ComputePipelineStateCreationDesc preFilterMapPipelineStateCreationDesc
 		{
-			.csShaderPath = L"Shaders/IBL/PrefilterCS.cso",
+			.csShaderPath =  csPath,
 			.pipelineName = L"Pre Filter Pipeline"
 		};
 
 		mPrefilterMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(preFilterMapPipelineStateCreationDesc));
 
+		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/BRDFLutCS.cso");
 		gfx::ComputePipelineStateCreationDesc brdfLutPipelineStateCreationDesc
 		{
-			.csShaderPath = L"Shaders/IBL/BRDFLutCS.cso",
+			.csShaderPath =  csPath,
 			.pipelineName = L" BRDF LUT Pipeline"
 		};
 

@@ -18,8 +18,8 @@ namespace helios::gfx
 
         gfx::GraphicsPipelineStateCreationDesc deferredPassPipelineStateCreationDesc{
             .shaderModule{
-                .vsShaderPath = L"Shaders/RenderPass/DeferredGeometryPassVS.cso",
-                .psShaderPath = L"Shaders/RenderPass/DeferredGeometryPassPS.cso",
+                .vsShaderPath = (L"Shaders/RenderPass/DeferredGeometryPassVS.cso"),
+                .psShaderPath = (L"Shaders/RenderPass/DeferredGeometryPassPS.cso"),
             },
             .rtvFormats = {DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT,
                            DXGI_FORMAT_R16G16B16A16_FLOAT},

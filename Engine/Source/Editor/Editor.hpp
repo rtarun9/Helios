@@ -1,15 +1,27 @@
 #pragma once
 
-#include "Pch.hpp"
-
 #include "Graphics/API/Device.hpp"
+#include "Graphics/RenderPass/DeferredGeometryPass.hpp"
 
 #include "Scene/Scene.hpp"
 
-#include "Graphics/RenderPass/DeferredGeometryPass.hpp"
+#include "Log.hpp"
 
 namespace helios::editor
 {
+	// Used for providing interface to log to ImGui console window.
+	// Code is literally a heavily stripped down version from the ImGui_Demo.cpp file, for a basic logger.
+	// reference : https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
+	
+	// lineOffsets : Index to lines offset. We maintain this with AddLog() calls.
+	struct ApplicationLog
+	{
+		void AddLog(std::string_view logMessage, const editor::LogMessageTypes& messageType);
+		
+		std::vector<std::string> textBuffer{};
+		std::vector<editor::LogMessageTypes> messageTypes{};
+	};
+
 	// The editor handles all UI related task.
 	// The goal is to avoid having UI specific configurations / settings in other abstractions, and have everything contained within this class.
 	class Editor
@@ -26,9 +38,9 @@ namespace helios::editor
 
 		void ShowUI(bool value);
 
-	private:
-		void SetCustomDarkTheme() const;
+		void AddLogMessage(std::string_view logMessage);
 
+	private:
 		void RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const;
 		
 		// Handles camera and other scene related properties.
@@ -39,18 +51,23 @@ namespace helios::editor
 
 		void RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const;
 
+		void RenderLogWindow();
+
 		// Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads the model (if path belongs to a .gltf file).
 		void RenderSceneViewport(const gfx::Device* device, const gfx::RenderTarget* renderTarget, scene::Scene* scene) const;
 
 		// Handle drag and drop of models into viewport at run time.
 		void RenderContentBrowser();
 
+	public:
+		static inline ApplicationLog sApplicationLog{};
+	
 	private:
 		bool mShowUI{ true };
 
 		// Member variables for content browser.
-		static inline const std::filesystem::path ASSETS_PATH = { L"Assets" };
+        static inline std::filesystem::path mAssetsPath{};
 
-		std::filesystem::path mContentBrowserCurrentPath{ ASSETS_PATH };
+		std::filesystem::path mContentBrowserCurrentPath{};
 	};
 }

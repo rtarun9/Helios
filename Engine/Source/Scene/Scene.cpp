@@ -3,6 +3,8 @@
 
 #include "Common/ConstantBuffers.hlsli"
 
+#include "Editor/Log.hpp"
+
 namespace helios::scene
 {
 	Scene::Scene(const gfx::Device* device)
@@ -32,10 +34,13 @@ namespace helios::scene
 	{
 		auto model = std::make_unique<Model>(device, modelCreationDesc);
 		mModels.push_back(std::move(model));
+
+		editor::LogMessage(L"Added model to scene : " + modelCreationDesc.modelName, editor::LogMessageTypes::Info);
 	}
 
 	void Scene::AddModel(std::unique_ptr<Model> model)
 	{
+	    editor::LogMessage(L"Added model to scene : " + model->mModelName, editor::LogMessageTypes::Info);
 		mModels.push_back(std::move(model));
 	}
 
@@ -48,6 +53,8 @@ namespace helios::scene
 	void Scene::AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc)
 	{
 		mSkyBox = std::make_unique<SkyBox>(device, skyBoxCreationDesc);
+
+	    editor::LogMessage(L"Added skybox to scene : " + skyBoxCreationDesc.name, editor::LogMessageTypes::Info);
 	}
 
 	void Scene::AddCamera()

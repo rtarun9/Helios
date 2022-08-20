@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "Descriptor.hpp"
 #include "CommandQueue.hpp"
 #include "GraphicsContext.hpp"

@@ -10,9 +10,10 @@ namespace helios::gfx
 {
 	MipMapGenerator::MipMapGenerator(gfx::Device* device): mDevice(*device)
 	{
-		ComputePipelineStateCreationDesc pipelineCreationDesc
-		{
-			.csShaderPath = L"Shaders/MipMapGeneration/GenerateMipsCS.cso",
+        auto computeShaderPath = utility::ResourceManager::GetAssetPath(L"Shaders/MipMapGeneration/GenerateMipsCS.cso");
+
+		ComputePipelineStateCreationDesc pipelineCreationDesc{
+			.csShaderPath = computeShaderPath,
 			.pipelineName = L"Mip Map Generation Pipeline"
 		};
 

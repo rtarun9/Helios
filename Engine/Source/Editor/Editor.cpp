@@ -37,9 +37,6 @@ namespace helios::editor
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
-		// Set up cinder dark theme (from : https://github.com/GraphicsProgramming/dear-imgui-styles)
-		SetCustomDarkTheme();
-
 		// Setup platform / renderer backends.
 
 		ImGui_ImplWin32_Init(core::Application::GetWindowHandle());
@@ -47,6 +44,11 @@ namespace helios::editor
 
 		ImGui_ImplDX12_Init(device->GetDevice(), gfx::Device::NUMBER_OF_FRAMES, gfx::Device::SWAPCHAIN_FORMAT, device->GetSrvCbvUavDescriptor()->GetDescriptorHeap(), srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
 		device->GetSrvCbvUavDescriptor()->OffsetCurrentHandle();
+
+        mAssetsPath = utility::ResourceManager::GetAssetPath(L"Assets");
+		mContentBrowserCurrentPath = mAssetsPath;
+
+        std::filesystem::path mContentBrowserCurrentPath{};
 	}
 
 	Editor::~Editor()
@@ -103,6 +105,9 @@ namespace helios::editor
 			// Render content browser panel.
 			RenderContentBrowser();
 
+			// Render Log Window.
+			RenderLogWindow();
+
 			// Render and update handles.
 			ImGui::Render();
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), graphicsContext->GetCommandList());
@@ -114,63 +119,6 @@ namespace helios::editor
 				ImGui::RenderPlatformWindowsDefault(core::Application::GetWindowHandle(), graphicsContext->GetCommandList());
 			}
 		}
-	}
-
-	void Editor::SetCustomDarkTheme() const
-	{
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.Colors[ImGuiCol_Text] = ImVec4(0.86f, 0.93f, 0.89f, 0.78f);
-		style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.86f, 0.93f, 0.89f, 0.28f);
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);
-		style.Colors[ImGuiCol_Border] = ImVec4(0.31f, 0.31f, 1.00f, 0.00f);
-		style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		style.Colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-		style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-		style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-		style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.20f, 0.22f, 0.27f, 0.75f);
-		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.20f, 0.22f, 0.27f, 0.47f);
-		style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-		style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.09f, 0.15f, 0.16f, 1.00f);
-		style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-		style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_CheckMark] = ImVec4(0.71f, 0.22f, 0.27f, 1.00f);
-		style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
-		style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_Button] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
-		style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.86f);
-		style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_Header] = ImVec4(0.92f, 0.18f, 0.29f, 0.76f);
-		style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.86f);
-		style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_Separator] = ImVec4(0.14f, 0.16f, 0.19f, 1.00f);
-		style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-		style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.47f, 0.77f, 0.83f, 0.04f);
-		style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-		style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_PlotLines] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);
-		style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);
-		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.92f, 0.18f, 0.29f, 0.43f);
-		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.20f, 0.22f, 0.27f, 0.9f);
-		style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.20f, 0.22f, 0.27f, 0.73f);
-		style.WindowMinSize = ImVec2(160, 20);
-		style.FramePadding = ImVec2(4, 2);
-		style.ItemSpacing = ImVec2(6, 2);
-		style.ItemInnerSpacing = ImVec2(6, 4);
-		style.Alpha = 0.95f;
-		style.WindowRounding = 4.0f;
-		style.FrameRounding = 2.0f;
-		style.IndentSpacing = 6.0f;
-		style.ItemInnerSpacing = ImVec2(2, 4);
-		style.ColumnsMinSpacing = 50.0f;
-		style.GrabMinSize = 14.0f;
-		style.GrabRounding = 16.0f;
-		style.ScrollbarSize = 12.0f;
-		style.ScrollbarRounding = 16.0f;
 	}
 
 	void Editor::RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const
@@ -281,32 +229,91 @@ namespace helios::editor
 		ImGui::End();
 	}
 
-	void Editor::RenderDeferredGPass(gfx::Device* const device, const gfx::DeferredPassRTs* deferredRTs) const
+	void Editor::RenderDeferredGPass(gfx::Device *const device, const gfx::DeferredPassRTs *deferredRTs) const
 	{
-		const gfx::DescriptorHandle& albedoEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->albedoRT->renderTexture.get());
-		const gfx::DescriptorHandle& positionEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->positionEmissiveRT->renderTexture.get());
-		const gfx::DescriptorHandle& normalEmissiveDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->normalEmissiveRT->renderTexture.get());
-		const gfx::DescriptorHandle& aoMetalRoughnessDescriptorHandle = device->GetTextureSrvDescriptorHandle(deferredRTs->aoMetalRoughnessEmissiveRT->renderTexture.get());
+		const gfx::DescriptorHandle &albedoEmissiveDescriptorHandle =
+			device->GetTextureSrvDescriptorHandle(deferredRTs->albedoRT->renderTexture.get());
+		const gfx::DescriptorHandle &positionEmissiveDescriptorHandle =
+			device->GetTextureSrvDescriptorHandle(deferredRTs->positionEmissiveRT->renderTexture.get());
+		const gfx::DescriptorHandle &normalEmissiveDescriptorHandle =
+			device->GetTextureSrvDescriptorHandle(deferredRTs->normalEmissiveRT->renderTexture.get());
+		const gfx::DescriptorHandle &aoMetalRoughnessDescriptorHandle =
+			device->GetTextureSrvDescriptorHandle(deferredRTs->aoMetalRoughnessEmissiveRT->renderTexture.get());
 
 		ImGui::Begin("Albedo RT");
-		ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+		ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+					 ImGui::GetWindowViewport()->WorkSize);
 		ImGui::End();
 
 		// Normal can be negative, which the RT cannot display, hence commenting out this code.
 		// ImGui::Begin("Normal RT");
-		// ImGui::Image((ImTextureID)(normalDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
-		// ImGui::End();
+		// ImGui::Image((ImTextureID)(normalDescriptorHandle.cpuDescriptorHandle.ptr),
+		// ImGui::GetWindowViewport()->WorkSize); ImGui::End();
 
-		/// Position, ao metal roughness rt's have the emissive component in thier fouth comp (.a / .w), so not visualizing that either.
+		/// Position, ao metal roughness rt's have the emissive component in thier fouth comp (.a / .w), so not
+		/// visualizing that either.
 		// ImGui::Begin("AO Metal Roughness RT");
-		// ImGui::Image((ImTextureID)(aoMetalRoughnessDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
-		// ImGui::End();
+		// ImGui::Image((ImTextureID)(aoMetalRoughnessDescriptorHandle.cpuDescriptorHandle.ptr),
+		// ImGui::GetWindowViewport()->WorkSize); ImGui::End();
 
 		// ImGui::Begin("Position RT");
-		// ImGui::Image((ImTextureID)(positionEmissiveDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
-		// ImGui::End();
-
+		// ImGui::Image((ImTextureID)(positionEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+		// ImGui::GetWindowViewport()->WorkSize); ImGui::End();
 	}
+
+	void Editor::RenderLogWindow()
+	{
+		ImGui::Begin("Console Log");
+
+		bool clear = ImGui::Button("Clear");
+		ImGui::SameLine();
+		
+		if (clear)
+		{
+			sApplicationLog.textBuffer.clear();
+			sApplicationLog.messageTypes.clear();
+		}
+		ImGui::Separator();
+		
+		ImGui::BeginChild("Log Window");
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+	
+
+		for (uint32_t i : std::views::iota(0u, (uint32_t)(sApplicationLog.textBuffer.size())))
+		{
+		    editor::LogMessageTypes &messageType = sApplicationLog.messageTypes[i];
+			std::string &message = sApplicationLog.textBuffer[i];
+
+			switch (messageType)
+			{
+			case LogMessageTypes::Info: {
+				ImGui::TextColored(ImVec4{1.0f, 1.0f, 1.0f, 1.0f}, "%s\n", message.c_str());
+			}
+			break;
+
+			case LogMessageTypes::Warn: {
+				ImGui::TextColored(ImVec4{1.0f, 1.0f, 0.0f, 1.0f}, "%s\n", message.c_str());
+			}
+			break;
+
+			case LogMessageTypes::Error: {
+				ImGui::TextColored(ImVec4{1.0f, 0.0f, 0.0f, 1.0f}, "%s\n", message.c_str());
+			}
+			break;
+			}
+        }
+
+		ImGui::PopStyleVar();
+
+		if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+		{
+			ImGui::SetScrollHereY(1.0f);
+		}
+
+		ImGui::EndChild();
+		ImGui::End();
+	};
 
 	void Editor::RenderSceneViewport(const gfx::Device* device, const gfx::RenderTarget* renderTarget, scene::Scene* scene) const
 	{
@@ -327,6 +334,7 @@ namespace helios::editor
 				{
 					// Needed if two models have same name they end up having same transform.
 					static int modelNumber{};
+					
 					size_t lastSlash = modelPathWStr.find_last_of(L"\\");
 					size_t lastDot = modelPathWStr.find_last_of(L".");
 
@@ -354,7 +362,7 @@ namespace helios::editor
 
 		// We dont want to allow renderer to see paths other than those of the Assets directory.
 		// If the current path is not assets (i.e within one of the assets/ files), show a backbutton, else disable it.
-		if (mContentBrowserCurrentPath != ASSETS_PATH)
+		if (mContentBrowserCurrentPath != mAssetsPath)
 		{
 			if (ImGui::Button("Back"))
 			{
@@ -370,9 +378,10 @@ namespace helios::editor
 			{
 				// If a asset (in our case, model) is being dragged, payload is set to its path.
 				// Null size is + 1 because nulltermination char must also be copied.
-				std::filesystem::path absolutePath = std::filesystem::absolute(directoryEntry.path());
-				const wchar_t* itemPath = absolutePath.c_str();
-				ImGui::SetDragDropPayload("CONTENT_BROWSER_ASSET_ITEM", itemPath, (wcslen(itemPath) + 1) * sizeof(wchar_t));
+
+				auto itemPath = directoryEntry.path().wstring();
+				auto itemPathStr = itemPath.c_str();
+				ImGui::SetDragDropPayload("CONTENT_BROWSER_ASSET_ITEM", itemPathStr, (wcslen(itemPathStr) + 1) * sizeof(wchar_t));
 				ImGui::EndDragDropSource();
 			}
 		
@@ -402,5 +411,13 @@ namespace helios::editor
 	{
 		ImGui::GetMainViewport()->WorkSize = ImVec2((float)dimensions.x, (float)dimensions.y);
 		ImGui::GetMainViewport()->Size = ImVec2((float)dimensions.x, (float)dimensions.y);
+	}
+	
+	void ApplicationLog::AddLog(std::string_view logMessage, const editor::LogMessageTypes &messageType)
+	{
+		int size = textBuffer.size();
+		std::string message = logMessage.data();
+		textBuffer.emplace_back(message);
+		messageTypes.emplace_back(messageType);
 	}
 }

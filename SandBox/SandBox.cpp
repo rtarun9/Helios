@@ -15,7 +15,6 @@ void SandBox::OnInit()
     mDevice = std::make_unique<gfx::Device>();
 
     // Load scene and its data.
-    // Load scene and its data.
     mScene = std::make_unique<scene::Scene>(mDevice.get());
 
 #if 0
@@ -28,16 +27,8 @@ void SandBox::OnInit()
 	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
 	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
 	mScene->AddModel(std::move(cube));
+
 #endif
-
-    scene::ModelCreationDesc sphereCreationDesc{
-        .modelPath = L"Assets/Models/Sphere/scene.gltf",
-        .modelName = L"Sphere",
-    };
-
-    auto sphere = std::make_unique<scene::Model>(mDevice.get(), sphereCreationDesc);
-    sphere->GetTransform()->data.translate = {0.0f, 5.0f, 0.0f};
-    mScene->AddModel(std::move(sphere));
 
     scene::ModelCreationDesc DamagedHelmetCreationDesc{
         .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -164,6 +155,10 @@ void SandBox::OnInit()
 
     // Init other scene objects.
     mEditor = std::make_unique<editor::Editor>(mDevice.get());
+
+    editor::LogMessage(L"SandBox data initialized", editor::LogMessageTypes::Info);
+    editor::LogMessage(L"Warn Test", editor::LogMessageTypes::Warn);
+    editor::LogMessage(L"Warn Error", editor::LogMessageTypes::Error);
 }
 
 void SandBox::OnUpdate()
@@ -196,7 +191,8 @@ void SandBox::OnRender()
     {
         mDeferredGPass->Render(mScene.get(), deferredGPassGraphicsContext.get(), mDepthStencilTexture.get());
 
-        // Copying the depth stencil texture so it can be used for rendering lights (which is forward rendering).
+        // Copying the depth stencil texture so it can be used for rendering lights
+        // (which is forward rendering).
         deferredGPassGraphicsContext->AddResourceBarrier(
             mDepthStencilTexture->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE);
         deferredGPassGraphicsContext->AddResourceBarrier(mForwardRenderingDepthStencilTexture->GetResource(),
@@ -216,8 +212,8 @@ void SandBox::OnRender()
         deferredGPassGraphicsContext->ExecuteResourceBarriers();
     }
 
-    // RenderPass 1 : Do shading on offscreen RT (deferred lighting pass) and then render lights using forward
-    // rendering.
+    // RenderPass 1 : Do shading on offscreen RT (deferred lighting pass) and then
+    // render lights using forward rendering.
     {
         shadingGraphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                                    D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -265,7 +261,8 @@ void SandBox::OnRender()
         shadingGraphicsContext->ExecuteResourceBarriers();
     }
 
-    // Render pass 2 : Render offscreen rt to post processed RT (after all processing has occured).
+    // Render pass 2 : Render offscreen rt to post processed RT (after all
+    // processing has occured).
     {
         postProcessingGraphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(),
                                                           D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
@@ -281,7 +278,8 @@ void SandBox::OnRender()
                                                              std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
         postProcessingGraphicsContext->ClearDepthStencilView(mForwardRenderingDepthStencilTexture.get(), 1.0f);
 
-        // Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
+        // Note : buffer indices can be set here or in the RenderTarget::Render
+        // function. Begin done there for now.
         RenderTargetRenderResources rtvRenderResources{
             .textureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mOffscreenRT.get()),
             .postProcessBufferIndex = gfx::Buffer::GetCbvIndex(mPostProcessBuffer.get())};
@@ -289,8 +287,8 @@ void SandBox::OnRender()
         gfx::RenderTarget::Render(postProcessingGraphicsContext.get(), rtvRenderResources);
     }
 
-    // Render pass 3 : The RT that is to be displayed to swap chain is processed. For now, UI is rendered in this RT as
-    // well.
+    // Render pass 3 : The RT that is to be displayed to swap chain is processed.
+    // For now, UI is rendered in this RT as well.
     {
         finalGraphicsContext->AddResourceBarrier(mPostProcessingRT->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET,
                                                  D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -304,7 +302,8 @@ void SandBox::OnRender()
 
         finalGraphicsContext->ClearDepthStencilView(mForwardRenderingDepthStencilTexture.get(), 1.0f);
 
-        // Note : buffer indices can be set here or in the RenderTarget::Render function. Begin done there for now.
+        // Note : buffer indices can be set here or in the RenderTarget::Render
+        // function. Begin done there for now.
         RenderTargetRenderResources rtvRenderResources{
             .textureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mPostProcessingRT.get()),
         };
@@ -404,8 +403,6 @@ void SandBox::OnResize()
 
 void SandBox::CreatePipelineStates()
 {
-    // Load pipeline states.
-
     gfx::GraphicsPipelineStateCreationDesc postProcessGraphicsPipelineStateCreationDesc{
         .shaderModule{
             .vsShaderPath = L"Shaders/RenderPass/PostProcessRenderPassVS.cso",

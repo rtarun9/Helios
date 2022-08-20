@@ -2,10 +2,13 @@
 
 #include "Core/Application.hpp"
 #include "Core/Engine.hpp"
-#include "Core/Helpers.hpp"
 #include "Core/Timer.hpp"
 
+#include "Utility/Helpers.hpp"
+#include "Utility/ResourceManager.hpp"
+
 #include "Editor/Editor.hpp"
+#include "Editor/Log.hpp"
 
 #include "Graphics/API/CommandQueue.hpp"
 #include "Graphics/API/ComputeContext.hpp"

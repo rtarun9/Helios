@@ -123,4 +123,3 @@ static inline Uint2 GetMonitorDimensions(const MONITORINFOEXW& monitorInfo)
 
 	return Uint2{ .x = width, .y = height };
 }
-

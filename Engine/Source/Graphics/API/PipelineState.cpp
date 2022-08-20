@@ -6,20 +6,23 @@ namespace helios::gfx
 {
 	PipelineState::PipelineState(ID3D12Device* const device, const GraphicsPipelineStateCreationDesc& pipelineStateCreationDesc)
 	{
+        auto vsPath = utility::ResourceManager::GetAssetPath(pipelineStateCreationDesc.shaderModule.vsShaderPath);
+        auto psPath = utility::ResourceManager::GetAssetPath(pipelineStateCreationDesc.shaderModule.psShaderPath);
+
 		wrl::ComPtr<ID3DBlob> vertexBlob;
-		::D3DReadFileToBlob(pipelineStateCreationDesc.shaderModule.vsShaderPath.data(), &vertexBlob);
+        ::D3DReadFileToBlob(vsPath.c_str(), &vertexBlob);
 
 		wrl::ComPtr<ID3DBlob> pixelBlob;
-		::D3DReadFileToBlob(pipelineStateCreationDesc.shaderModule.psShaderPath.data(), &pixelBlob);
+		::D3DReadFileToBlob(psPath.c_str(), &pixelBlob);
 
 		if (!vertexBlob.Get())
 		{
-			ErrorMessage(pipelineStateCreationDesc.shaderModule.vsShaderPath.data() + std::wstring(L" Not found"));
+			ErrorMessage(vsPath + std::wstring(L" Not found"));
 		}
 
 		if (!pixelBlob.Get())
 		{
-			ErrorMessage(pipelineStateCreationDesc.shaderModule.psShaderPath.data() + std::wstring(L" Not found"));
+			ErrorMessage(psPath + std::wstring(L" Not found"));
 		}
 
 		// note(rtarun9) : Blending not used for now, but the code is setup if needed.
@@ -125,12 +128,13 @@ namespace helios::gfx
 
 	void PipelineState::CreateBindlessRootSignature(ID3D12Device* const device, std::wstring_view shaderPath) 
 	{
+        auto path = utility::ResourceManager::GetAssetPath(shaderPath);
 		wrl::ComPtr<ID3DBlob> shaderBlob;
-		::D3DReadFileToBlob(shaderPath.data(), &shaderBlob);
+        ::D3DReadFileToBlob(path.c_str(), &shaderBlob);
 
 		if (!shaderBlob.Get())
 		{
-			ErrorMessage(shaderPath.data() + std::wstring(L" Not found"));
+			ErrorMessage(path + std::wstring(L" Not found"));
 		}
 
 		ThrowIfFailed(device->CreateRootSignature(0u, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));

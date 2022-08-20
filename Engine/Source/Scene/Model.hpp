@@ -107,13 +107,15 @@ namespace helios::scene
 
 		Transform mTransform{};
 	
+	public:
+		std::wstring mModelName{};
+	
 	private:
 		std::vector<Mesh> mMeshes{};
 		std::vector<PBRMaterial> mMaterials{};
 		std::vector<uint32_t> mSamplers{};
 			
 		std::wstring mModelPath{};
-		std::wstring mModelName{};
 		std::wstring mModelDirectory{};
 	};
 }

@@ -3,7 +3,11 @@ set(SRC_FILES
     "Source/Core/Engine.cpp"
     "Source/Core/Timer.cpp"
 
+    "Source/Utility/Helpers.hpp"
+    "Source/Utility/ResourceManager.hpp"
+
     "Source/Editor/Editor.cpp"
+    "Source/Editor/Log.cpp"
 
     "Source/Graphics/API/CommandQueue.cpp"
     "Source/Graphics/API/ComputeContext.cpp"
@@ -22,6 +26,33 @@ set(SRC_FILES
     "Source/Scene/Model.cpp"
     "Source/Scene/Scene.cpp"
     "Source/Scene/SkyBox.cpp"
+
+    "Source/Core/Application.hpp"
+    "Source/Core/Engine.hpp"
+    "Source/Core/Timer.hpp"
+
+    "Source/Utility/ResourceManager.cpp"
+
+    "Source/Editor/Editor.hpp"
+    "Source/Editor/Log.hpp"
+
+    "Source/Graphics/API/CommandQueue.hpp"
+    "Source/Graphics/API/ComputeContext.hpp"
+    "Source/Graphics/API/Descriptor.hpp"
+    "Source/Graphics/API/Device.hpp"
+    "Source/Graphics/API/GraphicsContext.hpp"
+    "Source/Graphics/API/MemoryAllocator.hpp"
+    "Source/Graphics/API/MipMapGenerator.hpp"
+    "Source/Graphics/API/PipelineState.hpp"
+    "Source/Graphics/API/Resources.hpp"
+
+    "Source/Graphics/RenderPass/DeferredGeometryPass.hpp"
+
+    "Source/Scene/Camera.hpp"
+    "Source/Scene/Light.hpp"
+    "Source/Scene/Model.hpp"
+    "Source/Scene/Scene.hpp"
+    "Source/Scene/SkyBox.hpp"
 )
 
 add_subdirectory(ThirdParty)
@@ -35,3 +66,5 @@ target_precompile_headers(
     PUBLIC
     Source/Pch.hpp
 )
+
+add_custom_command(TARGET Helios POST_BUILD COMMAND cmd  "${CMAKE_SOURCE_DIR}//Shaders//CompileShaders.bat")
