@@ -80,44 +80,32 @@ namespace helios::scene
 
 		}
 
-		// note(rtarun9) : The below multi threaded approach does work, but can cause race conditions as device is shared amonst them and there is no 
-		// internal locking / mutex mech for device.
-		//// Load samplers.
-		//std::thread loadSamplerThread([&]()
-		//{
-		//	LoadSamplers(device, model);
-		//});
-		//
-		//// Load textures and materials.
-		//std::thread loadMaterialThread([&]()
-		//{
-		//	LoadMaterials(device, model);
-		//});
-		//
-		//// Build meshes.
-		//tinygltf::Scene& scene = model.scenes[model.defaultScene];
-		//
-		//std::thread loadMeshThread([&]()
-		//{
-		//	for (const int& nodeIndex : scene.nodes)
-		//	{
-		//		LoadNode(device, modelCreationDesc, nodeIndex, model);
-		//	}
-		//});
-		//
-		//loadSamplerThread.join();
-		//loadMaterialThread.join();
-		//loadMeshThread.join();
-
-		LoadSamplers(device, model);
-		LoadMaterials(device, model);
-
-		tinygltf::Scene& scene = model.scenes[model.defaultScene];
-
-		for (const int& nodeIndex : scene.nodes)
+		// Load samplers.
+		std::thread loadSamplerThread([&]()
 		{
-			LoadNode(device, modelCreationDesc, nodeIndex, model);
-		}
+			LoadSamplers(device, model);
+		});
+		
+		// Load textures and materials.
+		std::thread loadMaterialThread([&]()
+		{
+			LoadMaterials(device, model);
+		});
+		
+		// Build meshes.
+		tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		
+		std::thread loadMeshThread([&]()
+		{
+			for (const int& nodeIndex : scene.nodes)
+			{
+				LoadNode(device, modelCreationDesc, nodeIndex, model);
+			}
+		});
+		
+		loadSamplerThread.join();
+		loadMaterialThread.join();
+		loadMeshThread.join();
 	}
 
 
@@ -460,8 +448,6 @@ namespace helios::scene
 
 	void Model::LoadMaterials(const gfx::Device* device, tinygltf::Model& model)
 	{
-		std::mutex deviceAccessMutex{};
-
 		auto CreateTexture = [&](tinygltf::Image& image, gfx::TextureCreationDesc& textureCreationDesc)
 		{
 			std::string texturePath = WstringToString(mModelDirectory) + image.uri;
@@ -480,7 +466,6 @@ namespace helios::scene
 
 			textureCreationDesc.dimensions = { (uint32_t)width, (uint32_t)height };
 
-			std::lock_guard<std::mutex> mutexGuard(deviceAccessMutex);
 			return std::move(std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc, data)));
 		};
 

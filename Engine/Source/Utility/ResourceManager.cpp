@@ -2,6 +2,10 @@
 
 #include "Editor/Log.hpp"
 
+
+#include "Scene/Scene.hpp"
+#include "Graphics/API/Device.hpp"
+
 namespace helios::utility
 {
 	void ResourceManager::LocateAssetsDirectory()
@@ -35,5 +39,18 @@ namespace helios::utility
     std::wstring ResourceManager::GetAssetPath(std::wstring_view relativePath)
     {
         return std::move(sAssetsDirectory + relativePath.data());
+    }
+
+    void ResourceManager::LoadResourceToScene(scene::Scene* scene, const std::function<void(scene::Scene*)>& function)
+    {
+        sResourceCreationThreads.push_back(std::thread([&]() {function; }));
+    }
+
+    void ResourceManager::WaitForThreads()
+    {
+        for (auto& thread : sResourceCreationThreads)
+        {
+            thread.join();
+        }
     }
 } // namespace helios::utility

@@ -416,6 +416,8 @@ namespace helios::gfx
 			};
 		}
 
+		std::lock_guard<std::recursive_mutex> resourceLockGuard(sResourceMutex);
+
 		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
 		texture.dimensions = textureCreationDesc.dimensions;

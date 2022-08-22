@@ -24,7 +24,7 @@ void SandBox::OnInit()
 		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
 		.modelName = L"Cube",
 	};
-	
+
 	auto cube = std::make_unique<scene::Model>(mDevice.get(), cubeCreationDesc);
 	cube->GetTransform()->data.translate = { 0.0f, 5.0f, 0.0f };
 	mScene->AddModel(std::move(cube));
@@ -37,9 +37,12 @@ void SandBox::OnInit()
 		.modelName = L"DamagedHelmet",
 	};
 
-	auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
-	damagedHelmet->GetTransform()->data.rotation = {math::XMConvertToRadians(63.0f), 0.0f, 0.0f};
-	mScene->AddModel(std::move(damagedHelmet));
+	std::jthread damagedHelmetThread([&]()
+	{ 
+		auto damagedHelmet = std::make_unique<scene::Model>(mDevice.get(), DamagedHelmetCreationDesc);
+		damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
+		mScene->AddModel(std::move(damagedHelmet));
+	});
 
 	scene::ModelCreationDesc sciFiHelmetCreationDesc
 	{
@@ -47,9 +50,14 @@ void SandBox::OnInit()
 		.modelName = L"SciFiHelmet",
 	};
 
-	auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
-	sciFiHelmet->GetTransform()->data.translate = {5.0f, 0.0f, 0.0f};
-	mScene->AddModel(std::move(sciFiHelmet));
+	std::jthread scifiHelmetThread([&]()
+	{
+		auto sciFiHelmet = std::make_unique<scene::Model>(mDevice.get(), sciFiHelmetCreationDesc);
+		sciFiHelmet->GetTransform()->data.translate = { 5.0f, 0.0f, 0.0f };
+		mScene->AddModel(std::move(sciFiHelmet));
+	});
+
+
 
 	scene::ModelCreationDesc metalRoughSpheresCreationDesc
 	{
@@ -57,20 +65,29 @@ void SandBox::OnInit()
 		.modelName = L"MetalRoughSpheres",
 	};
 
-	auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
-	metalRoughSpheres->GetTransform()->data.translate = {-15.0f, 0.0f, 0.0f};
-	mScene->AddModel(std::move(metalRoughSpheres));
+	std::jthread metalRoughSpheresThread([&]()
+	{
+		auto metalRoughSpheres = std::make_unique<scene::Model>(mDevice.get(), metalRoughSpheresCreationDesc);
+		metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
+		mScene->AddModel(std::move(metalRoughSpheres));
+	});
 
-#if 0
+
+
+#if 1
 	scene::ModelCreationDesc sponzaCreationDesc
 	{
 		.modelPath = L"Assets/Models/sponza-gltf-pbr/sponza.glb",
 		.modelName = L"Sponza Scene",
 	};
 
-	auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
-	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f };
-	mScene->AddModel(std::move(sponza));
+	std::jthread sponzaThread([&]()
+	{
+			auto sponza = std::make_unique<scene::Model>(mDevice.get(), sponzaCreationDesc);
+			sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f };
+			mScene->AddModel(std::move(sponza));
+	});
+
 #endif
 
 	// Load lights.
@@ -183,6 +200,7 @@ void SandBox::OnInit()
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
 
+	utility::ResourceManager::WaitForThreads();
 	editor::LogMessage(L"SandBox data initialized", editor::LogMessageTypes::Info);
 	editor::LogMessage(L"Warn Test", editor::LogMessageTypes::Warn);
 	editor::LogMessage(L"Warn Error", editor::LogMessageTypes::Error);

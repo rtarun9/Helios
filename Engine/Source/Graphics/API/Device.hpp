@@ -134,7 +134,8 @@ namespace helios::gfx
 
 		std::unique_ptr<MipMapGenerator> mMipMapGenerator{};
 
-		friend class MipMapGenerator;
+		// Mutex is used primarily to prevent race conditions where more than one resource has the same index.
+		static inline std::recursive_mutex  sResourceMutex{};
 	};
 
 	template <typename T>
@@ -148,6 +149,8 @@ namespace helios::gfx
 		buffer.sizeInBytes = numberComponents * sizeof(T);
 
 		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
+
+		std::lock_guard<std::recursive_mutex> resourceLockGuard(sResourceMutex);
 
 		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 
