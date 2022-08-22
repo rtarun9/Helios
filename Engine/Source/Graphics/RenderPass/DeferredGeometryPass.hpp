@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "../API/Resources.hpp"
 #include "../API/PipelineState.hpp"
 

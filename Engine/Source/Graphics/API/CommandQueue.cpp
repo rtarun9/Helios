@@ -80,33 +80,6 @@ namespace helios::gfx
 		return commandList;
 	}
 
-	// Returns the fence value to wait for to notify when command list has finished execution.
-	uint64_t CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList1* const commandList)
-	{
-		commandList->Close();
-
-		ID3D12CommandAllocator* commandAllocator{ nullptr };
-		UINT dataSize = sizeof(ID3D12CommandAllocator);
-
-		ThrowIfFailed(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, &commandAllocator));
-
-		std::array<ID3D12CommandList* const, 1> commandLists
-		{
-			commandList
-		};
-
-		mCommandQueue->ExecuteCommandLists(static_cast<UINT>(commandLists.size()), commandLists.data());
-	
-		uint64_t fenceValue = Signal();
-
-		mCommandAllocatorQueue.emplace(CommandAllocator{ .fenceValue = fenceValue, .commandAllocator = commandAllocator });
-		mCommandListQueue.emplace(commandList);
-
-		commandAllocator->Release();
-
-		return fenceValue;
-	}
-
 	uint64_t CommandQueue::ExecuteCommandLists(std::span<ID3D12GraphicsCommandList1*> commandList)
 	{
 		for (auto& list : commandList)
@@ -140,9 +113,10 @@ namespace helios::gfx
 		return fenceValue;
 	}
 
-	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList1* const commandList)
+	void CommandQueue::ExecuteAndFlush(ID3D12GraphicsCommandList1* commandList)
 	{
-		uint64_t signalValue = ExecuteCommandList(commandList);
+		std::array<ID3D12GraphicsCommandList1*, 1> commandLists{ std::move(commandList) };
+		uint64_t signalValue = ExecuteCommandLists(commandLists);
 		FlushQueue();
 	}
 

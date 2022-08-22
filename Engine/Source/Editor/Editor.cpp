@@ -330,7 +330,7 @@ namespace helios::editor
 				// If yes, let the model name be the name between final \ and .gltf.
 				// note(rtarun9) : the / and \\ are platform specific, preferring windows format for now.
 				const wchar_t* modelPath = reinterpret_cast<const wchar_t*>(payLoad->Data);
-				if (std::wstring modelPathWStr = modelPath; modelPathWStr.find(L".gltf") != std::wstring::npos)
+				if (std::wstring modelPathWStr = modelPath; modelPathWStr.find(L".gltf") != std::wstring::npos || modelPathWStr.find(L".glb") != std::wstring::npos)
 				{
 					// Needed if two models have same name they end up having same transform.
 					static int modelNumber{};

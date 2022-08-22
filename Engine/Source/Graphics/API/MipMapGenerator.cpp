@@ -12,7 +12,8 @@ namespace helios::gfx
 	{
         auto computeShaderPath = utility::ResourceManager::GetAssetPath(L"Shaders/MipMapGeneration/GenerateMipsCS.cso");
 
-		ComputePipelineStateCreationDesc pipelineCreationDesc{
+		ComputePipelineStateCreationDesc pipelineCreationDesc
+		{
 			.csShaderPath = computeShaderPath,
 			.pipelineName = L"Mip Map Generation Pipeline"
 		};

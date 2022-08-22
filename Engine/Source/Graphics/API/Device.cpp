@@ -255,27 +255,40 @@ namespace helios::gfx
 	{
 	}
 
-	void Device::ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext)
+	void Device::ExecuteContext(std::span<std::unique_ptr<GraphicsContext>> graphicsContext)
 	{
-		// Execute commands recorded into the graphics context.
-		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandList(graphicsContext->GetCommandList());
-	}
-
-	void Device::ExecuteContext(std::span<GraphicsContext*> graphicsContext)
-	{
-		std::vector<ID3D12GraphicsCommandList1*> commandList{};
-		for (auto list : graphicsContext)
+		std::vector<ID3D12GraphicsCommandList1*> commandLists{};
+		for (auto& list : graphicsContext)
 		{
-			commandList.push_back(list->GetCommandList());
+			commandLists.push_back(list->GetCommandList());
 		}
 
-		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandLists(commandList);
+		mFrameFenceValues[mCurrentBackBufferIndex] = mGraphicsCommandQueue->ExecuteCommandLists(commandLists);
+	}
+
+	void Device::ExecuteContext(std::span<std::unique_ptr<ComputeContext>> computeContext)
+	{
+		std::vector<ID3D12GraphicsCommandList1*> commandLists{};
+		for (auto& list : computeContext)
+		{
+			commandLists.push_back(list->GetCommandList());
+		}
+
+		// Execute commands recorded into the graphics context.
+		mFrameFenceValues[mCurrentBackBufferIndex] = mComputeCommandQueue->ExecuteCommandLists(commandLists);
+	}
+
+	// Forward argument in a 'span compatible format' other overload.
+	void Device::ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext)
+	{
+		std::array<std::unique_ptr<GraphicsContext>, 1u> context{ std::move(graphicsContext) };
+		ExecuteContext(context);
 	}
 
 	void Device::ExecuteContext(std::unique_ptr<ComputeContext> computeContext)
 	{
-		// Execute commands recorded into the graphics context.
-		mFrameFenceValues[mCurrentBackBufferIndex] = mComputeCommandQueue->ExecuteCommandList(computeContext->GetCommandList());
+		std::array<std::unique_ptr<ComputeContext>, 1u> context{ std::move(computeContext) };
+		ExecuteContext(context);
 	}
 
 	void Device::Present()

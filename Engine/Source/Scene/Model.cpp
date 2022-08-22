@@ -412,7 +412,7 @@ namespace helios::scene
 				
 				default:
 				{
-					samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+					samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
 				}
 				break;
 			}
@@ -425,14 +425,17 @@ namespace helios::scene
 					{
 						return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 					}break;
+
 					case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
 					{
 						return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 					}break;
+
 					case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
 					{
 						return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
 					}break;
+					
 					default:
 					{
 						return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -440,6 +443,7 @@ namespace helios::scene
 				}
 			};
 
+			samplerCreationDesc.samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
 			samplerCreationDesc.samplerDesc.AddressU = toTextureAddressMode(sampler.wrapS);
 			samplerCreationDesc.samplerDesc.AddressV = toTextureAddressMode(sampler.wrapT);
 			samplerCreationDesc.samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;

@@ -1,7 +1,0 @@
----
-Language: Cpp
-BasedOnStyle: Microsoft 
-Standard: c++20
-IndentWidth: 4
-TabWidth: 4
-UseTab: Always

@@ -15,36 +15,40 @@ namespace helios::core
         // Initialize Window class.
 
         // Force window redraw when either width / height of client region changes or if movement adjustment happens.
-        WNDCLASSEXW windowClass{.cbSize = sizeof(WNDCLASSEXW),
-                                .style = CS_HREDRAW | CS_VREDRAW,
-                                .lpfnWndProc = WindowProc,
-                                .cbClsExtra = 0,
-                                .cbWndExtra = 0,
-                                .hInstance = instance,
-                                .hIcon = nullptr,
-                                .hCursor = nullptr,
-                                .hbrBackground = nullptr,
-                                .lpszMenuName = nullptr,
-                                .lpszClassName = WINDOW_CLASS_NAME,
-                                .hIconSm = nullptr};
+        WNDCLASSEXW windowClass
+        {
+            .cbSize = sizeof(WNDCLASSEXW),
+            .style = CS_HREDRAW | CS_VREDRAW,
+            .lpfnWndProc = WindowProc,
+            .cbClsExtra = 0,
+            .cbWndExtra = 0,
+            .hInstance = instance,
+            .hIcon = nullptr,
+            .hCursor = nullptr,
+            .hbrBackground = nullptr,
+            .lpszMenuName = nullptr,
+            .lpszClassName = WINDOW_CLASS_NAME,
+            .hIconSm = nullptr
+        };
 
         if (!(::RegisterClassExW(&windowClass)))
         {
             ErrorMessage(L"Failed to register window class");
         }
 
-        sWindowRect = {.left = 0,
-                       .top = 0,
-                       .right = static_cast<LONG>(engine->GetDimensions().x),
-                       .bottom = static_cast<LONG>(engine->GetDimensions().y)};
+        sWindowRect = 
+        {
+            .left = 0,
+            .top = 0,
+            .right = static_cast<LONG>(engine->GetDimensions().x),
+            .bottom = static_cast<LONG>(engine->GetDimensions().y)
+        };
 
         Uint2 windowPosition = CenterWindow();
 
         // Pass pointer to engine as last parameter to createWindow. We can retrieve this data in the WindowProc
         // function by reinterpreting the lParam as a LPCREATESTRUCT.
-        sWindowHandle =
-            ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.x,
-                              windowPosition.y, sClientDimensions.x, sClientDimensions.y, 0, 0, instance, engine);
+        sWindowHandle = ::CreateWindowExW(0, WINDOW_CLASS_NAME, engine->GetTitle().c_str(), WS_OVERLAPPEDWINDOW, windowPosition.x, windowPosition.y, sClientDimensions.x, sClientDimensions.y, 0, 0, instance, engine);
 
         sClientDimensions = GetDimensionFromRect(sWindowRect);
         sPreviousWindowRect = sWindowRect;
@@ -189,14 +193,15 @@ namespace helios::core
 
         switch (message)
         {
-        case WM_CREATE: {
+        case WM_CREATE: 
+        {
             // Save the Engine* passed in to CreateWindow.
             LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
             SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
-        }
-        break;
+        }break;
 
-        case WM_KEYDOWN: {
+        case WM_KEYDOWN: 
+        {
             engine->OnKeyAction(static_cast<uint8_t>(wParam), true);
 
             if (wParam == VK_ESCAPE)
@@ -208,21 +213,21 @@ namespace helios::core
             {
                 ToggleFullScreenMode();
             }
-        }
-        break;
+        }break;
 
-        case WM_KEYUP: {
+        case WM_KEYUP: 
+        {
             engine->OnKeyAction(static_cast<uint8_t>(wParam), false);
-        }
-        break;
+        }break;
 
-        case WM_DESTROY: {
+        case WM_DESTROY: 
+        {
             ::PostQuitMessage(0);
             return 0;
-        }
-        break;
+        }break;
 
-        case WM_SIZE: {
+        case WM_SIZE: 
+        {
             if (engine && !resizingWindow)
             {
                 ::GetClientRect(sWindowHandle, &sWindowRect);
@@ -230,22 +235,21 @@ namespace helios::core
 
                 engine->OnResize();
             }
-        }
-        break;
+        }break;
 
-        case WM_ENTERSIZEMOVE: {
+        case WM_ENTERSIZEMOVE: 
+        {
             resizingWindow = true;
-        }
-        break;
+        }break;
 
-        case WM_EXITSIZEMOVE: {
+        case WM_EXITSIZEMOVE: 
+        {
             resizingWindow = false;
-        }
-        break;
+        }break;
 
-        default: {
-        }
-        break;
+        default: 
+        {
+        }break;
         }
 
         // Handle any messages the switch statement didn't.

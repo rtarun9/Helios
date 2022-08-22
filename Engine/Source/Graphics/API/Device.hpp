@@ -62,10 +62,12 @@ namespace helios::gfx
 		void BeginFrame();
 		void EndFrame();
 
+		void ExecuteContext(std::span<std::unique_ptr<GraphicsContext>> graphicsContext);
+		void ExecuteContext(std::span<std::unique_ptr<ComputeContext>> computeContext);
+		
 		void ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext);
-		void ExecuteContext(std::span<GraphicsContext*> graphicsContext);
-
 		void ExecuteContext(std::unique_ptr<ComputeContext> computeContext);
+
 		void Present();
 
 		// Helper creation functions.
@@ -77,7 +79,7 @@ namespace helios::gfx
 		uint32_t CreateSampler(const SamplerCreationDesc& samplerCreationDesc) const;
 
 		template <typename T>
-		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data) const;
+		Buffer CreateBuffer(const BufferCreationDesc& bufferCreationDesc, std::span<const T> data = {}) const;
 
 		
 		// note(rtarun9) : The creation desc are not passed as const T&, as the contents (the dimensions) are not set by user if the texture is being loaded from file.

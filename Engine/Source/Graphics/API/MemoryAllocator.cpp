@@ -11,7 +11,8 @@ namespace helios::gfx
     MemoryAllocator::MemoryAllocator(ID3D12Device *device, IDXGIAdapter *adapter)
     {
         // Create D3D12MA adapter.
-        D3D12MA::ALLOCATOR_DESC allocatorDesc{
+        D3D12MA::ALLOCATOR_DESC allocatorDesc
+        {
             .pDevice = device,
             .pAdapter = adapter,
         };
@@ -29,28 +30,27 @@ namespace helios::gfx
         bool isCpuVisible{};
 
         switch (bufferCreationDesc.usage)
-        {
-        case BufferUsage::UploadBuffer:
-        case BufferUsage::ConstantBuffer: {
-            resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-            heapType = D3D12_HEAP_TYPE_UPLOAD;
-            isCpuVisible = true;
-        }
-        break;
+            {
+            case BufferUsage::UploadBuffer:
+            case BufferUsage::ConstantBuffer: 
+            {
+                resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+                heapType = D3D12_HEAP_TYPE_UPLOAD;
+                isCpuVisible = true;
+            }break;
 
-        case BufferUsage::IndexBuffer:
-        case BufferUsage::StructuredBuffer: {
-            resourceState = D3D12_RESOURCE_STATE_COMMON;
-            heapType = D3D12_HEAP_TYPE_DEFAULT;
-            isCpuVisible = false;
-        }
-        break;
+            case BufferUsage::IndexBuffer:
+            case BufferUsage::StructuredBuffer: 
+            {
+                resourceState = D3D12_RESOURCE_STATE_COMMON;
+                heapType = D3D12_HEAP_TYPE_DEFAULT;
+                isCpuVisible = false;
+            }break;
         };
 
         D3D12MA::ALLOCATION_DESC allocationDesc{.HeapType = heapType};
 
-        ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState,
-                                                 nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+        ThrowIfFailed(mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
 
         if (isCpuVisible)
         {
@@ -65,8 +65,7 @@ namespace helios::gfx
         return std::move(std::make_unique<Allocation>(allocation));
     }
 
-    std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(
-        TextureCreationDesc &textureCreationDesc)
+    std::unique_ptr<Allocation> MemoryAllocator::CreateTextureResourceAllocation(TextureCreationDesc &textureCreationDesc)
     {
         Allocation allocation{};
 
@@ -80,43 +79,47 @@ namespace helios::gfx
 
         switch (textureCreationDesc.format)
         {
-        case DXGI_FORMAT_R32_FLOAT:
-        case DXGI_FORMAT_D32_FLOAT:
-        case DXGI_FORMAT_R32_TYPELESS: {
-            dsFormat = DXGI_FORMAT_D32_FLOAT;
-            format = DXGI_FORMAT_R32_FLOAT;
-        }
-        break;
+            case DXGI_FORMAT_R32_FLOAT:
+            case DXGI_FORMAT_D32_FLOAT:
+            case DXGI_FORMAT_R32_TYPELESS: 
+            {
+                dsFormat = DXGI_FORMAT_D32_FLOAT;
+                format = DXGI_FORMAT_R32_FLOAT;
+            }break;
         }
 
-        ResourceCreationDesc resourceCreationDesc{
-            .resourceDesc{.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-                          .Alignment = 0u,
-                          .Width = textureCreationDesc.dimensions.x,
-                          .Height = textureCreationDesc.dimensions.y,
-                          .DepthOrArraySize = static_cast<UINT16>(textureCreationDesc.depthOrArraySize),
-                          .MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
-                          .Format = format,
-                          .SampleDesc{.Count = 1u, .Quality = 0u},
-                          .Flags = D3D12_RESOURCE_FLAG_NONE}};
+        ResourceCreationDesc resourceCreationDesc
+        {
+            .resourceDesc
+            {
+                .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                .Alignment = 0u,
+                .Width = textureCreationDesc.dimensions.x,
+                .Height = textureCreationDesc.dimensions.y,
+                .DepthOrArraySize = static_cast<UINT16>(textureCreationDesc.depthOrArraySize),
+                .MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
+                .Format = format,
+                .SampleDesc{.Count = 1u, .Quality = 0u},
+                .Flags = D3D12_RESOURCE_FLAG_NONE
+            }
+        };
 
         if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Width)
         {
-            resourceCreationDesc.resourceDesc.MipLevels =
-                static_cast<UINT16>(resourceCreationDesc.resourceDesc.Width - 1);
+            resourceCreationDesc.resourceDesc.MipLevels = static_cast<UINT16>(resourceCreationDesc.resourceDesc.Width - 1);
         }
 
         if (resourceCreationDesc.resourceDesc.MipLevels >= resourceCreationDesc.resourceDesc.Height)
         {
-            resourceCreationDesc.resourceDesc.MipLevels =
-                static_cast<UINT16>(resourceCreationDesc.resourceDesc.Height - 1);
+            resourceCreationDesc.resourceDesc.MipLevels = static_cast<UINT16>(resourceCreationDesc.resourceDesc.Height - 1);
         }
 
         textureCreationDesc.mipLevels = resourceCreationDesc.resourceDesc.MipLevels;
 
         switch (textureCreationDesc.usage)
         {
-        case TextureUsage::DepthStencil: {
+        case TextureUsage::DepthStencil: 
+        {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
             resourceCreationDesc.resourceDesc.Format = dsFormat;
             allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -124,7 +127,8 @@ namespace helios::gfx
         }
         break;
 
-        case TextureUsage::RenderTarget: {
+        case TextureUsage::RenderTarget: 
+        {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
             allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
             allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -136,7 +140,8 @@ namespace helios::gfx
         case TextureUsage::TextureFromPath:
         case TextureUsage::TextureFromData:
         case TextureUsage::HDRTextureFromPath:
-        case TextureUsage::CubeMap: {
+        case TextureUsage::CubeMap: 
+        {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             resourceState = D3D12_RESOURCE_STATE_COMMON;
         }
@@ -147,7 +152,8 @@ namespace helios::gfx
 
         if (textureCreationDesc.usage == TextureUsage::RenderTarget)
         {
-            optimizedClearValue = {
+            optimizedClearValue = 
+            {
                 .Format = format,
                 .Color = {0.0f, 0.0f, 0.0f, 1.0f},
             };
@@ -160,9 +166,7 @@ namespace helios::gfx
         }
 
         ThrowIfFailed(
-            mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState,
-                                       optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr,
-                                       &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
+            mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
         allocation.resource->SetName(textureCreationDesc.name.c_str());
         allocation.allocation->SetResource(allocation.resource.Get());
         return std::move(std::make_unique<Allocation>(allocation));

@@ -28,7 +28,6 @@ namespace helios::gfx
 
 		// Returns the fence value to wait for to notify when command list has finished execution.
 		[[nodiscard]]
-		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList1* commandList);
 		uint64_t ExecuteCommandLists(std::span<ID3D12GraphicsCommandList1*> commandList);
 
 		void ExecuteAndFlush(ID3D12GraphicsCommandList1* commandList);

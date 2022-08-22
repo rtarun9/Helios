@@ -16,69 +16,74 @@ namespace helios::gfx
     {
         // Create pipeline state.
 
-        gfx::GraphicsPipelineStateCreationDesc deferredPassPipelineStateCreationDesc{
-            .shaderModule{
+        gfx::GraphicsPipelineStateCreationDesc deferredPassPipelineStateCreationDesc
+        {
+            .shaderModule
+            {
                 .vsShaderPath = (L"Shaders/RenderPass/DeferredGeometryPassVS.cso"),
                 .psShaderPath = (L"Shaders/RenderPass/DeferredGeometryPassPS.cso"),
             },
-            .rtvFormats = {DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT,
-                           DXGI_FORMAT_R16G16B16A16_FLOAT},
+            .rtvFormats = {DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT},
             .rtvCount = 4,
-            .pipelineName = L"Deferred Geometry Pass Pipeline"};
+            .pipelineName = L"Deferred Geometry Pass Pipeline"
+        };
 
-        mDeferredPassPipelineState =
-            std::make_unique<gfx::PipelineState>(device->GetDevice(), deferredPassPipelineStateCreationDesc);
+        mDeferredPassPipelineState = std::make_unique<gfx::PipelineState>(device->GetDevice(), deferredPassPipelineStateCreationDesc);
 
         // Create MRT's for GPass.
 
-        gfx::TextureCreationDesc albedoRenderTargetTextureCreationDesc{.usage = gfx::TextureUsage::RenderTarget,
-                                                                       .dimensions = dimensions,
-                                                                       .format = DXGI_FORMAT_R8G8B8A8_UNORM,
-                                                                       .name = L"Deferred Pass Albedo Texture"};
+        gfx::TextureCreationDesc albedoRenderTargetTextureCreationDesc
+        {
+            .usage = gfx::TextureUsage::RenderTarget,
+            .dimensions = dimensions,
+            .format = DXGI_FORMAT_R8G8B8A8_UNORM,
+            .name = L"Deferred Pass Albedo Texture"
+        };
 
-        mDeferredPassRTs.albedoRT =
-            std::make_unique<gfx::RenderTarget>(device->CreateRenderTarget(albedoRenderTargetTextureCreationDesc));
+        mDeferredPassRTs.albedoRT = std::make_unique<gfx::RenderTarget>(device->CreateRenderTarget(albedoRenderTargetTextureCreationDesc));
 
-        gfx::TextureCreationDesc positionEmissiveRenderTargetTextureCreationDesc{
+        gfx::TextureCreationDesc positionEmissiveRenderTargetTextureCreationDesc
+        {
             .usage = gfx::TextureUsage::RenderTarget,
             .dimensions = dimensions,
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-            .name = L"Deferred Pass Position Emissive Texture"};
+            .name = L"Deferred Pass Position Emissive Texture"
+        };
 
-        mDeferredPassRTs.positionEmissiveRT = std::make_unique<gfx::RenderTarget>(
-            device->CreateRenderTarget(positionEmissiveRenderTargetTextureCreationDesc));
+        mDeferredPassRTs.positionEmissiveRT = std::make_unique<gfx::RenderTarget>(device->CreateRenderTarget(positionEmissiveRenderTargetTextureCreationDesc));
 
-        gfx::TextureCreationDesc normalEmissiveRenderTargetTextureCreationDesc{
+        gfx::TextureCreationDesc normalEmissiveRenderTargetTextureCreationDesc
+        {
             .usage = gfx::TextureUsage::RenderTarget,
             .dimensions = dimensions,
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-            .name = L"Deferred Pass Normal Emissive Texture"};
+            .name = L"Deferred Pass Normal Emissive Texture"
+        };
 
-        mDeferredPassRTs.normalEmissiveRT = std::make_unique<gfx::RenderTarget>(
-            device->CreateRenderTarget(normalEmissiveRenderTargetTextureCreationDesc));
+        mDeferredPassRTs.normalEmissiveRT = std::make_unique<gfx::RenderTarget>(device->CreateRenderTarget(normalEmissiveRenderTargetTextureCreationDesc));
 
-        gfx::TextureCreationDesc aoMetalRoughnessEmissiveRenderTargetTextureCreationDesc{
+        gfx::TextureCreationDesc aoMetalRoughnessEmissiveRenderTargetTextureCreationDesc
+        {
             .usage = gfx::TextureUsage::RenderTarget,
             .dimensions = dimensions,
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-            .name = L"Deferred Pass AO Metal Roughness Emissive Texture"};
+            .name = L"Deferred Pass AO Metal Roughness Emissive Texture"
+        };
 
-        mDeferredPassRTs.aoMetalRoughnessEmissiveRT = std::make_unique<gfx::RenderTarget>(
-            device->CreateRenderTarget(aoMetalRoughnessEmissiveRenderTargetTextureCreationDesc));
+        mDeferredPassRTs.aoMetalRoughnessEmissiveRT = std::make_unique<gfx::RenderTarget>(device->CreateRenderTarget(aoMetalRoughnessEmissiveRenderTargetTextureCreationDesc));
     }
 
-    void DeferredGeometryPass::Render(scene::Scene *scene, gfx::GraphicsContext *graphicsContext,
-                                      gfx::Texture *depthBuffer)
+    void DeferredGeometryPass::Render(scene::Scene *scene, gfx::GraphicsContext *graphicsContext, gfx::Texture *depthBuffer)
     {
-        std::array<const gfx::RenderTarget *, 4u> renderTargets{
+        std::array<const gfx::RenderTarget *, 4u> renderTargets
+        {
             mDeferredPassRTs.albedoRT.get(),
             mDeferredPassRTs.positionEmissiveRT.get(),
             mDeferredPassRTs.normalEmissiveRT.get(),
             mDeferredPassRTs.aoMetalRoughnessEmissiveRT.get(),
         };
 
-        graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                            D3D12_RESOURCE_STATE_RENDER_TARGET);
+        graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
         graphicsContext->ExecuteResourceBarriers();
 
         graphicsContext->SetGraphicsPipelineState(mDeferredPassPipelineState.get());
@@ -91,8 +96,7 @@ namespace helios::gfx
 
         scene->RenderModels(graphicsContext);
 
-        graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        graphicsContext->AddResourceBarrier(renderTargets, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         graphicsContext->ExecuteResourceBarriers();
     }
 
