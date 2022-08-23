@@ -96,6 +96,7 @@ namespace helios::gfx
 		// VSync related functions.
 		void EnableVSync() { mVSync = true; }
 		void DisableVSync() { mVSync = false; }
+
 	public:
 		// Number of SwapChain back buffers.
 		static constexpr uint8_t NUMBER_OF_FRAMES = 3u;
@@ -135,7 +136,7 @@ namespace helios::gfx
 		std::unique_ptr<MipMapGenerator> mMipMapGenerator{};
 
 		// Mutex is used primarily to prevent race conditions where more than one resource has the same index.
-		static inline std::recursive_mutex  sResourceMutex{};
+		mutable std::recursive_mutex mResourceMutex{};
 	};
 
 	template <typename T>
@@ -150,7 +151,7 @@ namespace helios::gfx
 
 		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
 
-		std::lock_guard<std::recursive_mutex> resourceLockGuard(sResourceMutex);
+		std::lock_guard<std::recursive_mutex> resourceLockGuard(mResourceMutex);
 
 		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 

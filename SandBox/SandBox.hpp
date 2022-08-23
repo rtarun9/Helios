@@ -15,7 +15,7 @@ public:
 	void OnKeyAction(uint8_t keycode, bool isKeyDown) override;
 	void OnResize() override;
 
-	// Keep seperated from OnInit() so shader hotreloading can be used.
+	// Keeping some function seperated from OnInit() for organization.
 	void CreatePipelineStates();
 
 private:

@@ -1,21 +1,34 @@
 #pragma once
+
+#include "Graphics/API/Device.hpp"
+
 #include "Scene/Scene.hpp"
 
 namespace helios::utility
 {
-    // Note : In the future, this will take care of loading some assets (currently models & materials are loaded by scene::Model and the device.
-    // For now, will just act as a holder of the assets dir and spawns new thread for loading of models and resources.
+    // Purely static class that handles creation of all types of resources in a multithreaded way (by default, for now atleast).
+    // Use the name (usually passed into the XCreationDesc) to index and get the resource in the unordered_map of any resource type.
 	class ResourceManager
     {
     public:
         static void LocateAssetsDirectory();
         static std::wstring GetAssetPath(std::wstring_view assetPath);
 
-        static void LoadResourceToScene(scene::Scene* scene, const std::function<void(scene::Scene*)>& function);
-        static void WaitForThreads();
+        static void LoadModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc);
+        static std::unique_ptr<scene::Model> GetLoadedModel(std::wstring_view modelName);
+
+		static void LoadSkyBox(gfx::Device* const device, const scene::SkyBoxCreationDesc& skyBoxCreationDesc);
+		static std::unique_ptr<scene::SkyBox> GetLoadedSkyBox(std::wstring_view skyBoxName);
+
+    private:
+        static std::unique_ptr<scene::Model> CreateModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc);
+        static std::unique_ptr<scene::SkyBox> CreateSkyBox(gfx::Device* const device, const scene::SkyBoxCreationDesc& skyBoxCreationDesc);
 
     private:
         static inline std::wstring sAssetsDirectory{};
-        static inline std::vector<std::thread> sResourceCreationThreads{};
+
+        // Resources.
+        static inline std::unordered_map<std::wstring, std::future<std::unique_ptr<scene::Model>>> sLoadedModels{};
+        static inline std::unordered_map<std::wstring, std::future<std::unique_ptr<scene::SkyBox>>> sLoadedSkyBox{};
     };
 }

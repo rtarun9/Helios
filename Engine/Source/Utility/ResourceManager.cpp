@@ -2,7 +2,6 @@
 
 #include "Editor/Log.hpp"
 
-
 #include "Scene/Scene.hpp"
 #include "Graphics/API/Device.hpp"
 
@@ -41,16 +40,37 @@ namespace helios::utility
         return std::move(sAssetsDirectory + relativePath.data());
     }
 
-    void ResourceManager::LoadResourceToScene(scene::Scene* scene, const std::function<void(scene::Scene*)>& function)
+    void ResourceManager::LoadModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc)
     {
-        sResourceCreationThreads.push_back(std::thread([&]() {function; }));
+        sLoadedModels[modelCreationDesc.modelName] = std::async(utility::ResourceManager::CreateModel, device, modelCreationDesc);
     }
 
-    void ResourceManager::WaitForThreads()
+    std::unique_ptr<scene::Model> ResourceManager::GetLoadedModel(std::wstring_view modelName)
     {
-        for (auto& thread : sResourceCreationThreads)
-        {
-            thread.join();
-        }
+        std::future<std::unique_ptr<scene::Model>> model = std::move(sLoadedModels[modelName.data()]);
+        model.wait();
+        return std::move(model.get());
+    }
+
+    void ResourceManager::LoadSkyBox(gfx::Device* const device, const scene::SkyBoxCreationDesc& skyBoxCreationDesc)
+	{
+		sLoadedSkyBox[skyBoxCreationDesc.name] = std::async(utility::ResourceManager::CreateSkyBox, device, skyBoxCreationDesc);
+    }
+
+    std::unique_ptr<scene::SkyBox> ResourceManager::GetLoadedSkyBox(std::wstring_view skyBoxName)
+    {
+		std::future<std::unique_ptr<scene::SkyBox>> skyBox = std::move(sLoadedSkyBox[skyBoxName.data()]);
+        skyBox.wait();
+		return std::move(skyBox.get());
+    }
+
+    std::unique_ptr<scene::Model> ResourceManager::CreateModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc)
+    {
+        return std::move(std::make_unique<scene::Model>(device, modelCreationDesc));
+    }
+
+    std::unique_ptr<scene::SkyBox> ResourceManager::CreateSkyBox(gfx::Device* const device, const scene::SkyBoxCreationDesc& skyBoxCreationDesc)
+    {
+        return std::move(std::make_unique<scene::SkyBox>(device, skyBoxCreationDesc));
     }
 } // namespace helios::utility

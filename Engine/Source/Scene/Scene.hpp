@@ -18,14 +18,12 @@ namespace helios::scene
 		~Scene();
 
 		void AddModel(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc);
-
-		// Note sure why using a regular pointer and then doing a unnamed object construction and move doesnt work here,
-		// So the function directly takes a unique_ptr.
 		void AddModel(std::unique_ptr<Model> model);
 
 		void AddLight(const gfx::Device* device, const LightCreationDesc& modelCreationDesc);
 		
 		// note(rtarun9) : Try to fix the non const ref / type qualifier error preventing from using const T* for device.
+		void AddSkyBox(std::unique_ptr<SkyBox> skyBox);
 		void AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc);
 
 		void AddCamera();

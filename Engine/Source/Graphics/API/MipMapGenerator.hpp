@@ -16,9 +16,6 @@ namespace helios::gfx
 
 		void GenerateMips(gfx::Texture* texture);
 
-	public:
-		static constexpr uint32_t MAX_MIP_LEVELS = 6u;
-
 	private:
 		std::unique_ptr<gfx::PipelineState> mMipMapPipelineState{};
 

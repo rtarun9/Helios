@@ -57,6 +57,7 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <future>
 #include <variant>
 #include <vector>
 

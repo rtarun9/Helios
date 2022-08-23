@@ -50,6 +50,12 @@ namespace helios::scene
 		mLights.push_back(std::move(light));
 	}
 
+	void Scene::AddSkyBox(std::unique_ptr<SkyBox> skyBox)
+	{
+		mSkyBox = std::move(skyBox);
+		editor::LogMessage(L"Added skybox to scene : " + mSkyBox->mSkyBoxModel->GetName(), editor::LogMessageTypes::Info);
+	}
+
 	void Scene::AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc)
 	{
 		mSkyBox = std::make_unique<SkyBox>(device, skyBoxCreationDesc);

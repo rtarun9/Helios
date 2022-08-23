@@ -463,7 +463,6 @@ namespace helios::scene
 
 			textureCreationDesc.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))) + 1);
 	
-
 			textureCreationDesc.dimensions = { (uint32_t)width, (uint32_t)height };
 
 			return std::move(std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc, data)));
@@ -474,6 +473,10 @@ namespace helios::scene
 
 		for (const tinygltf::Material& material : model.materials)
 		{
+			if (mModelName == L"Sponza")
+			{
+				auto x = 3;
+			}
 			PBRMaterial pbrMaterial{};
 
 			std::thread albedoTextureThread([&]() 
