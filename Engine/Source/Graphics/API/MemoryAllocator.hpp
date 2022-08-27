@@ -19,6 +19,7 @@ namespace helios::gfx
 
 	private:
 		Microsoft::WRL::ComPtr<D3D12MA::Allocator> mAllocator{};
+		std::recursive_mutex mResourceAllocationMutex{};
 	};
 
 }

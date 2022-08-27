@@ -11,8 +11,9 @@ A Experimental, C++20 & DX12 renderer made for learning and trying out various g
 * Deferred Shading.
 * HDR and Tone Mapping.
 * Instanced rendering.
+* Editor (ImGui Integration) with Logging and Content Browser.
 * Compute Shader mip map generation.
-* Editor (ImGui Integration).
+* Multi-threaded asset loading.
 
 # Gallery
 > PBR and IBL

@@ -151,10 +151,11 @@ namespace helios::gfx
 
 		ResourceCreationDesc resourceCreationDesc = ResourceCreationDesc::CreateBufferResourceCreationDesc(buffer.sizeInBytes);
 
-		std::lock_guard<std::recursive_mutex> resourceLockGuard(mResourceMutex);
 
 		buffer.allocation = mMemoryAllocator->CreateBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 
+		std::lock_guard<std::recursive_mutex> resourceLockGuard(mResourceMutex)
+			;
 		// Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload buffer, copy the data onto the upload buffer,
 		// and then copy data from upload buffer -> GPU only buffer.
 		if (data.data())

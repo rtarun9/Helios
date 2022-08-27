@@ -281,7 +281,6 @@ namespace helios::scene
 
 			mesh.normalBuffer = std::make_shared<gfx::Buffer>(device->CreateBuffer<DirectX::XMFLOAT3>(normalBufferCreationDesc, modelNormals));
 
-			
 			gfx::BufferCreationDesc tangentBufferCreationDesc
 			{
 				.usage = gfx::BufferUsage::StructuredBuffer,
@@ -473,13 +472,8 @@ namespace helios::scene
 
 		for (const tinygltf::Material& material : model.materials)
 		{
-			if (mModelName == L"Sponza")
-			{
-				auto x = 3;
-			}
 			PBRMaterial pbrMaterial{};
 
-			std::thread albedoTextureThread([&]() 
 			{
 				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
 				{
@@ -498,9 +492,8 @@ namespace helios::scene
 					pbrMaterial.albedoTextureSamplerIndex = mSamplers[albedoTexture.sampler];
 				}
 
-			});
+			};
 			
-			std::thread metalRoughnessTextureThread([&]()
 			{
 				if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 				{
@@ -518,9 +511,8 @@ namespace helios::scene
 					pbrMaterial.metalRoughnessTexture = CreateTexture(metalRoughnessImage, metalRoughnessTextureCreationDesc);
 					pbrMaterial.metalRoughnessTextureSamplerIndex = mSamplers[metalRoughnessTexture.sampler];
 				}
-			});
+			};
 
-			std::thread normalTextureThread([&]()
 			{
 				if (material.normalTexture.index >= 0)
 				{
@@ -538,9 +530,8 @@ namespace helios::scene
 					pbrMaterial.normalTexture = CreateTexture(normalImage, normalTextureCreationDesc);
 					pbrMaterial.normalTextureSamplerIndex = mSamplers[normalTexture.sampler];
 				}
-			});
+			};
 
-			std::thread occlusionTextureThread([&]()
 			{
 				if (material.occlusionTexture.index >= 0)
 				{
@@ -558,9 +549,8 @@ namespace helios::scene
 					pbrMaterial.aoTexture = CreateTexture(aoImage, occlusionTextureCreationDesc);
 					pbrMaterial.aoTextureSamplerIndex = mSamplers[aoTexture.sampler];
 				}
-			});
+			};
 			
-			std::thread emissiveTextureThread([&]()
 			{
 				if (material.emissiveTexture.index >= 0)
 				{
@@ -578,13 +568,7 @@ namespace helios::scene
 					pbrMaterial.emissiveTexture = CreateTexture(emissiveImage, emissiveTextureCreationDesc);
 					pbrMaterial.emissiveTextureSamplerIndex = mSamplers[emissiveTexture.sampler];
 				}
-			});
-
-			albedoTextureThread.join();
-			metalRoughnessTextureThread.join();
-			normalTextureThread.join();
-			occlusionTextureThread.join();
-			emissiveTextureThread.join();
+			};
 
 			mMaterials[index++] = std::move(pbrMaterial);
 		}

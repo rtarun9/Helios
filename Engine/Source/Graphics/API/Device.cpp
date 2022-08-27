@@ -416,7 +416,6 @@ namespace helios::gfx
 			};
 		}
 
-		std::lock_guard<std::recursive_mutex> resourceLockGuard(mResourceMutex);
 
 		texture.allocation = mMemoryAllocator->CreateTextureResourceAllocation(textureCreationDesc);
 
@@ -443,6 +442,8 @@ namespace helios::gfx
 				throw std::runtime_error("Currently, the renderer does not support depth format of the type D24_S8_UINT. Please use one of the X32 types.");
 			}break;
 		}
+
+		std::lock_guard<std::recursive_mutex> resourceLockGuard(mResourceMutex);
 
 		// Create SRV.
 		SrvCreationDesc srvCreationDesc{};

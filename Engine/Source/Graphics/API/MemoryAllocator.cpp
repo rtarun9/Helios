@@ -165,6 +165,8 @@ namespace helios::gfx
             optimizedClearValue = {.Format = dsFormat, .DepthStencil = dsValue};
         }
 
+        std::lock_guard<std::recursive_mutex> resourceAllocationLockGuard(mResourceAllocationMutex);
+
         ThrowIfFailed(
             mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
         allocation.resource->SetName(textureCreationDesc.name.c_str());

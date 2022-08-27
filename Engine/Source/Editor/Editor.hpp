@@ -38,8 +38,6 @@ namespace helios::editor
 
 		void ShowUI(bool value);
 
-		void AddLogMessage(std::string_view logMessage);
-
 	private:
 		void RenderSceneHierarchy(std::span<std::unique_ptr<helios::scene::Model>> models) const;
 		

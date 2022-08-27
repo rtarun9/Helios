@@ -40,7 +40,7 @@ void SandBox::OnInit()
 	};
 	utility::ResourceManager::LoadModel(mDevice.get(), metalRoughSpheresCreationDesc);
 
-#if 1
+#if 0
 	scene::ModelCreationDesc sponzaCreationDesc
 	{
 		.modelPath = L"Assets/Models/sponza-gltf-pbr/sponza.glb",
@@ -173,9 +173,11 @@ void SandBox::OnInit()
 	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(metalRoughSpheres));
 
+#if 0
 	auto sponza = utility::ResourceManager::GetLoadedModel(L"Sponza");
 	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f };
 	mScene->AddModel(std::move(sponza));
+#endif 
 
 	auto skyBox = utility::ResourceManager::GetLoadedSkyBox(L"SkyBox");
 	mScene->AddSkyBox(std::move(skyBox));
