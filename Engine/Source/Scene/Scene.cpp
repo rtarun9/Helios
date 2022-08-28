@@ -107,6 +107,14 @@ namespace helios::scene
 		}
 	}
 
+	void Scene::RenderModels(const gfx::GraphicsContext* graphicsContext, ShadowMappingRenderResources& shadowMappingRenderResources)
+	{
+		for (auto& model : mModels)
+		{
+			model->Render(graphicsContext, shadowMappingRenderResources);
+		}
+	}
+
 	void Scene::RenderLights(const gfx::GraphicsContext* graphicsContext)
 	{
 		LightRenderResources lightRenderResources

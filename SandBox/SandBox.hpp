@@ -42,6 +42,7 @@ private:
 	std::unique_ptr<helios::gfx::PipelineState> mSkyBoxPipelineState{};
 
 	std::unique_ptr<helios::gfx::DeferredGeometryPass> mDeferredGPass{};
+	std::unique_ptr<helios::gfx::ShadowPass> mShadowPass{};
 
 	// Data for Deferred geometry pss
 	std::unique_ptr<helios::editor::Editor> mEditor{};

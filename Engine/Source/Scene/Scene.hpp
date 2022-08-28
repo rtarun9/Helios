@@ -5,6 +5,8 @@
 #include "Scene/Light.hpp"
 #include "Scene/SkyBox.hpp"
 
+#include "Common/BindlessRS.hlsli"
+
 namespace helios::scene
 {
 	// The reason for this abstraction is to seperate the code for managing scene objects (camera / model / light) from the SandBox, which is mostly related to 
@@ -32,6 +34,7 @@ namespace helios::scene
 		void Update(float cameraAspectRatio);
 
 		void RenderModels(const gfx::GraphicsContext* graphicsContext);
+		void RenderModels(const gfx::GraphicsContext* graphicsContext, ShadowMappingRenderResources& shadowMappingRenderResources);
 		void RenderLights(const gfx::GraphicsContext* graphicsContext);
 		void RenderSkyBox(const gfx::GraphicsContext* graphicsContext);
 

@@ -43,12 +43,14 @@ namespace helios::gfx
 		void Set32BitGraphicsConstants(const void* renderResources) const;
 		
 		void SetDefaultViewportAndScissor() const;
+		void SetViewportAndScissor(const D3D12_VIEWPORT& viewport) const;
 		
 		void SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
 
 		void SetRenderTarget(BackBuffer* const renderTarget, const Texture* depthStencilTexture) const;
 		void SetRenderTarget(std::span<const RenderTarget*> renderTargets, const Texture* depthStencilTexture) const;
 		void SetRenderTarget(RenderTarget* renderTarget, const Texture* depthStencilTexture) const;
+		void SetRenderTarget(const Texture* depthStencilTexture) const;
 
 		// Draw functions.
 		void DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;

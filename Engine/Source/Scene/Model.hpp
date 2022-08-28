@@ -99,6 +99,7 @@ namespace helios::scene
 		void Render(const gfx::GraphicsContext* graphicsContext, const SceneRenderResources& sceneRenderResources);
 		void Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources);
 		void Render(const gfx::GraphicsContext* graphicsContext, SkyBoxRenderResources& skyBoxrenderResources);
+		void Render(const gfx::GraphicsContext* graphicsContext, ShadowMappingRenderResources& shadowMappingRenderResources);
 
 	private:
 		void LoadNode(const gfx::Device* device, const ModelCreationDesc& modelCreationDesc, uint32_t nodeIndex, tinygltf::Model& model);

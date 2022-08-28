@@ -95,7 +95,7 @@ namespace helios::gfx
 		TextureFromPath,	
 		TextureFromData,
 		HDRTextureFromPath,
-		CubeMap
+		CubeMap,
 	};
 
 	struct TextureCreationDesc
@@ -212,10 +212,11 @@ namespace helios::gfx
 	{
 		ShaderModule shaderModule{};
 		std::vector<DXGI_FORMAT> rtvFormats{ DXGI_FORMAT_R16G16B16A16_FLOAT };
+		uint32_t rtvCount{ 1u };
 		DXGI_FORMAT depthFormat{ DXGI_FORMAT_D32_FLOAT };
 		D3D12_COMPARISON_FUNC depthComparisonFunc{ D3D12_COMPARISON_FUNC_LESS };
 		FrontFaceWindingOrder frontFaceWindingOrder{ FrontFaceWindingOrder::ClockWise };
-		uint32_t rtvCount{ 1u };
+		D3D12_CULL_MODE cullMode{ D3D12_CULL_MODE_BACK };
 		std::wstring pipelineName{};
 	};
 	

@@ -47,7 +47,7 @@ namespace helios::scene
 		static void Render(const gfx::GraphicsContext* graphicsContext, LightRenderResources& lightRenderResources);
 
 	public:
-		static constexpr float DIRECTIONAL_LIGHT_ANGLE{ -153.0f };
+		static constexpr float DIRECTIONAL_LIGHT_ANGLE{ -99.0f };
 	
 	private:
 		static constexpr inline const wchar_t*  LIGHT_MODEL_PATH = L"Assets/Models/Sphere/scene.gltf";

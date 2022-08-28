@@ -91,6 +91,8 @@ namespace helios::gfx
 
 		}
 
+		psoDesc.RasterizerState.CullMode = pipelineStateCreationDesc.cullMode;
+
 		// Set RTV formats.
 		for (uint32_t i : std::views::iota(0u, pipelineStateCreationDesc.rtvCount))
 		{

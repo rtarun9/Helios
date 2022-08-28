@@ -139,6 +139,20 @@ namespace helios::gfx
 		mCommandList->RSSetScissorRects(1u, &scissorRect);
 	}
 
+	void GraphicsContext::SetViewportAndScissor(const D3D12_VIEWPORT& viewport) const
+	{
+		static D3D12_RECT scissorRect
+		{
+			.left = 0u,
+			.top = 0u,
+			.right = LONG_MAX,
+			.bottom = LONG_MAX
+		};
+
+		mCommandList->RSSetViewports(1u, &viewport);
+		mCommandList->RSSetScissorRects(1u, &scissorRect);
+	}
+
 	// Specifies how the pipeline interprets vertex data bound to the input assembler stage.
 	// i.e if topology type is POINTLIST, vertex data is interpreted as list of points.
 	void GraphicsContext::SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const
@@ -178,8 +192,14 @@ namespace helios::gfx
 		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(Texture::GetDsvIndex(depthStencilTexture));
 		D3D12_CPU_DESCRIPTOR_HANDLE rtHandle = mDevice.GetRtvDescriptor()->GetDescriptorHandleFromIndex(RenderTarget::GetRenderTextureRTVIndex(renderTarget)).cpuDescriptorHandle;
 		mCommandList->OMSetRenderTargets(1u, &rtHandle, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
-
 	}
+
+	void GraphicsContext::SetRenderTarget(const Texture* depthStencilTexture) const
+	{
+		DescriptorHandle dsvDescriptorHandle = mDevice.GetDsvDescriptor()->GetDescriptorHandleFromIndex(Texture::GetDsvIndex(depthStencilTexture));
+		mCommandList->OMSetRenderTargets(0u, nullptr, FALSE, &dsvDescriptorHandle.cpuDescriptorHandle);
+	}
+
 	void GraphicsContext::DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount) const
 	{
 		mCommandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);

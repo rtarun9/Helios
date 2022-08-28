@@ -21,6 +21,7 @@
 #include "Graphics/API/Resources.hpp"
 
 #include "Graphics/RenderPass/DeferredGeometryPass.hpp"
+#include "Graphics/RenderPass/ShadowPass.hpp"
 
 #include "Scene/Camera.hpp"
 #include "Scene/Light.hpp"

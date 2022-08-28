@@ -20,6 +20,7 @@ set(SRC_FILES
     "Source/Graphics/API/Resources.cpp"
 
     "Source/Graphics/RenderPass/DeferredGeometryPass.cpp"
+    "Source/Graphics/RenderPass/ShadowPass.cpp"
 
     "Source/Scene/Camera.cpp"
     "Source/Scene/Light.cpp"
@@ -47,6 +48,7 @@ set(SRC_FILES
     "Source/Graphics/API/Resources.hpp"
 
     "Source/Graphics/RenderPass/DeferredGeometryPass.hpp"
+    "Source/Graphics/RenderPass/ShadowPass.hpp"
 
     "Source/Scene/Camera.hpp"
     "Source/Scene/Light.hpp"

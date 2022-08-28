@@ -642,4 +642,23 @@ namespace helios::scene
 			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
 		}
 	}
+	
+	void Model::Render(const gfx::GraphicsContext* graphicsContext, ShadowMappingRenderResources& shadowMappingRenderResources)
+	{
+		for (const Mesh& mesh : mMeshes)
+		{
+			graphicsContext->SetIndexBuffer(mesh.indexBuffer.get());
+
+			ShadowMappingRenderResources shadowRenderResources
+			{
+				.positionBufferIndex = gfx::Buffer::GetSrvIndex(mesh.positionBuffer.get()),
+				.transformBufferIndex = gfx::Buffer::GetCbvIndex(mTransform.transformBuffer.get()),
+				.shadowMappingBufferIndex = shadowMappingRenderResources.shadowMappingBufferIndex,
+			};
+
+
+			graphicsContext->Set32BitGraphicsConstants(&shadowRenderResources);
+			graphicsContext->DrawInstanceIndexed(mesh.indicesCount);
+		}
+	}
 }

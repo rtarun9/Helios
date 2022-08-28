@@ -60,7 +60,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -97,6 +97,9 @@ namespace helios::editor
 
 			// Render deferred pass rt's.
 			RenderDeferredGPass(device, deferredPassRTs);
+
+			// Render shadow pass data.
+			RenderShadowPass(device, shadowPass);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
@@ -259,6 +262,23 @@ namespace helios::editor
 		// ImGui::Begin("Position RT");
 		// ImGui::Image((ImTextureID)(positionEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
 		// ImGui::GetWindowViewport()->WorkSize); ImGui::End();
+	}
+
+	void Editor::RenderShadowPass(gfx::Device* device, gfx::ShadowPass* shadowPass)
+	{
+		const gfx::DescriptorHandle& depthTextureDescriptorHandle = device->GetTextureSrvDescriptorHandle(shadowPass->mDepthTexture.get());
+
+		ImGui::Begin("Shadow Pass Depth Texture");
+		ImGui::Image((ImTextureID)(depthTextureDescriptorHandle.cpuDescriptorHandle.ptr),
+		ImGui::GetWindowViewport()->WorkSize);
+		ImGui::End();
+
+		ImGui::Begin("Shadow Buffer Data");
+		ImGui::SliderFloat("BackOff Distance", &shadowPass->mShadowMappingBufferData.backOffDistance, 0.1f, 300.0f);
+		ImGui::SliderFloat("Extents", &shadowPass->mShadowMappingBufferData.extents, 0.5f, 120.0f);
+		ImGui::SliderFloat("Near Plane", &shadowPass->mShadowMappingBufferData.nearPlane, 0.1f, 100.0f);
+		ImGui::SliderFloat("Far Plane", &shadowPass->mShadowMappingBufferData.farPlane, 100.0f, 1000.0f);
+		ImGui::End();
 	}
 
 	void Editor::RenderLogWindow()

@@ -60,6 +60,15 @@ ConstantBufferStruct SceneBuffer
     float4x4 viewProjectionMatrix;
 };
 
+ConstantBufferStruct ShadowMappingBuffer
+{
+    float4x4 viewProjectionMatrix;
+    float backOffDistance;
+    float extents;
+    float nearPlane;
+    float farPlane;
+};
+
 ConstantBufferStruct LightBuffer
 {
     // Note : lightPosition essentially stores the light direction if the type is directional light.

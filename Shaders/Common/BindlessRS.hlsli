@@ -128,9 +128,19 @@ struct DeferredLightingPassRenderResources
     uint normalEmissiveGBufferIndex;
     uint aoMetalRoughnessEmissiveGBufferIndex;
 
+    uint shadowMappingBufferIndex;
+    uint shadowDepthTextureIndex;
+    
     uint irradianceMapIndex;
     uint prefilterMapIndex;
     uint brdfLutIndex;
+};
+
+struct ShadowMappingRenderResources
+{
+    uint positionBufferIndex;
+    uint transformBufferIndex;
+    uint shadowMappingBufferIndex;
 };
 
 struct MipMapGenerationRenderResources

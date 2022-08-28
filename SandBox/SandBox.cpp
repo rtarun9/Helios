@@ -19,6 +19,14 @@ void SandBox::OnInit()
 	mScene = std::make_unique<scene::Scene>(mDevice.get());
 
 	// Load scene resources.
+	scene::ModelCreationDesc floorCreationDesc
+	{
+		.modelPath = L"Assets/Models/Cube/glTF/Cube.gltf",
+		.modelName = L"Floor",
+	};
+	utility::ResourceManager::LoadModel(mDevice.get(), floorCreationDesc);
+
+
 	scene::ModelCreationDesc damagedHelmetCreationDesc
 	{
 		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -156,11 +164,17 @@ void SandBox::OnInit()
 
 	// Init render passes.
 	mDeferredGPass = std::make_unique<gfx::DeferredGeometryPass>(mDevice.get(), mDimensions);
+	mShadowPass = std::make_unique<gfx::ShadowPass>(mDevice.get());
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
 
 	// Add models to scene.
+	auto floor = utility::ResourceManager::GetLoadedModel(L"Floor");
+	floor->GetTransform()->data.scale = { 100.0f, 0.1f, 100.0f };
+	floor->GetTransform()->data.translate = { 0.0f, -10.0f, 0.0f };
+	mScene->AddModel(std::move(floor));
+
 	auto damagedHelmet = utility::ResourceManager::GetLoadedModel(L"DamagedHelmet");
 	damagedHelmet->GetTransform()->data.rotation = { math::XMConvertToRadians(63.0f), 0.0f, 0.0f };
 	mScene->AddModel(std::move(damagedHelmet));
@@ -196,6 +210,7 @@ void SandBox::OnUpdate()
 
 void SandBox::OnRender()
 {
+	std::unique_ptr<gfx::GraphicsContext> shadowPassGraphicsContext = mDevice->GetGraphicsContext(mShadowPass->mShadowPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> deferredGPassGraphicsContext = mDevice->GetGraphicsContext(mDeferredGPass->mDeferredPassPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> shadingGraphicsContext = mDevice->GetGraphicsContext(mPBRPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> postProcessingGraphicsContext = mDevice->GetGraphicsContext(mPostProcessingPipelineState.get());
@@ -213,6 +228,11 @@ void SandBox::OnRender()
 	};
 
 	static std::array<float, 4> clearColor{0.0f, 0.0f, 0.0f, 1.0f};
+
+	// Renderpass -1 : Shadow pass.
+	{
+		mShadowPass->Render(mScene.get(), shadowPassGraphicsContext.get());
+	}
 
 	// Renderpass 0 : Deferred Geometry pass
 	{
@@ -255,9 +275,12 @@ void SandBox::OnRender()
 			.normalEmissiveGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.normalEmissiveRT.get()),
 			.aoMetalRoughnessEmissiveGBufferIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mDeferredGPass->mDeferredPassRTs.aoMetalRoughnessEmissiveRT.get()),
 
+			.shadowMappingBufferIndex = gfx::Buffer::GetCbvIndex(mShadowPass->mShadowMappingBuffer.get()),
+			.shadowDepthTextureIndex = gfx::Texture::GetSrvIndex(mShadowPass->mDepthTexture.get()),
+
 			.irradianceMapIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mIrradianceMapTexture.get()),
 			.prefilterMapIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mPreFilterTexture.get()),
-			.brdfLutIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mBRDFLutTexture.get())
+			.brdfLutIndex = gfx::Texture::GetSrvIndex(mScene->mSkyBox->mBRDFLutTexture.get()),
 		};
 
 		gfx::RenderTarget::Render(shadingGraphicsContext.get(), deferredLightingPassRenderResources);
@@ -323,7 +346,7 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(finalGraphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, mShadowPass.get(), clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swap chain
@@ -340,8 +363,9 @@ void SandBox::OnRender()
 
 	mDevice->EndFrame();
 
-	std::array<std::unique_ptr<gfx::GraphicsContext>, 5u> graphicsContexts
+	std::array<std::unique_ptr<gfx::GraphicsContext>, 6u> graphicsContexts
 	{
+		std::move(shadowPassGraphicsContext),
 		std::move(deferredGPassGraphicsContext),
 		std::move(shadingGraphicsContext),		   
 		std::move(postProcessingGraphicsContext),
