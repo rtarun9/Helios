@@ -103,6 +103,7 @@ namespace helios::gfx
 		TextureUsage usage;
 		Uint2 dimensions{};
 		DXGI_FORMAT format{ DXGI_FORMAT_R8G8B8A8_UNORM };
+		D3D12_RESOURCE_STATES optionalInitialState{ D3D12_RESOURCE_STATE_COMMON};
 		uint32_t mipLevels{ 1u };
 		uint32_t depthOrArraySize{ 1u };
 		std::wstring name{};

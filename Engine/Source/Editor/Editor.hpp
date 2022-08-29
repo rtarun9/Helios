@@ -67,7 +67,10 @@ namespace helios::editor
 
 		// Member variables for content browser.
         static inline std::filesystem::path mAssetsPath{};
-
 		std::filesystem::path mContentBrowserCurrentPath{};
+
+		// Path to .ini file.
+		std::string mIniFilePath{};
+
 	};
 }

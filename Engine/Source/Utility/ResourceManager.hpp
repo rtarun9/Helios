@@ -13,6 +13,7 @@ namespace helios::utility
     public:
         static void LocateAssetsDirectory();
         static std::wstring GetAssetPath(std::wstring_view assetPath);
+        static std::wstring GetProjectRootDirectory();
 
         static void LoadModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc);
         static std::unique_ptr<scene::Model> GetLoadedModel(std::wstring_view modelName);

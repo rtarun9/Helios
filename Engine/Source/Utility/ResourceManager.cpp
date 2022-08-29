@@ -40,6 +40,11 @@ namespace helios::utility
         return std::move(sAssetsDirectory + relativePath.data());
     }
 
+    std::wstring ResourceManager::GetProjectRootDirectory()
+    {
+        return sAssetsDirectory;
+    }
+
     void ResourceManager::LoadModel(const gfx::Device* device, const scene::ModelCreationDesc& modelCreationDesc)
     {
         sLoadedModels[modelCreationDesc.modelName] = std::async(utility::ResourceManager::CreateModel, device, modelCreationDesc);

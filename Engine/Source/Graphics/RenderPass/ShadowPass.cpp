@@ -14,6 +14,7 @@ namespace helios::gfx
 			.usage = gfx::TextureUsage::DepthStencil,
 			.dimensions = {SHADOW_MAP_DIMENSIONS, SHADOW_MAP_DIMENSIONS},
 			.format = DXGI_FORMAT_D32_FLOAT,
+			.optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			.mipLevels = 1u,
 			.depthOrArraySize = 1u,
 			.name = L"Shadow Mapping Depth Texture"
@@ -47,12 +48,13 @@ namespace helios::gfx
 		mShadowMappingBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<ShadowMappingBuffer>(shadowMappingBufferCreationDesc));
 
 		// Setup initial data of shadow mapping buffer.
+		// note(rtarun9) : Currently begin setup for Sponza scene, as shadow buffer params are heavily scene dependent.
 		mShadowMappingBufferData =
 		{
 			.backOffDistance = 200.0f,
-			.extents = 99.0f,
+			.extents = 180.0f,
 			.nearPlane = 1.0f,
-			.farPlane = 480.0f
+			.farPlane = 370.0f
 		};
 	}
 
@@ -80,11 +82,8 @@ namespace helios::gfx
 		mShadowMappingBufferData.viewProjectionMatrix = lightViewMatrix * lightProjectionMatrix;
 		mShadowMappingBuffer->Update(&mShadowMappingBufferData);
 
-		if (!mFirstLoopIteration)
-		{
-			graphicsContext->AddResourceBarrier(mDepthTexture->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			graphicsContext->ExecuteResourceBarriers();
-		}
+		graphicsContext->AddResourceBarrier(mDepthTexture->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		graphicsContext->ExecuteResourceBarriers();
 
 
 		graphicsContext->SetGraphicsPipelineState(mShadowPipelineState.get());
@@ -103,7 +102,5 @@ namespace helios::gfx
 
 		graphicsContext->AddResourceBarrier(mDepthTexture->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext->ExecuteResourceBarriers();
-
-		mFirstLoopIteration = false;
 	}
 }

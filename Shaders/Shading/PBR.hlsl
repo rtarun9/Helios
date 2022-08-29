@@ -1,6 +1,9 @@
 #include "../Common/BindlessRS.hlsli"
 #include "../Common/ConstantBuffers.hlsli"
 #include "../Common/Utils.hlsli"
+
+#include "../Shadows/PCFShadows.hlsli"
+
 #include "BRDF.hlsli"
 
 struct VSOutput
@@ -27,29 +30,6 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     output.lightSpaceMatrix = shadowMappingBuffer.viewProjectionMatrix;
 
     return output;
-}
-
-// Reference : https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping.
-float CalculateShadow(float4 lightSpaceWorldPosition, float nDotL, uint shadowDepthBufferIndex)
-{
-    // Do perspective divide
-    float3 shadowPosition = lightSpaceWorldPosition.xyz / lightSpaceWorldPosition.w;
-    
-    // Convert x and y coord from [-1, 1] range to [0, 1].
-    shadowPosition.x = shadowPosition.x * 0.5f + 0.5f;
-    shadowPosition.y = shadowPosition.y * -0.5f + 0.5f;
-
-    if (shadowPosition.z > 1.0f)
-    {
-        return 0.0f;
-    }
-
-    Texture2D<float4> shadowDepthBuffer = ResourceDescriptorHeap[shadowDepthBufferIndex];
-    float closestDepth = shadowDepthBuffer.Sample(linearClampSampler, shadowPosition.xy).x;
-
-    float bias = max(0.05f * (1.0f - nDotL), 0.005f);
-
-    return shadowPosition.z  - bias > closestDepth ? 1.0f : 0.0f;
 }
 
 [RootSignature(BindlessRootSignature)]
@@ -110,6 +90,9 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
     // Will be used for calculated bias in shadow mapping as well (as it is highly dependent on nDotL).
     float nDotL = 0.0f;
+    float4 lightSpacePosition = mul(float4(position.xyz, 1.0f), psInput.lightSpaceMatrix);
+    float shadow = CalculateShadow(lightSpacePosition, nDotL, renderResource.shadowDepthTextureIndex);
+
     for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
     {
         float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
@@ -119,7 +102,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
         float3 radiance = lightBuffer.lightColor[i].xyz;
 
         nDotL = saturate(dot(pixelToLightDirection, normal));
-        lo += brdf *  radiance * nDotL;
+        lo += brdf *  radiance * nDotL * (1.0f -  shadow);
     }
 
     // Calculate ambient lighting from irradiance map.
@@ -141,9 +124,10 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
     float3 specularIBL = specularPrefilter * (f0 * brdfLut.x + brdfLut.y);
 
-    float4 lightSpacePosition = mul(float4(position.xyz, 1.0f), psInput.lightSpaceMatrix);
+    // Dimming the diffuseIBL component is not physically accurate, but does give a little better / realistic look.
+    float shadowAmbientFactor = (1.0f - shadow) == 0.0f ? 1.0f : 1.0f;
 
-    float3 ambient = (diffuseIBL + specularIBL) * ao * (1.0f -  CalculateShadow(lightSpacePosition, nDotL, renderResource.shadowDepthTextureIndex));
+    float3 ambient = (diffuseIBL + specularIBL) * ao * shadowAmbientFactor;
 
     lo += emissive + ambient;
 

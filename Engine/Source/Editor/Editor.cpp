@@ -11,6 +11,8 @@
 #include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
 
+using namespace DirectX;
+
 namespace helios::editor
 {
 	Editor::Editor(const gfx::Device* device)
@@ -20,9 +22,16 @@ namespace helios::editor
 		// Setup ImGui context.
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+		ImGuiIO& io = ImGui::GetIO();
+		auto iniFilePath = utility::ResourceManager::GetProjectRootDirectory() + L"imgui.ini";
+		auto relativeIniFilePath = std::filesystem::relative(iniFilePath);
+		mIniFilePath = relativeIniFilePath.string();
+		io.IniFilename = mIniFilePath.c_str();
 
 		// Reference : https://github.com/ocornut/imgui/blob/docking/examples/example_win32_directx12/main.cpp
+
+		sApplicationLog.AddLog(std::string("Ini file path : ") + std::string(ImGui::GetIO().IniFilename), LogMessageTypes::Info);
 
 		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -47,8 +56,6 @@ namespace helios::editor
 
         mAssetsPath = utility::ResourceManager::GetAssetPath(L"Assets");
 		mContentBrowserCurrentPath = mAssetsPath;
-
-        std::filesystem::path mContentBrowserCurrentPath{};
 	}
 
 	Editor::~Editor()
@@ -210,12 +217,24 @@ namespace helios::editor
 
 		if (ImGui::TreeNode("Directional Lights"))
 		{
+
 			for (uint32_t directionalLightIndex : std::views::iota(DIRECTIONAL_LIGHT_OFFSET, DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS))
 			{
 				std::string name = "Directional Light " + std::to_string(directionalLightIndex);
+				
+				DirectX::XMFLOAT4 color = scene::Light::GetLightBufferData()->lightColor[directionalLightIndex];
+				
 				if (ImGui::TreeNode(name.c_str()))
 				{
-					ImGui::ColorPicker3("Light Color", &scene::Light::GetLightBufferData()->lightColor[directionalLightIndex].x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+					ImGui::ColorPicker3("Light Color", &color.x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR);
+
+					scene::Light::GetLightBufferData()->lightColor[directionalLightIndex] =
+					{
+						color.x,
+						color.y,
+						color.z,
+						color.w
+					};
 
 					static float sunAngle{ scene::Light::DIRECTIONAL_LIGHT_ANGLE };
 					ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
@@ -438,6 +457,6 @@ namespace helios::editor
 		int size = textBuffer.size();
 		std::string message = logMessage.data();
 		textBuffer.emplace_back(message);
-		messageTypes.emplace_back(messageType);
+		messageTypes.push_back(messageType);
 	}
 }

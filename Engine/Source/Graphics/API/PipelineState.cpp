@@ -106,12 +106,14 @@ namespace helios::gfx
 
 	PipelineState::PipelineState(ID3D12Device* const device, const ComputePipelineStateCreationDesc& pipelineStateCreationDesc)
 	{
+  		auto csPath = utility::ResourceManager::GetAssetPath(pipelineStateCreationDesc.csShaderPath);
+
 		wrl::ComPtr<ID3DBlob> computeBlob;
-		::D3DReadFileToBlob(pipelineStateCreationDesc.csShaderPath.data(), &computeBlob);
+		::D3DReadFileToBlob(csPath.c_str(), &computeBlob);
 
 		if (!computeBlob.Get())
 		{
-			ErrorMessage(pipelineStateCreationDesc.csShaderPath.data() + std::wstring(L" Not found"));
+			ErrorMessage(csPath + std::wstring(L" Not found"));
 		}
 
 		// Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.

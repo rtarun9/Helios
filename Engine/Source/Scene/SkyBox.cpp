@@ -70,40 +70,34 @@ namespace helios::scene
 
 		mBRDFLutTexture = std::make_unique<gfx::Texture>(device->CreateTexture(brdfLutTextureCreationDesc));
 
-		auto csPath = utility::ResourceManager::GetAssetPath(L"Shaders/SkyBox/CubeMapFromEquirectTextureCS.cso");
-
 		// Create pipeline states.
 		gfx::ComputePipelineStateCreationDesc cubeMapFromEquirectPipelineStateCreationDesc
 		{
-			.csShaderPath =  csPath,
+			.csShaderPath =  L"Shaders/SkyBox/CubeMapFromEquirectTextureCS.cso",
 			.pipelineName = L"Cube Map From Equirect Pipeline"
 		};
 
 		mCubeMapFromEquirectPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(cubeMapFromEquirectPipelineStateCreationDesc));
 
-		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/IrradianceCS.cso");
-
 		gfx::ComputePipelineStateCreationDesc diffuseIrradianceMapPipelineStateCreationDesc
 		{
-			.csShaderPath =  csPath,
+			.csShaderPath =  L"Shaders/IBL/IrradianceCS.cso",
 			.pipelineName = L"Irradiance Pipeline"
 		};
 
 		mIrradianceMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(diffuseIrradianceMapPipelineStateCreationDesc));
 
-		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/PrefilterCS.cso");
 		gfx::ComputePipelineStateCreationDesc preFilterMapPipelineStateCreationDesc
 		{
-			.csShaderPath =  csPath,
+			.csShaderPath =  L"Shaders/IBL/PrefilterCS.cso",
 			.pipelineName = L"Pre Filter Pipeline"
 		};
 
 		mPrefilterMapPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(preFilterMapPipelineStateCreationDesc));
 
-		csPath = utility::ResourceManager::GetAssetPath(L"Shaders/IBL/BRDFLutCS.cso");
 		gfx::ComputePipelineStateCreationDesc brdfLutPipelineStateCreationDesc
 		{
-			.csShaderPath =  csPath,
+			.csShaderPath =  L"Shaders/IBL/BRDFLutCS.cso",
 			.pipelineName = L" BRDF LUT Pipeline"
 		};
 

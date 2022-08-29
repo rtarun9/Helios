@@ -79,7 +79,8 @@ namespace helios::gfx
 		// The adapter descriptor will be displayed as message (check infoQueue below).
 		DXGI_ADAPTER_DESC adapterDesc{};
 		ThrowIfFailed(mAdapter->GetDesc(&adapterDesc));
-		std::string adapterInfo{ "\nAdapter Description : " + WstringToString(adapterDesc.Description) + ".\n" };
+		std::string adapterInfo{ "\nAdapter Description : " + WstringToString(adapterDesc.Description) + ".\n" }; 
+		editor::LogMessage(StringToWString(adapterInfo), editor::LogMessageTypes::Info);
 #endif
 
 		// Create D3D12 device.
@@ -143,7 +144,7 @@ namespace helios::gfx
 		mSamplerDescriptor = std::make_unique<Descriptor>(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1000u, L"Sampler Descriptor");
 
 		// Create bindless root signature.
-		PipelineState::CreateBindlessRootSignature(mDevice.Get(), (L"Shaders/BindlessRS.cso"));
+		PipelineState::CreateBindlessRootSignature(mDevice.Get(), L"Shaders/BindlessRS.cso");
 
 		// Create render target resources.
 		RenderTarget::CreateRenderTargetResources(this);

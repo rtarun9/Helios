@@ -167,6 +167,11 @@ namespace helios::gfx
 
         std::lock_guard<std::recursive_mutex> resourceAllocationLockGuard(mResourceAllocationMutex);
 
+        if (textureCreationDesc.optionalInitialState != D3D12_RESOURCE_STATE_COMMON)
+        {
+            resourceState = textureCreationDesc.optionalInitialState;
+        }
+
         ThrowIfFailed(
             mAllocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState, optimizedClearValue.has_value() ? &optimizedClearValue.value() : nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
         allocation.resource->SetName(textureCreationDesc.name.c_str());

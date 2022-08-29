@@ -22,11 +22,5 @@ namespace helios::gfx
 		std::unique_ptr<gfx::PipelineState> mShadowPipelineState{};
 		std::unique_ptr<gfx::Buffer> mShadowMappingBuffer{};
 		ShadowMappingBuffer mShadowMappingBufferData{};
-
-	private:
-		// note(rtarun9) : Undesirable to have this here, but need as in the first loop the current resource state of depth texture is DEPTH_WRITE, and not pixel shader resource view.
-		// This flag will ignore execution of resource barrier for the first loop iteration.
-		// Currently, there is no other alternative for this.
-		bool mFirstLoopIteration{ true };
 	};
 }
