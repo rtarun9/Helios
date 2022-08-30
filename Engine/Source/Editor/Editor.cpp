@@ -31,7 +31,7 @@ namespace helios::editor
 
 		// Reference : https://github.com/ocornut/imgui/blob/docking/examples/example_win32_directx12/main.cpp
 
-		sApplicationLog.AddLog(std::string("Ini file path : ") + std::string(ImGui::GetIO().IniFilename), LogMessageTypes::Info);
+		core::ApplicationLog::AddLog(std::string("Ini file path : ") + std::string(ImGui::GetIO().IniFilename), core::LogMessageTypes::Info);
 
 		io.DisplaySize = ImVec2((float)core::Application::GetClientDimensions().x, (float)core::Application::GetClientDimensions().y);
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -67,7 +67,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, gfx::BloomPass* bloomPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -107,6 +107,9 @@ namespace helios::editor
 
 			// Render shadow pass data.
 			RenderShadowPass(device, shadowPass);
+
+			// Render Bloom Pass data.
+			RenderBloomPass(device, bloomPass);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
@@ -205,7 +208,7 @@ namespace helios::editor
 
 					ImGui::SliderFloat3("Translate", &scene::Light::GetLightBufferData()->lightPosition[pointLightIndex].x, -40.0f, 40.0f);
 					
-					ImGui::SliderFloat("Radius", &scene::Light::GetLightBufferData()->radius[pointLightIndex].x, 0.01f, 10.0f);
+					ImGui::SliderFloat("Radius", &scene::Light::GetLightBufferData()->radiusIntensity[pointLightIndex].x, 0.01f, 10.0f);
 
 					ImGui::TreePop();
 				}
@@ -221,13 +224,15 @@ namespace helios::editor
 			for (uint32_t directionalLightIndex : std::views::iota(DIRECTIONAL_LIGHT_OFFSET, DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS))
 			{
 				std::string name = "Directional Light " + std::to_string(directionalLightIndex);
-				
+
 				DirectX::XMFLOAT4 color = scene::Light::GetLightBufferData()->lightColor[directionalLightIndex];
-				
+
 				if (ImGui::TreeNode(name.c_str()))
 				{
 					ImGui::ColorPicker3("Light Color", &color.x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR);
-
+					ImGui::SliderFloat("Intensity", &scene::Light::GetLightBufferData()->radiusIntensity[directionalLightIndex].y, 0.0f, 5.0f);
+					float intensity = scene::Light::GetLightBufferData()->radiusIntensity[directionalLightIndex].y;
+					 
 					scene::Light::GetLightBufferData()->lightColor[directionalLightIndex] =
 					{
 						color.x,
@@ -300,6 +305,20 @@ namespace helios::editor
 		ImGui::End();
 	}
 
+	void Editor::RenderBloomPass(gfx::Device* device, gfx::BloomPass* bloomPass)
+	{
+		const gfx::DescriptorHandle& bloomTextureDescriptorHandle = device->GetTextureSrvDescriptorHandle(bloomPass->mBloomTextures.get());
+
+		ImGui::Begin("Bloom Texture");
+		ImGui::Image((ImTextureID)(bloomTextureDescriptorHandle.cpuDescriptorHandle.ptr),
+		ImGui::GetWindowViewport()->WorkSize);
+		ImGui::End();
+
+		ImGui::Begin("Bloom Buffer Data");
+		ImGui::SliderFloat("Threshold", &bloomPass->mBloomBufferData.threshHoldValue, 0.1f, 10.0f);
+		ImGui::End();
+	}
+
 	void Editor::RenderLogWindow()
 	{
 		ImGui::Begin("Console Log");
@@ -309,8 +328,8 @@ namespace helios::editor
 		
 		if (clear)
 		{
-			sApplicationLog.textBuffer.clear();
-			sApplicationLog.messageTypes.clear();
+			core::ApplicationLog::textBuffer.clear();
+			core::ApplicationLog::messageTypes.clear();
 		}
 		ImGui::Separator();
 		
@@ -319,24 +338,24 @@ namespace helios::editor
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 	
 
-		for (uint32_t i : std::views::iota(0u, (uint32_t)(sApplicationLog.textBuffer.size())))
+		for (uint32_t i : std::views::iota(0u, (uint32_t)(core::ApplicationLog::textBuffer.size())))
 		{
-		    editor::LogMessageTypes &messageType = sApplicationLog.messageTypes[i];
-			std::string &message = sApplicationLog.textBuffer[i];
+			core::LogMessageTypes &messageType = core::ApplicationLog::messageTypes[i];
+			std::string &message = core::ApplicationLog::textBuffer[i];
 
 			switch (messageType)
 			{
-			case LogMessageTypes::Info: {
+			case core::LogMessageTypes::Info: {
 				ImGui::TextColored(ImVec4{1.0f, 1.0f, 1.0f, 1.0f}, "%s\n", message.c_str());
 			}
 			break;
 
-			case LogMessageTypes::Warn: {
+			case core::LogMessageTypes::Warn: {
 				ImGui::TextColored(ImVec4{1.0f, 1.0f, 0.0f, 1.0f}, "%s\n", message.c_str());
 			}
 			break;
 
-			case LogMessageTypes::Error: {
+			case core::LogMessageTypes::Error: {
 				ImGui::TextColored(ImVec4{1.0f, 0.0f, 0.0f, 1.0f}, "%s\n", message.c_str());
 			}
 			break;
@@ -450,13 +469,5 @@ namespace helios::editor
 	{
 		ImGui::GetMainViewport()->WorkSize = ImVec2((float)dimensions.x, (float)dimensions.y);
 		ImGui::GetMainViewport()->Size = ImVec2((float)dimensions.x, (float)dimensions.y);
-	}
-	
-	void ApplicationLog::AddLog(std::string_view logMessage, const editor::LogMessageTypes &messageType)
-	{
-		int size = textBuffer.size();
-		std::string message = logMessage.data();
-		textBuffer.emplace_back(message);
-		messageTypes.push_back(messageType);
 	}
 }

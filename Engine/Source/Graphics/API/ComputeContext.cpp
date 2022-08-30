@@ -5,12 +5,14 @@
 
 namespace helios::gfx
 {
-	ComputeContext::ComputeContext(Device* device) : mDevice(*device)
+	ComputeContext::ComputeContext(Device* device, const gfx::PipelineState* pipelineState) : mDevice(*device)
 	{
-		mCommandList = device->GetComputeCommandQueue()->GetCommandList();
+		mCommandList = device->GetComputeCommandQueue()->GetCommandList(pipelineState);
 
 		// As all compute context's require to set the descriptor heap before hand, the user has option to set them manually (for explicitness) or just let the constructor take care of this.
 		SetDescriptorHeaps(mDevice.GetSrvCbvUavDescriptor());
+
+		mCommandList->SetComputeRootSignature(PipelineState::rootSignature.Get());
 	}
 
 	void ComputeContext::Dispatch(uint32_t threadGroupX, uint32_t threadGroupY, uint32_t threadGroupZ) const

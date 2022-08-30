@@ -63,6 +63,7 @@
 
 #include "Utility/Helpers.hpp"
 #include "Utility/ResourceManager.hpp"
+#include "Core/Log.hpp"
 
 // To be used only in the .cpp files.
 namespace wrl = Microsoft::WRL;

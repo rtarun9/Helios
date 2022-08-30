@@ -11,6 +11,7 @@ namespace helios::gfx
 
 	// Wrapper class for Graphics CommandList, which provides a set of easy and simple functions to record commands for execution by GPU.
 	// The command queue will contain a queue of command list, which can be passed into the GraphicsContext's constructor to create a GraphicsContext object.
+	// Note : Can be used for some compute stuff as well for convinence, though you should probably switch to ComputeContext for using the Compute pipeline.
 	// note (rtarun9) : This design is subject to change.
 	class GraphicsContext
 	{
@@ -41,7 +42,7 @@ namespace helios::gfx
 
 		void SetIndexBuffer(Buffer* const buffer) const;
 		void Set32BitGraphicsConstants(const void* renderResources) const;
-		
+
 		void SetDefaultViewportAndScissor() const;
 		void SetViewportAndScissor(const D3D12_VIEWPORT& viewport) const;
 		

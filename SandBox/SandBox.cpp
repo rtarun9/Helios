@@ -165,6 +165,7 @@ void SandBox::OnInit()
 	// Init render passes.
 	mDeferredGPass = std::make_unique<gfx::DeferredGeometryPass>(mDevice.get(), mDimensions);
 	mShadowPass = std::make_unique<gfx::ShadowPass>(mDevice.get());
+	mBloomPass = std::make_unique<gfx::BloomPass>(mDevice.get(), mDimensions);
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -196,9 +197,9 @@ void SandBox::OnInit()
 	auto skyBox = utility::ResourceManager::GetLoadedSkyBox(L"SkyBox");
 	mScene->AddSkyBox(std::move(skyBox));
 
-	editor::LogMessage(L"SandBox data initialized", editor::LogMessageTypes::Info);
-	editor::LogMessage(L"Warn Test", editor::LogMessageTypes::Warn);
-	editor::LogMessage(L"Warn Error", editor::LogMessageTypes::Error);
+	core::LogMessage(L"SandBox data initialized", core::LogMessageTypes::Info);
+	core::LogMessage(L"Warn Test", core::LogMessageTypes::Warn);
+	core::LogMessage(L"Warn Error", core::LogMessageTypes::Error);
 }
 
 void SandBox::OnUpdate()
@@ -217,6 +218,8 @@ void SandBox::OnRender()
 	std::unique_ptr<gfx::GraphicsContext> finalGraphicsContext = mDevice->GetGraphicsContext(mFinalPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalToSwapChainGraphicsContext = mDevice->GetGraphicsContext(nullptr);
 
+	std::unique_ptr<gfx::ComputeContext> bloomPassComputeContext = mDevice->GetComputeContext(mBloomPass->mBloomPipelineState.get());
+	
 	gfx::BackBuffer *backBuffer = mDevice->GetCurrentBackBuffer();
 
 	mDevice->BeginFrame();
@@ -300,6 +303,11 @@ void SandBox::OnRender()
 		shadingGraphicsContext->ExecuteResourceBarriers();
 	}
 
+	// Render pass 1.5 : Bloom Pass.
+	{
+		mBloomPass->Render(mDevice.get(),  mOffscreenRT.get(), bloomPassComputeContext.get());
+	}
+
 	// Render pass 2 : Render offscreen rt to post processed RT (after all
 	// processing has occured).
 	{
@@ -346,7 +354,7 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(finalGraphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, mShadowPass.get(), clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, mShadowPass.get(), mBloomPass.get(), clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swap chain
@@ -363,17 +371,31 @@ void SandBox::OnRender()
 
 	mDevice->EndFrame();
 
-	std::array<std::unique_ptr<gfx::GraphicsContext>, 6u> graphicsContexts
+	// Execute graphics / compute contexts.
+	std::array<std::unique_ptr<gfx::GraphicsContext>, 3u> graphicsContexts1
 	{
 		std::move(shadowPassGraphicsContext),
 		std::move(deferredGPassGraphicsContext),
 		std::move(shadingGraphicsContext),		   
+	};
+
+	mDevice->ExecuteContext(graphicsContexts1);
+
+	std::array<std::unique_ptr<gfx::ComputeContext>, 1u> computeContexts1
+	{
+		std::move(bloomPassComputeContext)
+	};
+
+	mDevice->ExecuteContext(computeContexts1);
+
+	std::array<std::unique_ptr<gfx::GraphicsContext>, 3u> graphicsContexts2
+	{
 		std::move(postProcessingGraphicsContext),
-		std::move(finalGraphicsContext),		
+		std::move(finalGraphicsContext),
 		std::move(finalToSwapChainGraphicsContext),
 	};
 
-	mDevice->ExecuteContext(graphicsContexts);
+	mDevice->ExecuteContext(graphicsContexts2);
 
 	mDevice->Present();
 
@@ -433,6 +455,7 @@ void SandBox::OnResize()
 		mDevice->ResizeRenderTarget(mPostProcessingRT.get());
 
 		mDeferredGPass->Resize(mDevice.get(), mDimensions);
+		mBloomPass->OnResize(mDevice.get(), mDimensions);
 
 		mEditor->OnResize(core::Application::GetClientDimensions());
 	}

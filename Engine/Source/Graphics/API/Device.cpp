@@ -7,7 +7,7 @@
 
 #include "stb_image.h"
 
-#include "Editor/Log.hpp"
+#include "Core/Log.hpp"
 
 // For setting the Agility SDK paramters.
 extern "C"
@@ -31,7 +31,7 @@ namespace helios::gfx
 
 		mIsInitialized = true;
 
-		helios::editor::LogMessage(L"Initialized Device", editor::LogMessageTypes::Info);
+		helios::core::LogMessage(L"Initialized Device", core::LogMessageTypes::Info);
 	}
 
 	Device::~Device()
@@ -80,7 +80,7 @@ namespace helios::gfx
 		DXGI_ADAPTER_DESC adapterDesc{};
 		ThrowIfFailed(mAdapter->GetDesc(&adapterDesc));
 		std::string adapterInfo{ "\nAdapter Description : " + WstringToString(adapterDesc.Description) + ".\n" }; 
-		editor::LogMessage(StringToWString(adapterInfo), editor::LogMessageTypes::Info);
+		core::LogMessage(StringToWString(adapterInfo), core::LogMessageTypes::Info);
 #endif
 
 		// Create D3D12 device.
@@ -610,7 +610,7 @@ namespace helios::gfx
 		texture.textureName = textureCreationDesc.name;
 		mMipMapGenerator->GenerateMips(&texture);
 
-		editor::LogMessage(L"Created texture : " + texture.textureName, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Created texture : " + texture.textureName, core::LogMessageTypes::Info);
 
 		return texture;
 	}
@@ -622,7 +622,7 @@ namespace helios::gfx
 		renderTarget.renderTexture = std::make_unique<gfx::Texture>(CreateTexture(textureCreationDesc));
 		renderTarget.renderTargetName = textureCreationDesc.name;
 
-	    editor::LogMessage(L"Created render target : " + renderTarget.renderTargetName, editor::LogMessageTypes::Info);
+	    core::LogMessage(L"Created render target : " + renderTarget.renderTargetName, core::LogMessageTypes::Info);
 
 		return renderTarget;
 	}
@@ -674,7 +674,7 @@ namespace helios::gfx
 	{
 		PipelineState pipelineState(mDevice.Get(), graphicsPipelineStateCreationDesc);
 
-        editor::LogMessage(L"Created compute pipeline state : " + graphicsPipelineStateCreationDesc.pipelineName, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Created compute pipeline state : " + graphicsPipelineStateCreationDesc.pipelineName, core::LogMessageTypes::Info);
 
 		return pipelineState;
 	}
@@ -683,7 +683,7 @@ namespace helios::gfx
 	{
 		PipelineState pipelineState(mDevice.Get(), computePipelineStateCreationDesc);
 
-	    editor::LogMessage(L"Created compute pipeline state : " + computePipelineStateCreationDesc.pipelineName, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Created compute pipeline state : " + computePipelineStateCreationDesc.pipelineName, core::LogMessageTypes::Info);
 
 		return pipelineState;
 	}

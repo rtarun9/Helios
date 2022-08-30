@@ -43,7 +43,8 @@ namespace helios::scene
 	Light::Light(const gfx::Device* device, const LightCreationDesc& lightCreationDesc) : mLightNumber(lightCreationDesc.lightNumber), mLightType(lightCreationDesc.lightType)
 	{
 		sLightBufferData.lightColor[mLightNumber] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		sLightBufferData.radius[mLightNumber].x = 0.1f;
+		sLightBufferData.radiusIntensity[mLightNumber].x = 0.1f;
+		sLightBufferData.radiusIntensity[mLightNumber].y = 1.0f;
 
 		if (lightCreationDesc.lightType == LightTypes::DirectionalLightData)
 		{
@@ -62,7 +63,7 @@ namespace helios::scene
 		{
 			math::XMVECTOR translationVector = math::XMLoadFloat4(&sLightBufferData.lightPosition[mLightNumber]);
 
-			sLightInstanceData.modelMatrix[mLightNumber] = math::XMMatrixScaling(sLightBufferData.radius[mLightNumber].x, sLightBufferData.radius[mLightNumber].x, sLightBufferData.radius[mLightNumber].x) * math::XMMatrixTranslationFromVector(translationVector);
+			sLightInstanceData.modelMatrix[mLightNumber] = math::XMMatrixScaling(sLightBufferData.radiusIntensity[mLightNumber].x, sLightBufferData.radiusIntensity[mLightNumber].x, sLightBufferData.radiusIntensity[mLightNumber].x) * math::XMMatrixTranslationFromVector(translationVector);
 
 			sLightInstanceBuffer->Update(&sLightInstanceData);
 		}

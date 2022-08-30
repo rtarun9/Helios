@@ -141,6 +141,7 @@ namespace helios::gfx
         case TextureUsage::TextureFromData:
         case TextureUsage::HDRTextureFromPath:
         case TextureUsage::CubeMap: 
+        case TextureUsage::UAVTexture:
         {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             resourceState = D3D12_RESOURCE_STATE_COMMON;

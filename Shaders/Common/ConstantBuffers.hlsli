@@ -74,11 +74,25 @@ ConstantBufferStruct LightBuffer
     // Note : lightPosition essentially stores the light direction if the type is directional light.
     // The shader can differentiate between directional and point lights based on the 'w' value. If 1 (i.e it is a position), light is a point light, while
     // if it is zero, then it is a light direction.
+    // Light intensity is not automatically multiplied to the light color on the C++ side, shading shaders need to manually multiply them.
     float4 lightPosition[TOTAL_LIGHTS];
     float4 lightColor[TOTAL_LIGHTS];
-    
     // float4 because of struct packing (16byte alignment).
-    float4 radius[TOTAL_LIGHTS];
+    // radiusIntensity[0] stores the radius, while index 1 stores the intensity.
+    float4 radiusIntensity[TOTAL_LIGHTS];
+};
+
+enum class BloomShaderUsage
+{
+    Downsample,
+    Upsample,
+    PreFilter
+};
+
+ConstantBufferStruct BloomBuffer
+{
+    BloomShaderUsage shaderUsage;
+    float threshHoldValue;
 };
 
 enum class TextureDimensionType
@@ -88,6 +102,7 @@ enum class TextureDimensionType
     HeightOddWidthEven,
     HeightWidthOdd
 };
+
 
 ConstantBufferStruct MipMapGenerationBuffer
 {

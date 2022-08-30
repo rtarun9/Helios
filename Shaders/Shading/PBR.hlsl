@@ -83,7 +83,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
         float distance = length(lightBuffer.lightPosition[i].xyz - position);
         float attenuation = 1.0f / (distance * distance);
 
-        float3 radiance = lightBuffer.lightColor[i].xyz * attenuation;
+        float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
 
         lo += brdf *  radiance * saturate(dot(pixelToLightDirection, normal));
     }
@@ -99,7 +99,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
         
         float3 brdf = BRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
 
-        float3 radiance = lightBuffer.lightColor[i].xyz;
+        float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
 
         nDotL = saturate(dot(pixelToLightDirection, normal));
         lo += brdf *  radiance * nDotL * (1.0f -  shadow);

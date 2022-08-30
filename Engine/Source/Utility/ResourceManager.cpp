@@ -1,6 +1,6 @@
 #include "ResourceManager.hpp"
 
-#include "Editor/Log.hpp"
+#include "Core/Log.hpp"
 
 #include "Scene/Scene.hpp"
 #include "Graphics/API/Device.hpp"
@@ -32,7 +32,7 @@ namespace helios::utility
 
         sAssetsDirectory = currentDirectory.wstring() + L"/";
 
-        editor::LogMessage(L"Detected assets path directory : " + sAssetsDirectory, editor::LogMessageTypes::Info);
+        core::LogMessage(L"Detected assets path directory : " + sAssetsDirectory, core::LogMessageTypes::Info);
     }
 
     std::wstring ResourceManager::GetAssetPath(std::wstring_view relativePath)

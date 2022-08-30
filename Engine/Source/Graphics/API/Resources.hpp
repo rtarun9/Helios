@@ -88,6 +88,7 @@ namespace helios::gfx
 	// Similarly, Render Targets will also be of type Texture.
 	// TextureUpload is used for intermediate buffers (as used in UpdateSubresources).
 	// If data is already loaded elsewhere, use the TextureFromData enum (this requires TextureCreateionDesc has all properties correctly set (specifically dimensions).
+	// UAV Texture is just a regular texture with flags to allow it to be used as a UAV.
 	enum class TextureUsage
 	{
 		DepthStencil,
@@ -96,6 +97,7 @@ namespace helios::gfx
 		TextureFromData,
 		HDRTextureFromPath,
 		CubeMap,
+		UAVTexture
 	};
 
 	struct TextureCreationDesc

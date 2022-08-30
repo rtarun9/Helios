@@ -43,7 +43,7 @@ namespace helios::gfx
 		BackBuffer* GetCurrentBackBuffer() { return &mBackBuffers[mCurrentBackBufferIndex]; }
 		
 		std::unique_ptr<GraphicsContext> const  GetGraphicsContext(const gfx::PipelineState* pipelineState = nullptr) { return std::move(std::make_unique<GraphicsContext>(this, pipelineState)); }
-		std::unique_ptr<ComputeContext> const GetComputeContext() { return std::move(std::make_unique<ComputeContext>(this)); }
+		std::unique_ptr<ComputeContext> const GetComputeContext(const gfx::PipelineState* pipelineState = nullptr) { return std::move(std::make_unique<ComputeContext>(this, pipelineState)); }
 		
 		MipMapGenerator* GetMipMapGenerator()  { return mMipMapGenerator.get(); }
 		

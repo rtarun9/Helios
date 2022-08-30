@@ -1,4 +1,5 @@
 set(SRC_FILES
+    "Source/Core/Log.cpp"
     "Source/Core/Application.cpp"
     "Source/Core/Engine.cpp"
     "Source/Core/Timer.cpp"
@@ -7,7 +8,6 @@ set(SRC_FILES
     "Source/Utility/ResourceManager.hpp"
 
     "Source/Editor/Editor.cpp"
-    "Source/Editor/Log.cpp"
 
     "Source/Graphics/API/CommandQueue.cpp"
     "Source/Graphics/API/ComputeContext.cpp"
@@ -21,6 +21,7 @@ set(SRC_FILES
 
     "Source/Graphics/RenderPass/DeferredGeometryPass.cpp"
     "Source/Graphics/RenderPass/ShadowPass.cpp"
+    "Source/Graphics/RenderPass/BloomPass.cpp"
 
     "Source/Scene/Camera.cpp"
     "Source/Scene/Light.cpp"
@@ -28,6 +29,7 @@ set(SRC_FILES
     "Source/Scene/Scene.cpp"
     "Source/Scene/SkyBox.cpp"
 
+    "Source/Core/Log.hpp"
     "Source/Core/Application.hpp"
     "Source/Core/Engine.hpp"
     "Source/Core/Timer.hpp"
@@ -35,7 +37,6 @@ set(SRC_FILES
     "Source/Utility/ResourceManager.cpp"
 
     "Source/Editor/Editor.hpp"
-    "Source/Editor/Log.hpp"
 
     "Source/Graphics/API/CommandQueue.hpp"
     "Source/Graphics/API/ComputeContext.hpp"
@@ -49,6 +50,7 @@ set(SRC_FILES
 
     "Source/Graphics/RenderPass/DeferredGeometryPass.hpp"
     "Source/Graphics/RenderPass/ShadowPass.hpp"
+    "Source/Graphics/RenderPass/BloomPass.hpp"
 
     "Source/Scene/Camera.hpp"
     "Source/Scene/Light.hpp"

@@ -143,6 +143,12 @@ struct ShadowMappingRenderResources
     uint shadowMappingBufferIndex;
 };
 
+struct BloomPassRenderResources
+{
+    uint inputTextureIndex;
+    uint outputTextureIndex;
+};
+
 struct MipMapGenerationRenderResources
 {
     uint sourceMipIndex;

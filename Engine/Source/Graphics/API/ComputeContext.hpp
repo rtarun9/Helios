@@ -16,7 +16,7 @@ namespace helios::gfx
 	class ComputeContext
 	{
 	public:
-		ComputeContext(Device* device);
+		ComputeContext(Device* device, const gfx::PipelineState* pipelineState);
 		ID3D12GraphicsCommandList1* const GetCommandList() const { return mCommandList.Get(); }
 
 		// Core functionalities.

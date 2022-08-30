@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Log.hpp"
 #include "Core/Application.hpp"
 #include "Core/Engine.hpp"
 #include "Core/Timer.hpp"
@@ -8,7 +9,6 @@
 #include "Utility/ResourceManager.hpp"
 
 #include "Editor/Editor.hpp"
-#include "Editor/Log.hpp"
 
 #include "Graphics/API/CommandQueue.hpp"
 #include "Graphics/API/ComputeContext.hpp"
@@ -22,6 +22,7 @@
 
 #include "Graphics/RenderPass/DeferredGeometryPass.hpp"
 #include "Graphics/RenderPass/ShadowPass.hpp"
+#include "Graphics/RenderPass/BloomPass.hpp"
 
 #include "Scene/Camera.hpp"
 #include "Scene/Light.hpp"

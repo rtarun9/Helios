@@ -23,7 +23,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-    output.color = lightBuffer.lightColor[instanceID];
+    output.color = lightBuffer.lightColor[instanceID] * lightBuffer.radiusIntensity[instanceID][1];
     return output;
 }
 

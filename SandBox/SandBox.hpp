@@ -43,6 +43,7 @@ private:
 
 	std::unique_ptr<helios::gfx::DeferredGeometryPass> mDeferredGPass{};
 	std::unique_ptr<helios::gfx::ShadowPass> mShadowPass{};
+	std::unique_ptr<helios::gfx::BloomPass> mBloomPass{};
 
 	// Data for Deferred geometry pss
 	std::unique_ptr<helios::editor::Editor> mEditor{};

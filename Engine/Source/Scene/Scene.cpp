@@ -3,7 +3,7 @@
 
 #include "Common/ConstantBuffers.hlsli"
 
-#include "Editor/Log.hpp"
+#include "Core/Log.hpp"
 
 namespace helios::scene
 {
@@ -35,12 +35,12 @@ namespace helios::scene
 		auto model = std::make_unique<Model>(device, modelCreationDesc);
 		mModels.push_back(std::move(model));
 
-		editor::LogMessage(L"Added model to scene : " + modelCreationDesc.modelName, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Added model to scene : " + modelCreationDesc.modelName, core::LogMessageTypes::Info);
 	}
 
 	void Scene::AddModel(std::unique_ptr<Model> model)
 	{
-	    editor::LogMessage(L"Added model to scene : " + model->mModelName, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Added model to scene : " + model->mModelName, core::LogMessageTypes::Info);
 		mModels.push_back(std::move(model));
 	}
 
@@ -53,14 +53,14 @@ namespace helios::scene
 	void Scene::AddSkyBox(std::unique_ptr<SkyBox> skyBox)
 	{
 		mSkyBox = std::move(skyBox);
-		editor::LogMessage(L"Added skybox to scene : " + mSkyBox->mSkyBoxModel->GetName(), editor::LogMessageTypes::Info);
+		core::LogMessage(L"Added skybox to scene : " + mSkyBox->mSkyBoxModel->GetName(), core::LogMessageTypes::Info);
 	}
 
 	void Scene::AddSkyBox(gfx::Device* device, const SkyBoxCreationDesc& skyBoxCreationDesc)
 	{
 		mSkyBox = std::make_unique<SkyBox>(device, skyBoxCreationDesc);
 
-	    editor::LogMessage(L"Added skybox to scene : " + skyBoxCreationDesc.name, editor::LogMessageTypes::Info);
+		core::LogMessage(L"Added skybox to scene : " + skyBoxCreationDesc.name, core::LogMessageTypes::Info);
 	}
 
 	void Scene::AddCamera()
