@@ -17,6 +17,16 @@ namespace helios::gfx
 		};
 
 		mMipMapPipelineState = std::make_unique<gfx::PipelineState>(device->GetDevice(), pipelineCreationDesc);	
+
+		// Create mip map buffer.
+		gfx::BufferCreationDesc mipMapBufferCreationDesc
+		{
+			.usage = gfx::BufferUsage::ConstantBuffer,
+			.name = L"Mip Map Buffer",
+		};
+
+		mMipMapBuffer = std::make_unique<gfx::Buffer>(mDevice.CreateBuffer<MipMapGenerationBuffer>(mipMapBufferCreationDesc, std::span<MipMapGenerationBuffer, 0u>{}));
+
 	}
 
 	void MipMapGenerator::GenerateMips(gfx::Texture* texture)
@@ -27,13 +37,6 @@ namespace helios::gfx
 			return;
 		}
 
-		gfx::BufferCreationDesc mipMapBufferCreationDesc
-		{
-			.usage = gfx::BufferUsage::ConstantBuffer,
-			.name = L"Mip Map Buffer Creation Desc " + texture->textureName,
-		};
-
-		std::unique_ptr<gfx::Buffer> mipMapBuffer = std::make_unique<gfx::Buffer>(mDevice.CreateBuffer<MipMapGenerationBuffer>(mipMapBufferCreationDesc, std::span<MipMapGenerationBuffer, 0u>{}));
 
 		SrvCreationDesc srvCreationDesc
 		{
@@ -122,7 +125,7 @@ namespace helios::gfx
 				.dimensionType = dimensionType,
 			};
 
-			mipMapBuffer->Update(&mipMapGenerationBufferData);
+			mMipMapBuffer->Update(&mipMapGenerationBufferData);
 
 			MipMapGenerationRenderResources renderResources
 			{
@@ -131,7 +134,7 @@ namespace helios::gfx
 				.outputMip2Index = mipUavs[1],
 				.outputMip3Index = mipUavs[2],
 				.outputMip4Index = mipUavs[3],
-				.mipMapGenerationBufferIndex = Buffer::GetCbvIndex(mipMapBuffer.get()),
+				.mipMapGenerationBufferIndex = Buffer::GetCbvIndex(mMipMapBuffer.get()),
 			};
 
 			std::unique_ptr<ComputeContext> computeContext = mDevice.GetComputeContext();
@@ -147,7 +150,7 @@ namespace helios::gfx
 		}
 	}
 
-	void MipMapGenerator::GenerateMips(gfx::Texture* texture, std::uint32_t srvIndex, std::span<uint32_t> uavIndices, gfx::Buffer* mipMapBuffer)
+	void MipMapGenerator::GenerateMips(gfx::Texture* texture, std::uint32_t srvIndex, std::span<uint32_t> uavIndices)
 	{
 
 		D3D12_RESOURCE_DESC sourceResourceDesc = texture->GetResource()->GetDesc();
@@ -208,7 +211,7 @@ namespace helios::gfx
 				.dimensionType = dimensionType,
 			};
 
-			mipMapBuffer->Update(&mipMapGenerationBufferData);
+			mMipMapBuffer->Update(&mipMapGenerationBufferData);
 
 			MipMapGenerationRenderResources renderResources
 			{
@@ -217,7 +220,7 @@ namespace helios::gfx
 				.outputMip2Index = uavIndices[1],
 				.outputMip3Index = uavIndices[2],
 				.outputMip4Index = uavIndices[3],
-				.mipMapGenerationBufferIndex = Buffer::GetCbvIndex(mipMapBuffer),
+				.mipMapGenerationBufferIndex = Buffer::GetCbvIndex(mMipMapBuffer.get()),
 			};
 
 			std::unique_ptr<ComputeContext> computeContext = mDevice.GetComputeContext();

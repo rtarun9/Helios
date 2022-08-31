@@ -217,8 +217,6 @@ void SandBox::OnRender()
 	std::unique_ptr<gfx::GraphicsContext> postProcessingGraphicsContext = mDevice->GetGraphicsContext(mPostProcessingPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalGraphicsContext = mDevice->GetGraphicsContext(mFinalPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalToSwapChainGraphicsContext = mDevice->GetGraphicsContext(nullptr);
-
-	std::unique_ptr<gfx::ComputeContext> bloomPassComputeContext = mDevice->GetComputeContext(mBloomPass->mBloomPipelineState.get());
 	
 	gfx::BackBuffer *backBuffer = mDevice->GetCurrentBackBuffer();
 
@@ -303,9 +301,19 @@ void SandBox::OnRender()
 		shadingGraphicsContext->ExecuteResourceBarriers();
 	}
 
+	// Execute contexts.
+	std::array<std::unique_ptr<gfx::GraphicsContext>, 3u> graphicsContexts1
+	{
+		std::move(shadowPassGraphicsContext),
+		std::move(deferredGPassGraphicsContext),
+		std::move(shadingGraphicsContext),
+	};
+
+	mDevice->ExecuteContext(graphicsContexts1);
+
 	// Render pass 1.5 : Bloom Pass.
 	{
-		mBloomPass->Render(mDevice.get(),  mOffscreenRT.get(), bloomPassComputeContext.get());
+		mBloomPass->Render(mDevice.get(),  mOffscreenRT.get());
 	}
 
 	// Render pass 2 : Render offscreen rt to post processed RT (after all
@@ -323,13 +331,14 @@ void SandBox::OnRender()
 
 		// Note : buffer indices can be set here or in the RenderTarget::Render
 		// function. Begin done there for now.
-		RenderTargetRenderResources rtvRenderResources
+		PostProcessRenderResources postProcessRenderResources
 		{
-			.textureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mOffscreenRT.get()),
+			.finalRenderTextureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mOffscreenRT.get()),
+			.bloomTextureIndex = gfx::Texture::GetSrvIndex(mBloomPass->mUpDownSampledBloomTextures.get()),
 			.postProcessBufferIndex = gfx::Buffer::GetCbvIndex(mPostProcessBuffer.get())
 		};
 
-		gfx::RenderTarget::Render(postProcessingGraphicsContext.get(), rtvRenderResources);
+		gfx::RenderTarget::Render(postProcessingGraphicsContext.get(), postProcessRenderResources);
 	}
 
 	// Render pass 3 : The RT that is to be displayed to swap chain is processed.
@@ -372,21 +381,6 @@ void SandBox::OnRender()
 	mDevice->EndFrame();
 
 	// Execute graphics / compute contexts.
-	std::array<std::unique_ptr<gfx::GraphicsContext>, 3u> graphicsContexts1
-	{
-		std::move(shadowPassGraphicsContext),
-		std::move(deferredGPassGraphicsContext),
-		std::move(shadingGraphicsContext),		   
-	};
-
-	mDevice->ExecuteContext(graphicsContexts1);
-
-	std::array<std::unique_ptr<gfx::ComputeContext>, 1u> computeContexts1
-	{
-		std::move(bloomPassComputeContext)
-	};
-
-	mDevice->ExecuteContext(computeContexts1);
 
 	std::array<std::unique_ptr<gfx::GraphicsContext>, 3u> graphicsContexts2
 	{

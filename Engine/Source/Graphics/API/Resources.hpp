@@ -265,6 +265,7 @@ namespace helios::gfx
 
 		static void Render(const GraphicsContext* graphicsContext, RenderTargetRenderResources& renderTargetRenderResources);
 		static void Render(const GraphicsContext* graphicsContext, DeferredLightingPassRenderResources& deferredLightingRenderResources);
+		static void Render(const GraphicsContext* graphicsContext, PostProcessRenderResources& postProcessRenderResources);
 
 		static inline std::unique_ptr<Buffer> sIndexBuffer;
 		static inline std::unique_ptr<Buffer> sPositionBuffer;

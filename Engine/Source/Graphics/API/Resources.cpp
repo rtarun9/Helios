@@ -322,6 +322,19 @@ namespace helios::gfx
 		graphicsContext->DrawInstanceIndexed(6u);
 	}
 
+	void RenderTarget::Render(const GraphicsContext* graphicsContext, PostProcessRenderResources& postProcessRenderResources)
+	{
+		postProcessRenderResources.positionBufferIndex = Buffer::GetSrvIndex(sPositionBuffer.get());
+		postProcessRenderResources.textureBufferIndex = Buffer::GetSrvIndex(sTextureCoordsBuffer.get());
+
+		graphicsContext->SetPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		graphicsContext->SetIndexBuffer(RenderTarget::sIndexBuffer.get());
+
+		graphicsContext->Set32BitGraphicsConstants(&postProcessRenderResources);
+
+		graphicsContext->DrawInstanceIndexed(6u);
+	}
+
 	uint32_t RenderTarget::GetRenderTextureRTVIndex(const RenderTarget* renderTarget)
 	{
 		if (!renderTarget)

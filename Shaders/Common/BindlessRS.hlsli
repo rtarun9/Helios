@@ -108,10 +108,19 @@ struct SceneRenderResources
 };
 
 struct RenderTargetRenderResources
-{
+{   
     uint positionBufferIndex;
     uint textureBufferIndex;
     uint textureIndex;
+    uint postProcessBufferIndex;
+};
+
+struct PostProcessRenderResources
+{
+    uint positionBufferIndex;
+    uint textureBufferIndex;
+    uint finalRenderTextureIndex;
+    uint bloomTextureIndex;
     uint postProcessBufferIndex;
 };
 
@@ -147,6 +156,7 @@ struct BloomPassRenderResources
 {
     uint inputTextureIndex;
     uint outputTextureIndex;
+    uint bloomBufferIndex;
 };
 
 struct MipMapGenerationRenderResources

@@ -307,15 +307,16 @@ namespace helios::editor
 
 	void Editor::RenderBloomPass(gfx::Device* device, gfx::BloomPass* bloomPass)
 	{
-		const gfx::DescriptorHandle& bloomTextureDescriptorHandle = device->GetTextureSrvDescriptorHandle(bloomPass->mBloomTextures.get());
+		const gfx::DescriptorHandle& bloomTextureDescriptorHandle = device->GetTextureSrvDescriptorHandle(bloomPass->mPreFilterBloomTexture.get());
 
-		ImGui::Begin("Bloom Texture");
+		ImGui::Begin("Bloom Texture Pre Filtered");
 		ImGui::Image((ImTextureID)(bloomTextureDescriptorHandle.cpuDescriptorHandle.ptr),
 		ImGui::GetWindowViewport()->WorkSize);
 		ImGui::End();
 
 		ImGui::Begin("Bloom Buffer Data");
-		ImGui::SliderFloat("Threshold", &bloomPass->mBloomBufferData.threshHoldValue, 0.1f, 10.0f);
+		ImGui::SliderFloat("ThresholdValue", &bloomPass->mBloomBufferData.threshHoldParams.x, 0.1f, 10.0f);
+		ImGui::SliderFloat("Curve Knee", &bloomPass->mBloomBufferData.threshHoldParams.y, 0.05f, 10.0f);
 		ImGui::End();
 	}
 

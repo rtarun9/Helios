@@ -82,17 +82,27 @@ ConstantBufferStruct LightBuffer
     float4 radiusIntensity[TOTAL_LIGHTS];
 };
 
-enum class BloomShaderUsage
+enum class BloomShaderUsage : int
 {
     Downsample,
+    FirstDownsample,
     Upsample,
-    PreFilter
+    PreFilter,
+    Other
 };
 
+// threshHoldParams = float2(threshHoldValue, knee).
 ConstantBufferStruct BloomBuffer
 {
     BloomShaderUsage shaderUsage;
-    float threshHoldValue;
+    
+    float3 padding;
+    
+    float2 threshHoldParams;
+    
+    float2 padding2;
+    
+    float2 texelSize;
 };
 
 enum class TextureDimensionType

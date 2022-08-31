@@ -10,6 +10,7 @@ set(SRC_FILES
     "Source/Editor/Editor.cpp"
 
     "Source/Graphics/API/CommandQueue.cpp"
+    "Source/Graphics/API/Context.hpp"
     "Source/Graphics/API/ComputeContext.cpp"
     "Source/Graphics/API/Descriptor.cpp"
     "Source/Graphics/API/Device.cpp"
@@ -39,6 +40,7 @@ set(SRC_FILES
     "Source/Editor/Editor.hpp"
 
     "Source/Graphics/API/CommandQueue.hpp"
+    "Source/Graphics/API/Context.cpp"
     "Source/Graphics/API/ComputeContext.hpp"
     "Source/Graphics/API/Descriptor.hpp"
     "Source/Graphics/API/Device.hpp"

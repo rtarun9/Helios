@@ -528,7 +528,7 @@ namespace helios::gfx
 		}
 
 		// Create UAV (if applicable).
-		if (textureCreationDesc.usage == TextureUsage::CubeMap)
+		if (textureCreationDesc.usage == TextureUsage::CubeMap || textureCreationDesc.usage == TextureUsage::UAVTexture)
 		{
 			UavCreationDesc uavCreationDesc
 			{

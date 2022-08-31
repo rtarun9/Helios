@@ -13,7 +13,7 @@ namespace helios::gfx
 
 		mBloomBufferData =
 		{
-			.threshHoldValue = 0.9f
+			.threshHoldParams = {1.0f, 0.1f}
 		};
 
 		mBloomBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<BloomBuffer>(bloomBufferCreationDesc));
@@ -27,54 +27,43 @@ namespace helios::gfx
 
 		mBloomPipelineState = std::make_unique<gfx::PipelineState>(device->CreatePipelineState(bloomPipelineState));
 
-		// Create the texture (will act as threshold capture and also for mip map result texture).
-		// Will generate all mips (up until dimension 1x1)
-		gfx::TextureCreationDesc textureCreationDesc
+		gfx::TextureCreationDesc preFilterTextureCreationDesc
 		{
 			.usage = gfx::TextureUsage::UAVTexture,
 			.dimensions = dimensions,
 			.format = DXGI_FORMAT_R11G11B10_FLOAT,
-			.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(dimensions.x, dimensions.y))) + 1),
-			.name = L"Bloom Pass Texture",
+			.mipLevels = BLOOM_MIP_LEVELS,
+			.name = L"Bloom Pre Filter Pass Texture",
 		};
 
-		mBloomTextures = std::make_unique<gfx::Texture>(device->CreateTexture(textureCreationDesc));
+		mPreFilterBloomTexture = std::make_unique<gfx::Texture>(device->CreateTexture(preFilterTextureCreationDesc));
 	
-		// Create mip map buffer (to be passed used when mip maps are being created).
-		gfx::BufferCreationDesc mipMapBufferCreationDesc
+		mSrvIndex = gfx::Texture::GetSrvIndex(mPreFilterBloomTexture.get());
+
+		mPreFilterUavIndex = gfx::Texture::GetUavIndex(mPreFilterBloomTexture.get());
+
+		gfx::TextureCreationDesc upDownSamplingTextureCreationDesc
 		{
-			.usage = gfx::BufferUsage::ConstantBuffer,
-			.name = L"Mip Map Buffer Creation Desc Bloom Pass"
+			.usage = gfx::TextureUsage::UAVTexture,
+			.dimensions = dimensions,
+			.format = DXGI_FORMAT_R11G11B10_FLOAT,
+			.mipLevels = BLOOM_MIP_LEVELS ,
+			.name = L"Bloom Pass Up / Down Sampling Texture",
 		};
 
-		mMipMapBuffer = std::make_unique<gfx::Buffer>(device->CreateBuffer<MipMapGenerationBuffer>(mipMapBufferCreationDesc, std::span<MipMapGenerationBuffer, 0u>{}));
+		mUpDownSampledBloomTextures = std::make_unique<gfx::Texture>(device->CreateTexture(upDownSamplingTextureCreationDesc));
 
-		// Create the SRV's and UAV's for bloom pass (mip map generation part).
-		SrvCreationDesc srvCreationDesc
-		{
-			.srvDesc
-			{
-				.Format = textureCreationDesc.format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D
-				{
-					.MipLevels = textureCreationDesc.mipLevels
-				}
-			}
-		};
-
-		mSrvIndex = device->CreateSrv(srvCreationDesc, mBloomTextures->GetResource());
-
+		mMipUavIndices.reserve(BLOOM_MIP_LEVELS);
 
 		// Create the UAV's for the bloom pass.
-		for (uint32_t uav : std::views::iota(0u, static_cast<uint32_t>(textureCreationDesc.mipLevels)))
+
+		for (uint32_t uav : std::views::iota(0u, BLOOM_MIP_LEVELS))
 		{
 			UavCreationDesc uavCreationDesc
 			{
 				.uavDesc
 				{
-					.Format = gfx::Texture::GetNonSRGBFormat(textureCreationDesc.format),
+					.Format = gfx::Texture::GetNonSRGBFormat(upDownSamplingTextureCreationDesc.format),
 					.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
 					.Texture2D
 					{
@@ -85,7 +74,7 @@ namespace helios::gfx
 			};
 
 			//  Reading from a SRV/UAV mapped to a null resource will return black and writing to a UAV mapped to a null resource will have no effect (from 3DGEP).
-			mMipUavIndices.push_back(device->CreateUav(uavCreationDesc, mBloomTextures->GetResource()));
+			mMipUavIndices.push_back(device->CreateUav(uavCreationDesc, mUpDownSampledBloomTextures->GetResource()));
 		}
 	}
 
@@ -94,19 +83,96 @@ namespace helios::gfx
 		// note(rtarun9) : Todo.
 	}
 
-	void BloomPass::Render(gfx::Device* const device, gfx::RenderTarget* renderTarget, gfx::ComputeContext* computeContext)
+	void BloomPass::Render(gfx::Device* const device, gfx::RenderTarget* renderTarget)
 	{
-		BloomPassRenderResources renderResourcess
+		for (uint32_t passes : std::views::iota(0u, BLOOM_PASSES))
 		{
-			.inputTextureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(renderTarget),
-			.outputTextureIndex = mMipUavIndices[0]
-		};
+			// Do the Prefilter pass first.
+			uint32_t srcWidth = mPreFilterBloomTexture->dimensions.x;
+			uint32_t srcHeight = mPreFilterBloomTexture->dimensions.y;
 
+			mBloomBufferData.shaderUsage = BloomShaderUsage::PreFilter;
+			mBloomBufferData.texelSize = { 1.0f / srcWidth, 1.0f / srcHeight };
 
-		computeContext->Set32BitComputeConstants(&renderResourcess);
+			mBloomBuffer->Update(&mBloomBufferData);
 
-		computeContext->Dispatch(mBloomTextures->dimensions.x / 8u, mBloomTextures->dimensions.y / 8u, 1u);
-		
-		device->GetMipMapGenerator()->GenerateMips(mBloomTextures.get(), mSrvIndex, mMipUavIndices, mMipMapBuffer.get());
+			BloomPassRenderResources renderResourcess
+			{
+				.inputTextureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(renderTarget),
+				.outputTextureIndex = mPreFilterUavIndex,
+				.bloomBufferIndex = gfx::Buffer::GetCbvIndex(mBloomBuffer.get())
+			};
+
+			auto computeContext = device->GetComputeContext(mBloomPipelineState.get());
+
+			computeContext->Set32BitComputeConstants(&renderResourcess);
+
+			computeContext->Dispatch(srcWidth / 8u, srcHeight / 8u, 1u);
+			device->GetComputeCommandQueue()->ExecuteAndFlush(computeContext->GetCommandList());
+
+			// Copy the prefilter texture into the first (0th) mip level of the up/down sampling textures.
+			auto commandList = device->GetGraphicsContext();
+			commandList->CopyResource(mPreFilterBloomTexture->GetResource(), mUpDownSampledBloomTextures->GetResource());
+			device->GetGraphicsCommandQueue()->ExecuteAndFlush(commandList->GetCommandList());
+
+			// Do the down sampling.
+
+			for (uint32_t mipLevel : std::views::iota(0u, BLOOM_MIP_LEVELS - 1u))
+			{
+				uint64_t sourceWidth = srcWidth >> mipLevel;
+				uint64_t sourceHeight = srcHeight >> mipLevel;
+
+				uint32_t destinationWidth = std::max<uint32_t>((uint32_t)sourceWidth >> (1), 1u);
+				uint32_t destinationHeight = std::max<uint32_t>((uint32_t)sourceHeight >> (1), 1u);
+
+				mBloomBufferData.shaderUsage = mipLevel == 0u ? BloomShaderUsage::FirstDownsample : BloomShaderUsage::Downsample;
+				mBloomBufferData.texelSize = { 1.0f / destinationWidth, 1.0f / destinationHeight };
+
+				mBloomBuffer->Update(&mBloomBufferData);
+
+				auto downsampleComputeContext = device->GetComputeContext(mBloomPipelineState.get());
+
+				BloomPassRenderResources renderResourcess
+				{
+					.inputTextureIndex = mMipUavIndices[mipLevel],
+					.outputTextureIndex = mMipUavIndices[mipLevel + 1u],
+					.bloomBufferIndex = gfx::Buffer::GetCbvIndex(mBloomBuffer.get())
+				};
+
+				downsampleComputeContext->Set32BitComputeConstants(&renderResourcess);
+
+				downsampleComputeContext->Dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u), std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1u);
+				device->GetComputeCommandQueue()->ExecuteAndFlush(downsampleComputeContext->GetCommandList());
+			}
+
+			// Do the upsampling such that final result is in the first UAV index for up / down sampling texture Index.
+			for (uint32_t mipLevel = BLOOM_MIP_LEVELS - 1u; mipLevel > 0; --mipLevel)
+			{
+				uint64_t sourceWidth = srcWidth >> mipLevel;
+				uint64_t sourceHeight = srcHeight >> mipLevel;
+
+				uint32_t destinationWidth = std::min<uint32_t>((uint32_t)sourceWidth << (1), srcWidth);
+				uint32_t destinationHeight = std::min<uint32_t>((uint32_t)sourceHeight << (1), srcHeight);
+
+				mBloomBufferData.shaderUsage = BloomShaderUsage::Upsample;
+				mBloomBufferData.texelSize = { 1.0f / destinationWidth, 1.0f / destinationHeight };
+
+				mBloomBuffer->Update(&mBloomBufferData);
+
+				auto upSampleComputeContext = device->GetComputeContext(mBloomPipelineState.get());
+
+				BloomPassRenderResources renderResourcess
+				{
+					.inputTextureIndex = mMipUavIndices[mipLevel],
+					.outputTextureIndex = mMipUavIndices[mipLevel - 1u],
+					.bloomBufferIndex = gfx::Buffer::GetCbvIndex(mBloomBuffer.get())
+				};
+
+				upSampleComputeContext->Set32BitComputeConstants(&renderResourcess);
+
+				upSampleComputeContext->Dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u), std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1u);
+				device->GetComputeCommandQueue()->ExecuteAndFlush(upSampleComputeContext->GetCommandList());
+			}
+		}
 	}
 }

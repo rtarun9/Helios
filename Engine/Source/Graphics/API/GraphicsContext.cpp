@@ -24,19 +24,6 @@ namespace helios::gfx
 		mCommandList->SetGraphicsRootSignature(PipelineState::rootSignature.Get());
 	}
 
-	void GraphicsContext::AddResourceBarrier(ID3D12Resource* const resource, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) 
-	{
-		mResourceBarriers.push_back({ CD3DX12_RESOURCE_BARRIER::Transition(resource, previousState, newState) });
-	}
-	
-	void GraphicsContext::AddResourceBarrier(std::span<const RenderTarget*> renderTargets, D3D12_RESOURCE_STATES previousState, D3D12_RESOURCE_STATES newState) 
-	{
-		for (const auto& rt : renderTargets)
-		{
-			mResourceBarriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(rt->renderTexture->allocation->resource.Get(), previousState, newState));
-		}
-	}
-
 	void GraphicsContext::ClearRenderTargetView(BackBuffer* const backBuffer, std::span<const float, 4> color)
 	{
 		mCommandList->ClearRenderTargetView(backBuffer->backBufferDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
@@ -213,12 +200,6 @@ namespace helios::gfx
 	void GraphicsContext::CopyResource(ID3D12Resource* source, ID3D12Resource* destination)
 	{
 		mCommandList->CopyResource(destination, source);
-	}
-
-	void GraphicsContext::ExecuteResourceBarriers()
-	{
-		mCommandList->ResourceBarrier(static_cast<UINT>(mResourceBarriers.size()), mResourceBarriers.data());
-		mResourceBarriers.clear();
 	}
 }
 

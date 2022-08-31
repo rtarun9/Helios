@@ -64,10 +64,10 @@ namespace helios::gfx
 
 		void ExecuteContext(std::span<std::unique_ptr<GraphicsContext>> graphicsContext);
 		void ExecuteContext(std::span<std::unique_ptr<ComputeContext>> computeContext);
-		
+
 		void ExecuteContext(std::unique_ptr<GraphicsContext> graphicsContext);
 		void ExecuteContext(std::unique_ptr<ComputeContext> computeContext);
-
+	
 		void Present();
 
 		// Helper creation functions.
