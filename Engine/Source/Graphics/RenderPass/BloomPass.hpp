@@ -14,10 +14,10 @@ namespace helios::gfx
 	class BloomPass
 	{
 	public:
-		BloomPass(const gfx::Device* device, const Uint2& dimensions);
+		BloomPass(gfx::Device* device, const Uint2& dimensions);
 		void OnResize(const gfx::Device* device, const Uint2& dimensions);
 
-		void Render(gfx::Device* const device, gfx::RenderTarget* renderTarget);
+		void Render(gfx::Device* const device, gfx::RenderTarget* renderTarget, std::vector<std::unique_ptr<ComputeContext>>& computeContexts);
 
 	public:
 		static constexpr uint32_t BLOOM_MIP_LEVELS = 9u;
@@ -25,13 +25,17 @@ namespace helios::gfx
 
 		// For simplicity, the bloom pipeline state will be able to do a lot of various task based on the the bloom buffer values.
 		std::unique_ptr<gfx::PipelineState> mBloomPipelineState{};
+		
 		std::unique_ptr<gfx::Texture> mPreFilterBloomTexture{};
-		std::unique_ptr<gfx::Texture> mUpDownSampledBloomTextures{};
+		std::unique_ptr<gfx::Texture> mDownSampledBloomTextures{};
+		std::unique_ptr<gfx::Texture> mUpSampledBloomTextures{};
+		
 		std::unique_ptr<gfx::Buffer> mBloomBuffer{};
 
-		std::vector<uint32_t> mMipUavIndices{};
+		std::vector<uint32_t> mDownSamplingMipUavIndices{};
+		std::vector<uint32_t> mUpSamplingMipUavIndices{};
 
-		uint32_t mSrvIndex{};
+		uint32_t mPreFilterSrvIndex{};
 		uint32_t mPreFilterUavIndex{};
 
 		BloomBuffer mBloomBufferData{};

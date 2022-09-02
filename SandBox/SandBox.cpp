@@ -48,7 +48,7 @@ void SandBox::OnInit()
 	};
 	utility::ResourceManager::LoadModel(mDevice.get(), metalRoughSpheresCreationDesc);
 
-#if 1
+#if 0
 	scene::ModelCreationDesc sponzaCreationDesc
 	{
 		.modelPath = L"Assets/Models/sponza-gltf-pbr/sponza.glb",
@@ -165,7 +165,7 @@ void SandBox::OnInit()
 	// Init render passes.
 	mDeferredGPass = std::make_unique<gfx::DeferredGeometryPass>(mDevice.get(), mDimensions);
 	mShadowPass = std::make_unique<gfx::ShadowPass>(mDevice.get());
-	mBloomPass = std::make_unique<gfx::BloomPass>(mDevice.get(), mDimensions);
+	//mBloomPass = std::make_unique<gfx::BloomPass>(mDevice.get(), mDimensions);
 
 	// Init other scene objects.
 	mEditor = std::make_unique<editor::Editor>(mDevice.get());
@@ -188,7 +188,7 @@ void SandBox::OnInit()
 	metalRoughSpheres->GetTransform()->data.translate = { -15.0f, 0.0f, 0.0f };
 	mScene->AddModel(std::move(metalRoughSpheres));
 
-#if 1
+#if 0
 	auto sponza = utility::ResourceManager::GetLoadedModel(L"Sponza");
 	sponza->GetTransform()->data.scale = { 0.1f, 0.1f, 0.1f };
 	mScene->AddModel(std::move(sponza));
@@ -218,6 +218,8 @@ void SandBox::OnRender()
 	std::unique_ptr<gfx::GraphicsContext> finalGraphicsContext = mDevice->GetGraphicsContext(mFinalPipelineState.get());
 	std::unique_ptr<gfx::GraphicsContext> finalToSwapChainGraphicsContext = mDevice->GetGraphicsContext(nullptr);
 	
+	std::vector<std::unique_ptr<gfx::ComputeContext>> bloomComputeContexts{};
+
 	gfx::BackBuffer *backBuffer = mDevice->GetCurrentBackBuffer();
 
 	mDevice->BeginFrame();
@@ -311,10 +313,14 @@ void SandBox::OnRender()
 
 	mDevice->ExecuteContext(graphicsContexts1);
 
+	// note(rtarun9) : Bloom has not been implemented.
 	// Render pass 1.5 : Bloom Pass.
 	{
-		mBloomPass->Render(mDevice.get(),  mOffscreenRT.get());
+		//mBloomPass->Render(mDevice.get(),  mOffscreenRT.get(), bloomComputeContexts);
 	}
+
+	// Execute the contexts.
+	mDevice->ExecuteContext(bloomComputeContexts);
 
 	// Render pass 2 : Render offscreen rt to post processed RT (after all
 	// processing has occured).
@@ -334,7 +340,7 @@ void SandBox::OnRender()
 		PostProcessRenderResources postProcessRenderResources
 		{
 			.finalRenderTextureIndex = gfx::RenderTarget::GetRenderTextureSRVIndex(mOffscreenRT.get()),
-			.bloomTextureIndex = gfx::Texture::GetSrvIndex(mBloomPass->mUpDownSampledBloomTextures.get()),
+			.bloomTextureIndex = 0u,
 			.postProcessBufferIndex = gfx::Buffer::GetCbvIndex(mPostProcessBuffer.get())
 		};
 
@@ -363,7 +369,7 @@ void SandBox::OnRender()
 
 		gfx::RenderTarget::Render(finalGraphicsContext.get(), rtvRenderResources);
 
-		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, mShadowPass.get(), mBloomPass.get(), clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
+		mEditor->Render(mDevice.get(), mScene.get(), &mDeferredGPass->mDeferredPassRTs, mShadowPass.get(), clearColor, mPostProcessBufferData, mPostProcessingRT.get(), finalGraphicsContext.get());
 	}
 
 	// Render pass 3 : Copy the final RT to the swap chain
@@ -449,7 +455,7 @@ void SandBox::OnResize()
 		mDevice->ResizeRenderTarget(mPostProcessingRT.get());
 
 		mDeferredGPass->Resize(mDevice.get(), mDimensions);
-		mBloomPass->OnResize(mDevice.get(), mDimensions);
+		//mBloomPass->OnResize(mDevice.get(), mDimensions);
 
 		mEditor->OnResize(core::Application::GetClientDimensions());
 	}

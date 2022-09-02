@@ -2,6 +2,7 @@
 #define __UTILS_HLSLI__
 
 static const float MIN_FLOAT_VALUE = 0.00001f;
+static const float EPSILON = 1.0e-4;
 
 static const float PI = 3.14159265359;
 static const float TWO_PI = 2.0f * PI;

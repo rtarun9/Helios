@@ -22,7 +22,7 @@ float3 QuadraticThreshold(float3 inputColor, float threshHoldValue, float3 curve
     rq = curve.z * rq * rq;
 
     // Combine and apply the brightness response curve.
-    float3 color = inputColor * max(rq, brightness - threshHoldValue) / max(brightness, MIN_FLOAT_VALUE);
+    float3 color = inputColor * max(rq, brightness - threshHoldValue) / max(brightness, EPSILON);
 
     return color;
 }
@@ -30,7 +30,7 @@ float3 QuadraticThreshold(float3 inputColor, float threshHoldValue, float3 curve
 // Curve : (threshHold - knee), knee * 2, 0.25 / knee.
 float3 Prefilter(float3 inputColor, float2 textureCoords, float2 threshHoldParams)
 {
-    const float clampValue = 20.0f;
+    const float clampValue = 50.0f;
     inputColor = min(float3(clampValue, clampValue, clampValue), inputColor);
     return QuadraticThreshold(inputColor.xyz, threshHoldParams.x, float3(threshHoldParams.x - threshHoldParams.y, threshHoldParams.y * 2.0f, 0.25f / threshHoldParams.y));
 }
@@ -78,15 +78,15 @@ float3 UpsampleTent(Texture2D<float3> inputTexture, float2 textureCoords, float2
     float4 d = texelSize.xyxy * float4(1.0, 1.0, -1.0, 0.0);
 
     float3 result = float3(0.0f, 0.0f, 0.0f);
-    result = inputTexture.Sample(linearClampSampler, textureCoords - d.xy);
-    result += inputTexture.Sample(linearClampSampler, textureCoords - d.wy) * 2.0f;
-    result += inputTexture.Sample(linearClampSampler, textureCoords - d.zy); 
-    result += inputTexture.Sample(linearClampSampler, textureCoords + d.zw) * 2.0f;
-    result += inputTexture.Sample(linearClampSampler, textureCoords) * 4.0f;
-    result += inputTexture.Sample(linearClampSampler, textureCoords + d.xw) * 2.0f;
-    result += inputTexture.Sample(linearClampSampler, textureCoords + d.zy);
-    result += inputTexture.Sample(linearClampSampler, textureCoords + d.wy) * 2.0f;
-    result += inputTexture.Sample(linearClampSampler, textureCoords + d.xy);
+    result =  inputTexture.SampleLevel(linearClampSampler, textureCoords - d.xy, 0u);
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords - d.wy, 0u) * 2.0f;
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords - d.zy, 0u); 
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords + d.zw, 0u) * 2.0f;
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords       , 0u) * 4.0f;
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords + d.xw, 0u) * 2.0f;
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords + d.zy, 0u);
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords + d.wy, 0u) * 2.0f;
+    result += inputTexture.SampleLevel(linearClampSampler, textureCoords + d.xy, 0u);
 
     return  result * (1.0 / 16.0);
 }
@@ -111,6 +111,39 @@ float3 KarisAverage(Texture2D<float3> inputTexture, float2 textureCoords, float2
 	
 	return (a * weightA + b * weightB + c * weightC + d * weightD) / (weightA + weightB + weightC + weightD);
 }
+
+float3 GaussianBlurHorizontal(Texture2D<float3> inputTexture, float2 textureCoords, float2 texelSize)
+{
+    const int WEIGHTS = 5;
+
+    const float weight[WEIGHTS] = {0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216};
+
+    float3 result = inputTexture.Sample(linearClampSampler, textureCoords) * weight[0];
+    for(int i = 1; i < WEIGHTS; ++i)
+    {
+        result += inputTexture.Sample(linearClampSampler, textureCoords + float2(texelSize.x * i, 0.0)).rgb * weight[i];
+        result += inputTexture.Sample(linearClampSampler, textureCoords - float2(texelSize.x * i, 0.0)).rgb * weight[i];
+    }
+
+    return result;
+}
+
+float3 GaussianBlurVertical(Texture2D<float3> inputTexture, float2 textureCoords, float2 texelSize)
+{
+    const int WEIGHTS = 5;
+
+    const float weight[WEIGHTS] = {0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216};
+
+    float3 result = inputTexture.Sample(linearClampSampler, textureCoords) * weight[0];
+    for(int i = 1; i < WEIGHTS; ++i)
+    {
+        result += inputTexture.Sample(linearClampSampler, textureCoords + float2(0.0f, texelSize.y * i)).rgb * weight[i];
+        result += inputTexture.Sample(linearClampSampler, textureCoords - float2(0.0f, texelSize.y * i)).rgb * weight[i];
+    }
+
+    return result;
+}
+
 ConstantBuffer<BloomPassRenderResources> renderResources : register(b0);
 
 [RootSignature(BindlessRootSignature)]
@@ -131,10 +164,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     {
         float3 downSampledResult = DownSample13Fetches(inputTexture, textureCoords, texelSize);
         float3 color = Prefilter(downSampledResult, textureCoords, bloomBuffer.threshHoldParams);
-        outputTexture[dispatchThreadID.xy] =    color;
-        
-        //textureCoords = (dispatchThreadID.xy + float2(0.5f, 0.5f)) * float2(texelSize);
-        //outputTexture[dispatchThreadID.xy] = KarisAverage(inputTexture, textureCoords, texelSize);
+        outputTexture[dispatchThreadID.xy] =  color;
     }
     else if (bloomBuffer.shaderUsage == BloomShaderUsage::FirstDownsample)
     {
@@ -155,6 +185,14 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     else if (bloomBuffer.shaderUsage == BloomShaderUsage::Upsample)
     {
         float3 upsampleResult = UpsampleTent(inputTexture, textureCoords, texelSize);
-        outputTexture[dispatchThreadID.xy] = upsampleResult + outputTexture[dispatchThreadID.xy];
+        outputTexture[dispatchThreadID.xy] = upsampleResult;
+    }
+    else if (bloomBuffer.shaderUsage == BloomShaderUsage::GaussianBlurVertical)
+    {
+        outputTexture[dispatchThreadID.xy] = GaussianBlurVertical(inputTexture, textureCoords, texelSize);
+    }
+    else if (bloomBuffer.shaderUsage == BloomShaderUsage::GaussianBlurHorizontal)
+    {
+        outputTexture[dispatchThreadID.xy] = GaussianBlurHorizontal(inputTexture, textureCoords, texelSize);
     }
 }

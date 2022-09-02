@@ -16,7 +16,10 @@ namespace helios::core
 	void ApplicationLog::AddLog(std::string_view logMessage, const core::LogMessageTypes& messageType)
 	{
 		// note(rtarun9) : Crashes occur because of (most probably) a compiler error in MSVC, so function not in use until the cause of error is identified.
+		
+#ifdef _DEBUG
 		return;
+#endif
 
 		std::string message{ logMessage };
 		textBuffer.push_back(message);

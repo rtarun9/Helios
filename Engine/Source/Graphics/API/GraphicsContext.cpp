@@ -196,6 +196,16 @@ namespace helios::gfx
 	{
 		mCommandList->DrawInstanced(indicesCount, instanceCount, 0u, 0u);
 	}
+
+	void GraphicsContext::Dispatch(uint32_t threadGroupX, uint32_t threadGroupY, uint32_t threadGroupZ) const
+	{
+		mCommandList->Dispatch(threadGroupX, threadGroupY, threadGroupZ);
+	}
+
+	void GraphicsContext::Set32BitComputeConstants(const void* renderResources) const
+	{
+		mCommandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
+	}
 	 
 	void GraphicsContext::CopyResource(ID3D12Resource* source, ID3D12Resource* destination)
 	{

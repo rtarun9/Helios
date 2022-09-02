@@ -72,7 +72,7 @@ PsOutput PsMain(VSOutput psInput)
     output.positionEmissive = float4(psInput.worldSpacePosition, emissive.r);
     
     output.normalEmissive = float4(GetNormal(psInput.textureCoord, renderResource.normalTextureIndex, renderResource.normalTextureSamplerIndex, psInput.normal, psInput.tbnMatrix), emissive.g);
-
+    
     float ao = GetAO(psInput.textureCoord, renderResource.aoTextureIndex, renderResource.aoTextureSamplerIndex);
     float2 metalRoughness = GetMetalRoughness(psInput.textureCoord, renderResource.metalRoughnessTextureIndex, renderResource.metalRoughnessTextureSamplerIndex);
 

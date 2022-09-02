@@ -88,6 +88,8 @@ enum class BloomShaderUsage : int
     FirstDownsample,
     Upsample,
     PreFilter,
+    GaussianBlurHorizontal,
+    GaussianBlurVertical,
     Other
 };
 

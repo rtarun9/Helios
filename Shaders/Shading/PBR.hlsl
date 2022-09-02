@@ -85,7 +85,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
         float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
 
-        lo += brdf *  radiance * saturate(dot(pixelToLightDirection, normal));
+        lo += brdf *  radiance * saturate(dot(pixelToLightDirection, normal)) * attenuation;
     }
 
     // Will be used for calculated bias in shadow mapping as well (as it is highly dependent on nDotL).
@@ -127,7 +127,7 @@ float4 PsMain(VSOutput psInput) : SV_Target
     // Dimming the diffuseIBL component is not physically accurate, but does give a little better / realistic look.
     float shadowAmbientFactor = (1.0f - shadow) == 0.0f ? 1.0f : 1.0f;
 
-    float3 ambient = (diffuseIBL + specularIBL) * ao * shadowAmbientFactor;
+    float3 ambient =  (diffuseIBL + specularIBL) * ao * shadowAmbientFactor;
 
     lo += emissive + ambient;
 

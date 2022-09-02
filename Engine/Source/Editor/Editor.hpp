@@ -25,7 +25,7 @@ namespace helios::editor
 
 		// Goal is to call this single function from the engine which does all the UI internally, helps make the engine clean as well.
 		// This function is heavy WIP and not given as much importance as other abstractions.
-		void Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, gfx::BloomPass* bloomPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext);
+		void Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext);
 
 		void OnResize(Uint2 dimensions) const;
 
@@ -42,7 +42,7 @@ namespace helios::editor
 
 		void RenderDeferredGPass(gfx::Device* device, const gfx::DeferredPassRTs* deferredRTs) const;
 		void RenderShadowPass(gfx::Device* device, gfx::ShadowPass* shadowPass);
-		void RenderBloomPass(gfx::Device* device, gfx::BloomPass* bloomPass);
+		// void RenderBloomPass(gfx::Device* device, gfx::BloomPass* bloomPass);
 
 		void RenderLogWindow();
 

@@ -49,6 +49,10 @@ namespace helios::gfx
 		void DrawInstanceIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;
 		void DrawIndexed(uint32_t indicesCount, uint32_t instanceCount = 1u) const;
 
+		// Compute functions (as graphics context can be used for compute as well).
+		void Dispatch(uint32_t threadGroupX, uint32_t threadGroupY, uint32_t threadGroupZ) const;
+		void Set32BitComputeConstants(const void* renderResources) const;
+		
 		// Copy related calls.
 		void CopyResource(ID3D12Resource* source, ID3D12Resource* destination);
 

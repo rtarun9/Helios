@@ -67,7 +67,7 @@ namespace helios::editor
 
 	// This massive class will do all rendering of UI and its settings / configs within in.
 	// May seem like lot of code squashed into a single function, but this makes the engine code clean
-	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, gfx::BloomPass* bloomPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
+	void Editor::Render(gfx::Device* const device, scene::Scene* const scene, gfx::DeferredPassRTs* const deferredPassRTs, gfx::ShadowPass* shadowPass, std::span<float, 4> clearColor, PostProcessBuffer& postProcessBufferData, const gfx::RenderTarget* renderTarget, gfx::GraphicsContext* graphicsContext)
 	{
 		if (mShowUI)
 		{
@@ -107,9 +107,6 @@ namespace helios::editor
 
 			// Render shadow pass data.
 			RenderShadowPass(device, shadowPass);
-
-			// Render Bloom Pass data.
-			RenderBloomPass(device, bloomPass);
 
 			// Render scene viewport (After all post processing).
 			// All add model to model list if a path is dragged into scene viewport.
@@ -168,7 +165,7 @@ namespace helios::editor
 			ImGui::SliderFloat("Rotation Speed", &scene->mCamera->mRotationSpeed, 0.1f, 250.0f);
 
 			ImGui::SliderFloat("Friction Factor", &scene->mCamera->mFrictionFactor, 0.0f, 1.0f);
-			
+			//	ImGui::SliderFloat("Sun Angle Speed", &scene->mSunChangeSpeed, -100.0f, 50.0f);
 			ImGui::TreePop();
 		}
 
@@ -180,6 +177,8 @@ namespace helios::editor
 
 			ImGui::TreePop();
 		}
+
+	
 
 		ImGui::End();
 	}
@@ -230,7 +229,7 @@ namespace helios::editor
 				if (ImGui::TreeNode(name.c_str()))
 				{
 					ImGui::ColorPicker3("Light Color", &color.x, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR);
-					ImGui::SliderFloat("Intensity", &scene::Light::GetLightBufferData()->radiusIntensity[directionalLightIndex].y, 0.0f, 5.0f);
+					ImGui::SliderFloat("Intensity", &scene::Light::GetLightBufferData()->radiusIntensity[directionalLightIndex].y, 0.0f, 50.0f);
 					float intensity = scene::Light::GetLightBufferData()->radiusIntensity[directionalLightIndex].y;
 					 
 					scene::Light::GetLightBufferData()->lightColor[directionalLightIndex] =
@@ -305,6 +304,8 @@ namespace helios::editor
 		ImGui::End();
 	}
 
+	// note : Removed, as bloom has not been implemented.
+	/*
 	void Editor::RenderBloomPass(gfx::Device* device, gfx::BloomPass* bloomPass)
 	{
 		const gfx::DescriptorHandle& bloomTextureDescriptorHandle = device->GetTextureSrvDescriptorHandle(bloomPass->mPreFilterBloomTexture.get());
@@ -319,6 +320,7 @@ namespace helios::editor
 		ImGui::SliderFloat("Curve Knee", &bloomPass->mBloomBufferData.threshHoldParams.y, 0.05f, 10.0f);
 		ImGui::End();
 	}
+	*/
 
 	void Editor::RenderLogWindow()
 	{

@@ -43,7 +43,8 @@ float4 PsMain(VSOutput input) : SV_Target
     bloomColor.rgb = float3(1.0f, 1.0f, 1.0f) - exp(-bloomColor.rgb * exposure);
 
     // Gamma correction.
-    color.rgb = pow(color.rgb + bloomColor.rgb, GAMMA_CORRECTION);
+    // note(rtarun9) : Bloom is not used, as it has not been implemented.
+    color.rgb = pow(color.rgb, GAMMA_CORRECTION);
 
     return color;
 }
