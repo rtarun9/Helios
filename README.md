@@ -1,6 +1,6 @@
 # Helios
 
-A Experimental, C++20 & DX12 renderer made for learning and trying out various graphics / rendering techniques.
+An experimental C++20 & DX12 renderer made for learning and trying out various graphics / rendering techniques.
 
 # Features
 * Bindless Rendering (Using SM 6.6's Resource / Sampler descriptor Heap).
@@ -41,13 +41,20 @@ A Experimental, C++20 & DX12 renderer made for learning and trying out various g
 * [Tiny GLTF](https://github.com/syoyo/tinygltf)
 
 # Building
-+ This project uses CMake as a build system, and all third party libs are setup using CMake's FetchContent().
-+ After cloning the project, build the project using CMake (cmake -S . -B Build, then : cmake --build Build --config Release) (or alternatively open the folder if your IDE supports doing so). The application will take care of relative file paths.
-+ Run the setup.bat file, which will install the DirectXAgility SDK. 
-+ Ensure you have installed the DirectXShaderCompiler (must support atleast SM 6.6).
-+ Shaders are automatically compiled after build process, however to compile manually, run the CompileShaders.bat (or alternatively the CompileShaders.py script) from the Shaders directory. This is necessary for the first setup and run.
+* This project uses CMake as a build system, and all third party libs are setup using CMake's FetchContent().
+* After cloning the project, build the project using CMake:
 
-# Reference Projects :
-[Wicked Engine](https://github.com/turanszkij/WickedEngine) \
-[Vanguard Engine](https://github.com/adepke/VanguardEngine/tree/master) \
-[Adria-DX12](https://github.com/mateeeeeee/Adria-DX12)
+  ```
+  cmake -S . -B Build
+  cmake --build Build --config Release
+  ```
+  
+  Alternatively, open the folder if your IDE supports doing so. The application will take care of relative file paths.
+* Run the `setup.bat` file, which will install the DirectXAgility SDK. 
+* Ensure you have installed the DirectXShaderCompiler (must support atleast SM 6.6).
+* Shaders are automatically compiled after build process, however to compile manually, run the `CompileShaders.bat` (or alternatively the `CompileShaders.py` script) from the [`Shaders`](Shaders) directory. This is necessary for the first setup and run.
+
+# Reference Projects
+* [Wicked Engine](https://github.com/turanszkij/WickedEngine)
+* [Vanguard Engine](https://github.com/adepke/VanguardEngine)
+* [Adria-DX12](https://github.com/mateeeeeee/Adria-DX12)
