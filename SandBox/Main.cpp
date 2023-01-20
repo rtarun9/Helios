@@ -1,19 +1,21 @@
-#include "Helios.hpp"
-#include "SandBox.hpp"
+#include "core/Application.hpp"
 
-int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prevInstance, [[maybe_unused]] _In_ LPWSTR commandLine, [[maybe_unused]] _In_ INT commandShow)
+class SandBox final : public helios::core::Application
 {
-    helios::core::Config config
-    {
-        .title = L"Helios Engine", 
-        .dimensions
-        {
-            .x = 1920u, 
-            .y = 1080u
-        }
-    };
+  public:
+    SandBox(const std::string_view windowTitle) : Application(windowTitle) {}
 
-    SandBox sandBox{config};
+    void loadContent() override{};
+    void update(const float deltaTime) override{};
+    void render() override{};
 
-    return helios::core::Application::Run(&sandBox, instance);
+  private:
+};
+
+int main()
+{
+    SandBox sandbox{"Helios::SandBox"};
+    sandbox.run();
+
+    return 0;
 }
