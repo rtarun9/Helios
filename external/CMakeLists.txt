@@ -65,7 +65,7 @@ add_library(libimgui
 target_include_directories(libimgui PUBLIC 
 ${imgui_SOURCE_DIR} 
 ${imgui_SOURCE_DIR}/backends
-${sdl3_SOURCE_DIR}/include
+${sdl2_SOURCE_DIR}/include
 )
 
 target_link_libraries(libimgui PUBLIC SDL2::SDL2main SDL2::SDL2-static)

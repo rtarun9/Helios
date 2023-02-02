@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Graphics/GraphicsDevice.hpp"
+
 struct SDL_Window;
 
 namespace helios::core
@@ -7,8 +9,14 @@ namespace helios::core
     class Application
     {
       public:
-        Application(const std::string_view windowTitle);
+        explicit Application(const std::string_view windowTitle);
         virtual ~Application();
+
+        Application(const Application& other) = delete;
+        Application& operator=(const Application& other) = delete;
+
+        Application(Application&& other) = delete;
+        Application& operator=(Application&& other) = delete;
 
         void run();
 
@@ -27,5 +35,7 @@ namespace helios::core
         uint32_t m_windowHeight{};
         SDL_Window* m_window{};
         HWND m_windowHandle{};
+
+        std::unique_ptr<gfx::GraphicsDevice> m_graphicsDevice{};
     };
-}
+} // namespace helios::core

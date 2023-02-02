@@ -1,18 +1,22 @@
-#include "core/Application.hpp"
+#include "Core/Application.hpp"
 
 #include <SDL.h>
 #include <SDL_syswm.h>
 
 namespace helios::core
 {
-    Application::Application(const std::string_view windowTitle) : m_windowTitle(windowTitle) {}
+    Application::Application(const std::string_view windowTitle) : m_windowTitle(windowTitle)
+    {
+    }
 
-    Application::~Application() { cleanup(); }
+    Application::~Application()
+    {
+        cleanup();
+    }
 
     void Application::init()
     {
-        // Set DPI awareness.
-        ::SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
         // Initialize SDL2 and create window.
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -34,7 +38,8 @@ namespace helios::core
         m_windowWidth = static_cast<uint32_t>(monitorWidth * 0.60f);
         m_windowHeight = static_cast<uint32_t>(monitorHeight * 0.60f);
 
-        m_window = SDL_CreateWindow(m_windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_windowWidth, m_windowHeight, SDL_WINDOW_ALLOW_HIGHDPI);
+        m_window = SDL_CreateWindow(m_windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                    m_windowWidth, m_windowHeight, SDL_WINDOW_ALLOW_HIGHDPI);
 
         if (!m_window)
         {
@@ -47,6 +52,9 @@ namespace helios::core
 
         SDL_GetWindowWMInfo(m_window, &wmInfo);
         m_windowHandle = wmInfo.info.win.window;
+
+        // Initialize the graphics device.
+        m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>();
     }
 
     void Application::cleanup()
@@ -76,7 +84,7 @@ namespace helios::core
                         quit = true;
                     }
 
-                    const uint8_t* keyboardState = SDL_GetKeyboardState(nullptr);
+                    const uint8_t *keyboardState = SDL_GetKeyboardState(nullptr);
                     if (keyboardState[SDL_SCANCODE_ESCAPE])
                     {
                         quit = true;
@@ -84,17 +92,19 @@ namespace helios::core
                 }
 
                 const std::chrono::high_resolution_clock::time_point currentFrameTimePoint = clock.now();
-                const float deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentFrameTimePoint - previousFrameTimePoint).count();
+                const float deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentFrameTimePoint -
+                                                                                              previousFrameTimePoint)
+                                            .count();
                 previousFrameTimePoint = currentFrameTimePoint;
 
                 update(deltaTime);
                 render();
             }
         }
-        catch (const std::exception& exception)
+        catch (const std::exception &exception)
         {
-            std::cerr << "[EXCEPTION] : " << exception.what() << '\n';
+            std::cerr << "[EXCEPTION] :: " << exception.what() << '\n';
             return;
         }
     }
-}
+} // namespace helios::core
