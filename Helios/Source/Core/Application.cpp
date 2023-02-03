@@ -14,8 +14,9 @@ namespace helios::core
         cleanup();
     }
 
-    void Application::init()
+    void Application::initPlatformBackend()
     {
+        // Set DPI awareness.
         SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 
         // Initialize SDL2 and create window.
@@ -28,7 +29,7 @@ namespace helios::core
         SDL_DisplayMode displayMode{};
         if (SDL_GetCurrentDisplayMode(0, &displayMode) < 0)
         {
-            fatalError("Failed to get display mode.");
+            fatalError(std::format("Failed to get display mode. SDL Error: {}", SDL_GetError()));
         }
 
         const uint32_t monitorWidth = displayMode.w;
@@ -43,7 +44,7 @@ namespace helios::core
 
         if (!m_window)
         {
-            fatalError("Failed to create SDL2 window.");
+            fatalError(std::format("Failed to create SDL2 window. SDL Error: {}", SDL_GetError()));
         }
 
         // Get the underlying window handle.
@@ -52,9 +53,15 @@ namespace helios::core
 
         SDL_GetWindowWMInfo(m_window, &wmInfo);
         m_windowHandle = wmInfo.info.win.window;
+    }
+
+    void Application::init()
+    {
+        initPlatformBackend();
 
         // Initialize the graphics device.
-        m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>();
+        m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>(m_windowWidth, m_windowHeight,
+                                                                 DXGI_FORMAT_R10G10B10A2_UNORM, m_windowHandle);
     }
 
     void Application::cleanup()
@@ -84,7 +91,7 @@ namespace helios::core
                         quit = true;
                     }
 
-                    const uint8_t *keyboardState = SDL_GetKeyboardState(nullptr);
+                    const uint8_t* keyboardState = SDL_GetKeyboardState(nullptr);
                     if (keyboardState[SDL_SCANCODE_ESCAPE])
                     {
                         quit = true;
@@ -101,7 +108,7 @@ namespace helios::core
                 render();
             }
         }
-        catch (const std::exception &exception)
+        catch (const std::exception& exception)
         {
             std::cerr << "[EXCEPTION] :: " << exception.what() << '\n';
             return;

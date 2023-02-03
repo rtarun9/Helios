@@ -20,6 +20,9 @@ namespace helios::core
 
         void run();
 
+      private:
+        void initPlatformBackend();
+
       protected:
         virtual void init();
         virtual void cleanup();

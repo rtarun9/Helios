@@ -1,4 +1,5 @@
 #include "Graphics/CommandQueue.hpp"
+#include "Graphics/Context.hpp"
 
 namespace helios::gfx
 {
@@ -21,10 +22,18 @@ namespace helios::gfx
         m_fence->SetName(name.data());
     }
 
-    void executeContext(const std::span<const Context> contexts)
+    void CommandQueue::executeContext(const std::span<const Context* const> contexts)
     {
-        // TODO(rtarun9) : Fill in this function.
-        return;
+        std::vector<ID3D12CommandList*> commandLists{};
+        commandLists.reserve(contexts.size());
+
+        for (auto& context : contexts)
+        {
+            throwIfFailed(context->getCommandList()->Close());
+            commandLists.emplace_back(context->getCommandList());
+        }
+
+        m_commandQueue->ExecuteCommandLists(static_cast<UINT>(contexts.size()), commandLists.data());
     }
 
     bool CommandQueue::isFenceComplete(const uint64_t fenceValue) const
@@ -32,11 +41,12 @@ namespace helios::gfx
         return m_fence->GetCompletedValue() >= fenceValue;
     }
 
-    uint64_t CommandQueue::signal(const uint64_t fenceValue) const
+    uint64_t CommandQueue::signal()
     {
-        throwIfFailed(m_commandQueue->Signal(m_fence.Get(), fenceValue));
+        m_monotonicallyIncreasingFenceValue++;
+        throwIfFailed(m_commandQueue->Signal(m_fence.Get(), m_monotonicallyIncreasingFenceValue));
 
-        return fenceValue + 1u;
+        return m_monotonicallyIncreasingFenceValue;
     }
 
     void CommandQueue::waitForFenceValue(const uint64_t fenceValue) const
@@ -44,7 +54,6 @@ namespace helios::gfx
         if (!isFenceComplete(fenceValue))
         {
             throwIfFailed(m_fence->SetEventOnCompletion(fenceValue, nullptr));
-            ::WaitForSingleObject(nullptr, INFINITE);
         }
     }
 
@@ -53,9 +62,9 @@ namespace helios::gfx
         return m_fence->GetCompletedValue();
     }
 
-    void CommandQueue::flush(const uint64_t fenceValue)
+    void CommandQueue::flush()
     {
-        const uint64_t fenceValueToWaitFor = signal(fenceValue);
+        const uint64_t fenceValueToWaitFor = signal();
         waitForFenceValue(fenceValueToWaitFor);
     }
 } // namespace helios::gfx

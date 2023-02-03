@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <span>
+#include <ranges>
 #include <vector>
 #include <array>
 #include <format>

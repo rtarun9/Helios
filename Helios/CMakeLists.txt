@@ -12,6 +12,12 @@ set(SRC_FILES
 
     "Source/Graphics/Context.cpp"
     "Include/Graphics/Context.hpp"
+
+    "Source/Graphics/GraphicsContext.cpp"
+    "Include/Graphics/GraphicsContext.hpp"
+
+    "Source/Graphics/DescriptorHeap.cpp"
+    "Include/Graphics/DescriptorHeap.hpp"
 )
 
 add_library(Helios STATIC ${SRC_FILES})

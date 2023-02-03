@@ -2,9 +2,9 @@
 
 namespace helios::gfx
 {
-    // Base class for Context (i.e wrapper for command list and a command allocator). Provides batching of resource barriers for optimal
-    // performance. It uses a GraphicsCOmmandList and is can execute commands of any type (copy, compute, graphics,
-    // etc).
+    // Base class for Context (i.e wrapper for command list and a command allocator). Provides batching of resource
+    // barriers for optimal performance. It uses a GraphicsCommandList and is can execute commands of any type (copy,
+    // compute, graphics, etc).
     class Context
     {
       public:
@@ -17,9 +17,11 @@ namespace helios::gfx
                                 const D3D12_RESOURCE_STATES newState);
         void executeResourceBarriers();
 
+        void reset();
+
       protected:
-        Context() = default;
-        virtual ~Context();
+        explicit Context() = default;
+        virtual ~Context() = default;
 
         wrl::ComPtr<ID3D12GraphicsCommandList1> m_commandList{};
         wrl::ComPtr<ID3D12CommandAllocator> m_commandAllocator{};
@@ -27,7 +29,6 @@ namespace helios::gfx
         // Resource barriers are quite heavy, and executing them in a single call (batched) is very efficient.
         // The resource barriers are executed when the ExecuteResourceBarriers() call is invoked, which must happen
         // before command list is sent over to the device for execution, or be batched as much as possible.
-
         std::vector<CD3DX12_RESOURCE_BARRIER> m_resourceBarriers{};
     };
 } // namespace helios::gfx

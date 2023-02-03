@@ -22,9 +22,8 @@ inline void log(const std::wstring_view message)
     std::wcout << L"[LOG] :: " << message << '\n';
 }
 
-inline void throwIfFailed(const HRESULT hr,
-                              const std::source_location sourceLocation = std::source_location::current())
-    {
+inline void throwIfFailed(const HRESULT hr, const std::source_location sourceLocation = std::source_location::current())
+{
     if (FAILED(hr))
     {
         fatalError("HRESULT failed!", sourceLocation);
@@ -62,7 +61,7 @@ inline std::string wStringToString(const std::wstring_view inputWString)
 }
 
 template <typename T>
-static inline constexpr typename std::underlying_type<T>::type enumClassValue(const T &value)
+static inline constexpr typename std::underlying_type<T>::type enumClassValue(const T& value)
 {
     return static_cast<std::underlying_type<T>::type>(value);
 }
