@@ -53,7 +53,7 @@ namespace helios::core
         m_windowHeight = static_cast<uint32_t>(monitorHeight * 0.60f);
 
         m_window = SDL_CreateWindow(m_windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                    m_windowWidth, m_windowHeight, SDL_WINDOW_ALLOW_HIGHDPI);
+                                    m_windowWidth, m_windowHeight, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 
         if (!m_window)
         {
@@ -109,6 +109,13 @@ namespace helios::core
                         quit = true;
                     }
 
+                    if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                    {
+                        m_windowWidth = event.window.data1;
+                        m_windowHeight = event.window.data2;
+
+                        //m_graphicsDevice->resizeWindow(event.window.data1, event.window.data2);
+                    }
                     const uint8_t* keyboardState = SDL_GetKeyboardState(nullptr);
                     if (keyboardState[SDL_SCANCODE_ESCAPE])
                     {

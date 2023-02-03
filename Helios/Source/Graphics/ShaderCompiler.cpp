@@ -12,7 +12,7 @@ namespace helios::gfx::ShaderCompiler
 
     std::wstring shaderDirectory{};
 
-    Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath, const bool extractRootSignature)
+    Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath, const std::wstring_view entryPoint, const bool extractRootSignature)
     {
         Shader shader{};
 
@@ -27,31 +27,6 @@ namespace helios::gfx::ShaderCompiler
         }
 
         // Setup compilation arguments.
-        const std::wstring entryPoint = [=]() {
-            switch (shaderType)
-            {
-            case ShaderTypes::Vertex: {
-                return L"VsMain";
-            }
-            break;
-
-            case ShaderTypes::Pixel: {
-                return L"PsMain";
-            }
-            break;
-
-            case ShaderTypes::Compute: {
-                return L"CsMain";
-            }
-            break;
-
-            default: {
-                return L"";
-            }
-            break;
-            }
-        }();
-
         const std::wstring targetProfile = [=]() {
             switch (shaderType)
             {
@@ -79,7 +54,7 @@ namespace helios::gfx::ShaderCompiler
 
         std::vector<LPCWSTR> compilationArguments{
             L"-E",
-            entryPoint.c_str(),
+            entryPoint.data(),
             L"-T",
             targetProfile.c_str(),
             DXC_ARG_PACK_MATRIX_ROW_MAJOR,
@@ -101,10 +76,10 @@ namespace helios::gfx::ShaderCompiler
         }
 
         // Load the shader source file to a blob.
-        wrl::ComPtr<IDxcBlobEncoding> sourceBlob{};
+        wrl::ComPtr<IDxcBlobEncoding> sourceBlob{nullptr};
         throwIfFailed(utils->LoadFile(shaderPath.data(), nullptr, &sourceBlob));
 
-        const DxcBuffer sourceBuffer{
+        const DxcBuffer sourceBuffer = {
             .Ptr = sourceBlob->GetBufferPointer(),
             .Size = sourceBlob->GetBufferSize(),
             .Encoding = 0u,

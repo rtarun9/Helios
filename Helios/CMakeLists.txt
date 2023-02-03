@@ -19,6 +19,9 @@ set(SRC_FILES
     "Source/Graphics/GraphicsContext.cpp"
     "Include/Graphics/GraphicsContext.hpp"
 
+    "Source/Graphics/CopyContext.cpp"
+    "Include/Graphics/CopyContext.hpp"
+
     "Source/Graphics/DescriptorHeap.cpp"
     "Include/Graphics/DescriptorHeap.hpp"
     
@@ -27,6 +30,12 @@ set(SRC_FILES
 
     "Source/Graphics/PipelineState.cpp"
     "Include/Graphics/PipelineState.hpp"
+
+    "Source/Graphics/Resources.cpp"
+    "Include/Graphics/Resources.hpp"
+
+    "Source/Graphics/MemoryAllocator.cpp"
+    "Include/Graphics/MemoryAllocator.hpp"
 )
 
 add_library(Helios STATIC ${SRC_FILES})

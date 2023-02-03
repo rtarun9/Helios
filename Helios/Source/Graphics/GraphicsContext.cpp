@@ -22,6 +22,16 @@ namespace helios::gfx
         throwIfFailed(m_commandList->Close());
     }
 
+    void GraphicsContext::reset()
+    {
+        Context::reset();
+        const std::array<const DescriptorHeap* const, 1u> descriptorHeaps = {
+            graphicsDevice.getCbvSrvUavDescriptorHeap(),
+        };
+
+        setDescriptorHeaps(descriptorHeaps);
+    }
+
     void GraphicsContext::setDescriptorHeaps(
         const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const
     {
@@ -40,4 +50,68 @@ namespace helios::gfx
         m_commandList->ClearRenderTargetView(backBuffer.backBufferDescriptorHandle.cpuDescriptorHandle, color.data(),
                                              0u, nullptr);
     }
+
+    void GraphicsContext::setGraphicsPipelineState(const PipelineState& pipelineState) const
+    {
+        m_commandList->SetPipelineState(pipelineState.m_pipelineStateObject.Get());
+    }
+
+    void GraphicsContext::setGraphicsRootSignature(const PipelineState& pipelineState) const
+    {
+        m_commandList->SetGraphicsRootSignature(pipelineState.s_rootSignature.Get());
+    }
+
+    void GraphicsContext::setGraphicsRootSignatureAndPipeline(const PipelineState& pipelineState) const
+    {
+        m_commandList->SetGraphicsRootSignature(PipelineState::s_rootSignature.Get());
+        m_commandList->SetPipelineState(pipelineState.m_pipelineStateObject.Get());
+    }
+
+    void GraphicsContext::setIndexBuffer(const Buffer& buffer) const
+    {
+        const D3D12_INDEX_BUFFER_VIEW indexBufferView = {
+            .BufferLocation = buffer.allocation->resource->GetGPUVirtualAddress(),
+            .SizeInBytes = static_cast<UINT>(buffer.sizeInBytes),
+            .Format = DXGI_FORMAT_R32_UINT,
+        };
+
+        m_commandList->IASetIndexBuffer(&indexBufferView);
+    }
+
+    void GraphicsContext::set32BitGraphicsConstants(const void* renderResources) const
+    {
+        m_commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
+    }
+
+    void GraphicsContext::setViewport(const D3D12_VIEWPORT& viewport) const
+    {
+        static D3D12_RECT scissorRect{.left = 0u, .top = 0u, .right = LONG_MAX, .bottom = LONG_MAX};
+
+        m_commandList->RSSetViewports(1u, &viewport);
+        m_commandList->RSSetScissorRects(1u, &scissorRect);
+    }
+
+    // Specifies how the pipeline interprets vertex data bound to the input assembler stage.
+    // i.e if topology type is POINTLIST, vertex data is interpreted as list of points.
+    void GraphicsContext::setPrimitiveTopologyLayout(const D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const
+    {
+        m_commandList->IASetPrimitiveTopology(primitiveTopology);
+    }
+
+    void GraphicsContext::setRenderTarget(const BackBuffer& renderTarget) const
+    {
+        m_commandList->OMSetRenderTargets(1u, &renderTarget.backBufferDescriptorHandle.cpuDescriptorHandle, FALSE,
+                                          nullptr);
+    }
+
+    void GraphicsContext::drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
+    {
+        m_commandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);
+    }
+
+    void GraphicsContext::drawIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
+    {
+        m_commandList->DrawInstanced(indicesCount, instanceCount, 0u, 0u);
+    }
+
 } // namespace helios::gfx

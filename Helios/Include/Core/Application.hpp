@@ -21,6 +21,16 @@ namespace helios::core
 
         void run();
 
+        inline std::string getAssetsPath(const std::string_view assetPath)
+        {
+            return ResourceManager::getAssetsPath(assetPath);
+        }
+
+        inline std::wstring getAssetsPath(const std::wstring_view assetPath)
+        {
+            return ResourceManager::getAssetsPath(assetPath);
+        }
+
       private:
         void initPlatformBackend();
 

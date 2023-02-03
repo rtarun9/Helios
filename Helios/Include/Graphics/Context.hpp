@@ -17,7 +17,7 @@ namespace helios::gfx
                                 const D3D12_RESOURCE_STATES newState);
         void executeResourceBarriers();
 
-        void reset();
+        virtual void reset();
 
       protected:
         explicit Context() = default;

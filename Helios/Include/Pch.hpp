@@ -21,6 +21,7 @@
 #include <DirectXMath.h>
 #include <dxcapi.h>
 #include <d3dcompiler.h>
+#include <D3D12MemAlloc.h>
 
 #include "Graphics/d3dx12.hpp"
 
@@ -35,3 +36,5 @@ constexpr bool HELIOS_DEBUG_MODE = true;
 #else
 constexpr bool HELIOS_DEBUG_MODE = false;
 #endif
+
+constexpr uint32_t INVALID_INDEX_U32 = 0xFFFFFFFF;

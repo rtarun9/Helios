@@ -16,6 +16,6 @@ namespace helios::gfx
     // functions' of the name space.
     namespace ShaderCompiler
     {
-        [[nodiscard]] Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath, const bool extractRootSignature = false);
+        [[nodiscard]] Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath, const std::wstring_view entryPoint, const bool extractRootSignature = false);
     } // namespace ShaderCompiler
 } // namespace helios::gfx

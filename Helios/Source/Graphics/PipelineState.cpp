@@ -7,25 +7,6 @@ namespace helios::gfx
     PipelineState::PipelineState(ID3D12Device5* const device,
                                  const GraphicsPipelineStateCreationDesc& pipelineStateCreationDesc)
     {
-        const auto vsPath = core::ResourceManager::getAssetsPath(pipelineStateCreationDesc.shaderModule.vsShaderPath);
-        const auto psPath = core::ResourceManager::getAssetsPath(pipelineStateCreationDesc.shaderModule.psShaderPath);
-
-        wrl::ComPtr<ID3DBlob> vertexBlob{nullptr};
-        ::D3DReadFileToBlob(vsPath.c_str(), &vertexBlob);
-
-        wrl::ComPtr<ID3DBlob> pixelBlob{nullptr};
-        ::D3DReadFileToBlob(psPath.c_str(), &pixelBlob);
-
-        if (!vertexBlob.Get())
-        {
-            fatalError(std::format("Shader {} not found.", wStringToString(vsPath)));
-        }
-
-        if (!pixelBlob.Get())
-        {
-            fatalError(std::format("Shader {} not found.", wStringToString(psPath)));
-        }
-
         // note(rtarun9) : Blending not used for now, but the code is setup if needed.
         // Set up blend state (as d3dx12 doesn't seem to provide a automatic way to create pipeline state with blending
         // enabled).
@@ -64,10 +45,13 @@ namespace helios::gfx
             .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
         };
 
+        const auto& vertexShaderBlob = pipelineStateCreationDesc.shaderModule.vertexShader.shaderBlob.Get();
+        const auto& pixelShaderBlob = pipelineStateCreationDesc.shaderModule.pixelShader.shaderBlob.Get();
+
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {
             .pRootSignature = PipelineState::s_rootSignature.Get(),
-            .VS = CD3DX12_SHADER_BYTECODE(vertexBlob.Get()),
-            .PS = CD3DX12_SHADER_BYTECODE(pixelBlob.Get()),
+            .VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize()),
+            .PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize()),
             .BlendState = blendDesc,
             .SampleMask = UINT32_MAX,
             .RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT),
@@ -128,7 +112,7 @@ namespace helios::gfx
     void PipelineState::createBindlessRootSignature(ID3D12Device* const device, const std::wstring_view shaderPath)
     {
         const auto path = core::ResourceManager::getAssetsPath(shaderPath);
-        const auto shader = core::ResourceManager::compileShader(ShaderTypes::Vertex, path, true);
+        const auto shader = core::ResourceManager::compileShader(ShaderTypes::Vertex, path, L"VsMain", true);
 
         if (!shader.rootSignatureBlob.Get())
         {

@@ -4,9 +4,10 @@ namespace helios::gfx
 {
     GraphicsDevice::GraphicsDevice(const uint32_t windowWidth, const uint32_t windowHeight,
                                    const DXGI_FORMAT swapchainFormat, const HWND windowHandle)
+        : m_swapchainBackBufferFormat(swapchainFormat), m_windowHandle(windowHandle)
     {
         initDeviceResources();
-        initSwapchainResources(windowWidth, windowHeight, swapchainFormat, windowHandle);
+        initSwapchainResources(windowWidth, windowHeight);
 
         m_isInitialized = true;
     }
@@ -16,35 +17,16 @@ namespace helios::gfx
         m_directCommandQueue->flush();
     }
 
-    void GraphicsDevice::beginFrame()
-    {
-        m_perFrameGraphicsContexts[m_currentFrameIndex]->reset();
-    }
-
-    void GraphicsDevice::present()
-    {
-        throwIfFailed(m_swapchain->Present(1u, 0u));
-    }
-
-    void GraphicsDevice::endFrame()
-    {
-        m_fenceValues[m_currentFrameIndex].directQueueFenceValue = m_directCommandQueue->signal();
-
-        m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
-
-        m_directCommandQueue->waitForFenceValue(m_fenceValues[m_currentFrameIndex].directQueueFenceValue);
-    }
-
     void GraphicsDevice::initDeviceResources()
     {
         initD3D12Core();
         initCommandQueues();
         initDescriptorHeaps();
+        initMemoryAllocator();
         initPerFrameContexts();
     }
 
-    void GraphicsDevice::initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight,
-                                                const DXGI_FORMAT swapchainFormat, const HWND windowHandle)
+    void GraphicsDevice::initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight)
     {
         // Check if the tearing feature is supported.
         BOOL tearingSupported = TRUE;
@@ -56,31 +38,39 @@ namespace helios::gfx
 
         m_tearingSupported = tearingSupported;
 
-        const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
-            .Width = windowWidth,
-            .Height = windowHeight,
-            .Format = swapchainFormat,
-            .Stereo = FALSE,
-            .SampleDesc{
-                .Count = 1,
-                .Quality = 0,
-            },
-            .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-            .BufferCount = FRAMES_IN_FLIGHT,
-            .Scaling = DXGI_SCALING_STRETCH,
-            .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
-            .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-            .Flags = m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u,
-        };
+        if (!m_swapchain)
+        {
+            const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
+                .Width = windowWidth,
+                .Height = windowHeight,
+                .Format = m_swapchainBackBufferFormat,
+                .Stereo = FALSE,
+                .SampleDesc{
+                    .Count = 1,
+                    .Quality = 0,
+                },
+                .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                .BufferCount = FRAMES_IN_FLIGHT,
+                .Scaling = DXGI_SCALING_STRETCH,
+                .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+                .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
+                .Flags = m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u,
+            };
 
-        wrl::ComPtr<IDXGISwapChain1> swapChain1;
-        throwIfFailed(m_factory->CreateSwapChainForHwnd(m_directCommandQueue->getCommandQueue(), windowHandle,
-                                                        &swapChainDesc, nullptr, nullptr, &swapChain1));
+            wrl::ComPtr<IDXGISwapChain1> swapChain1;
+            throwIfFailed(m_factory->CreateSwapChainForHwnd(m_directCommandQueue->getCommandQueue(), m_windowHandle,
+                                                            &swapChainDesc, nullptr, nullptr, &swapChain1));
 
-        // Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-        throwIfFailed(m_factory->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER));
+            // Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
+            throwIfFailed(m_factory->MakeWindowAssociation(m_windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
-        throwIfFailed(swapChain1.As(&m_swapchain));
+            throwIfFailed(swapChain1.As(&m_swapchain));
+        }
+        else
+        {
+            m_swapchain->ResizeBuffers(FRAMES_IN_FLIGHT, windowWidth, windowHeight, m_swapchainBackBufferFormat,
+                                       m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u);
+        }
 
         m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
 
@@ -150,6 +140,9 @@ namespace helios::gfx
         // Create the command queue's.
         m_directCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Direct Command Queue");
+
+         m_copyCommandQueue =
+            std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
     }
 
     void GraphicsDevice::initDescriptorHeaps()
@@ -162,6 +155,11 @@ namespace helios::gfx
                                                                L"RTV Descriptor Heap");
     }
 
+    void GraphicsDevice::initMemoryAllocator()
+    {
+        m_memoryAllocator = std::make_unique<MemoryAllocator>(m_device.Get(), m_adapter.Get());
+    }
+
     void GraphicsDevice::initPerFrameContexts()
     {
         // Create graphics contexts (one per frame in flight).
@@ -169,6 +167,8 @@ namespace helios::gfx
         {
             m_perFrameGraphicsContexts[i] = std::make_unique<GraphicsContext>(this);
         }
+
+        m_copyContext = std::make_unique<CopyContext>(this);
     }
 
     void GraphicsDevice::createBackBufferRTVs()
@@ -198,4 +198,101 @@ namespace helios::gfx
             m_rtvDescriptorHeap->offsetCurrentHandle(FRAMES_IN_FLIGHT);
         }
     }
+
+        void GraphicsDevice::beginFrame()
+    {
+        m_perFrameGraphicsContexts[m_currentFrameIndex]->reset();
+    }
+
+    void GraphicsDevice::present()
+    {
+        throwIfFailed(m_swapchain->Present(1u, 0u));
+    }
+
+    void GraphicsDevice::endFrame()
+    {
+        m_fenceValues[m_currentFrameIndex].directQueueFenceValue = m_directCommandQueue->signal();
+
+        m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
+
+        m_directCommandQueue->waitForFenceValue(m_fenceValues[m_currentFrameIndex].directQueueFenceValue);
+    }
+
+    void GraphicsDevice::resizeWindow(const uint32_t windowWidth, const uint32_t windowHeight)
+    {
+        m_directCommandQueue->flush();
+        m_copyCommandQueue->flush();
+
+        initSwapchainResources(windowWidth, windowHeight);
+    }
+
+    uint32_t GraphicsDevice::createCbv(const CbvCreationDesc& cbvCreationDesc) const
+    {
+        const uint32_t cbvIndex = m_cbvSrvUavDescriptorHeap->getCurrentDescriptorIndex();
+
+        m_device->CreateConstantBufferView(&cbvCreationDesc.cbvDesc,
+                                           m_cbvSrvUavDescriptorHeap->getCurrentDescriptorHandle().cpuDescriptorHandle);
+
+        m_cbvSrvUavDescriptorHeap->offsetCurrentHandle();
+
+        return cbvIndex;
+    }
+
+    uint32_t GraphicsDevice::createSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* const resource) const
+    {
+        const uint32_t srvIndex = m_cbvSrvUavDescriptorHeap->getCurrentDescriptorIndex();
+
+        m_device->CreateShaderResourceView(resource, &srvCreationDesc.srvDesc,
+                                           m_cbvSrvUavDescriptorHeap->getCurrentDescriptorHandle().cpuDescriptorHandle);
+
+        m_cbvSrvUavDescriptorHeap->offsetCurrentHandle();
+
+        return srvIndex;
+    }
+
+    uint32_t GraphicsDevice::createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const
+    {
+        const uint32_t uavIndex = m_cbvSrvUavDescriptorHeap->getCurrentDescriptorIndex();
+
+        m_device->CreateUnorderedAccessView(
+            resource, nullptr, &uavCreationDesc.uavDesc,
+            m_cbvSrvUavDescriptorHeap->getCurrentDescriptorHandle().cpuDescriptorHandle);
+
+        m_cbvSrvUavDescriptorHeap->offsetCurrentHandle();
+
+        return uavIndex;
+    }
+
+    uint32_t GraphicsDevice::createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const
+    {
+        return INVALID_INDEX_U32;
+    }
+    uint32_t GraphicsDevice::createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const
+    {
+        return INVALID_INDEX_U32;
+    }
+
+    uint32_t GraphicsDevice::createSampler(const SamplerCreationDesc& cbvCreationDesc) const
+    {
+        return INVALID_INDEX_U32;
+    }
+
+    
+	PipelineState GraphicsDevice::createPipelineState(
+        const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
+    {
+        PipelineState pipelineState(m_device.Get(), graphicsPipelineStateCreationDesc);
+
+        return pipelineState;
+    }
+
+    PipelineState GraphicsDevice::createPipelineState(
+        const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const
+    {
+        PipelineState pipelineState(m_device.Get(), computePipelineStateCreationDesc);
+
+        return pipelineState;
+    }
+
+
 } // namespace helios::gfx

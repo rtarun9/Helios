@@ -13,11 +13,11 @@ ConstantBuffer<TriangleRenderResources> renderResource : register(b0);
 
 [RootSignature(BindlessRootSignature)] VSOutput VsMain(uint vertexID
                                                        : SV_VertexID) {
-    StructuredBuffer<float2> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
+    StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
 
     VSOutput output;
 
-    output.position = float4(positionBuffer[vertexID].xy, 0.0f, 1.0f);
+    output.position = float4(positionBuffer[vertexID].xyz, 1.0f);
 
     return output;
 }
