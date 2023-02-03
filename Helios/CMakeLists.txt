@@ -2,6 +2,9 @@ set(SRC_FILES
     "Source/Core/Application.cpp"
     "Include/Core/Application.hpp"
 
+    "Source/Core/ResourceManager.cpp"
+    "Include/Core/ResourceManager.hpp"
+    
     "Include/Graphics/d3dx12.hpp"
 
     "Source/Graphics/GraphicsDevice.cpp"
@@ -18,11 +21,17 @@ set(SRC_FILES
 
     "Source/Graphics/DescriptorHeap.cpp"
     "Include/Graphics/DescriptorHeap.hpp"
+    
+    "Source/Graphics/ShaderCompiler.cpp"
+    "Include/Graphics/ShaderCompiler.hpp"
+
+    "Source/Graphics/PipelineState.cpp"
+    "Include/Graphics/PipelineState.hpp"
 )
 
 add_library(Helios STATIC ${SRC_FILES})
 target_include_directories(Helios PUBLIC "Include")
-target_link_libraries(Helios PUBLIC External d3d12.lib)
+target_link_libraries(Helios PUBLIC External d3d12.lib d3dcompiler.lib dxcompiler.lib)
 
 # Setup precompiled headers.
 target_precompile_headers(

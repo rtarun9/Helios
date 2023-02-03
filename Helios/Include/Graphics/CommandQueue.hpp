@@ -28,6 +28,7 @@ namespace helios::gfx
 
         void executeContext(const std::span<const Context* const> contexts);
 
+      public:
         // Synchronization related functions.
         bool isFenceComplete(const uint64_t fenceValue) const;
         uint64_t signal();

@@ -40,12 +40,7 @@ namespace helios::gfx
         initD3D12Core();
         initCommandQueues();
         initDescriptorHeaps();
-
-        // Create graphics contexts (one per frame in flight).
-        for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
-        {
-            m_perFrameGraphicsContexts[i] = std::make_unique<GraphicsContext>(this);
-        }
+        initPerFrameContexts();
     }
 
     void GraphicsDevice::initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight,
@@ -165,6 +160,15 @@ namespace helios::gfx
 
         m_rtvDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 10u,
                                                                L"RTV Descriptor Heap");
+    }
+
+    void GraphicsDevice::initPerFrameContexts()
+    {
+        // Create graphics contexts (one per frame in flight).
+        for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
+        {
+            m_perFrameGraphicsContexts[i] = std::make_unique<GraphicsContext>(this);
+        }
     }
 
     void GraphicsDevice::createBackBufferRTVs()

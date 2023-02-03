@@ -1,10 +1,23 @@
 #include "Core/Application.hpp"
 
+#include "Graphics/PipelineState.hpp"
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 
 namespace helios::core
 {
+    // Setting the Agility SDK parameters.
+    extern "C"
+    {
+        __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u;
+    }
+    extern "C"
+    {
+        __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
+    }
+
+
     Application::Application(const std::string_view windowTitle) : m_windowTitle(windowTitle)
     {
     }
@@ -57,11 +70,16 @@ namespace helios::core
 
     void Application::init()
     {
+        ResourceManager::locateRootDirectory();
+
         initPlatformBackend();
 
         // Initialize the graphics device.
         m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>(m_windowWidth, m_windowHeight,
                                                                  DXGI_FORMAT_R10G10B10A2_UNORM, m_windowHandle);
+
+        // Setup bindless root signature.
+        gfx::PipelineState::createBindlessRootSignature(m_graphicsDevice->getDevice(), L"Shaders/Triangle.hlsl");
     }
 
     void Application::cleanup()

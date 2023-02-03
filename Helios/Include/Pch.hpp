@@ -9,6 +9,7 @@
 #include <ranges>
 #include <vector>
 #include <array>
+#include <filesystem>
 #include <format>
 
 #define WIN32_LEAN_AND_MEAN
@@ -18,6 +19,8 @@
 #include <dxgi1_6.h>
 #include <wrl.h>
 #include <DirectXMath.h>
+#include <dxcapi.h>
+#include <d3dcompiler.h>
 
 #include "Graphics/d3dx12.hpp"
 

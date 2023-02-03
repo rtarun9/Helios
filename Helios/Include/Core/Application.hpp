@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/ResourceManager.hpp"
 #include "Graphics/GraphicsDevice.hpp"
 
 struct SDL_Window;

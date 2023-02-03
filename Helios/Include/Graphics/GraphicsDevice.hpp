@@ -71,6 +71,7 @@ namespace helios::gfx
         void initD3D12Core();
         void initCommandQueues();
         void initDescriptorHeaps();
+        void initPerFrameContexts();
 
         void createBackBufferRTVs();
 

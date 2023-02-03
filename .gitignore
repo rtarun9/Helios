@@ -1,3 +1,9 @@
 out/
 build/
 .vs/
+Debug/
+Release/
+External/DirectXAgilitySDK
+External/DirectXShaderCompiler
+*.zip
+Bin/
