@@ -8,13 +8,6 @@ namespace helios::gfx
     {
         wrl::ComPtr<ID3D12Resource> backBufferResource;
         DescriptorHandle backBufferDescriptorHandle;
-
-        ID3D12Resource* const getResource()
-        {
-            return backBufferResource.Get();
-        }
-
-        std::wstring bufferName{};
     };
 
     struct Shader
@@ -26,8 +19,14 @@ namespace helios::gfx
     // Struct's related to pipeline's.
     struct ShaderModule
     {
-        Shader vertexShader{};
-        Shader pixelShader{};
+        std::wstring_view vertexShaderPath{};
+        std::wstring_view vertexEntryPoint{L"VsMain"};
+
+        std::wstring_view pixelShaderPath{};
+        std::wstring_view pixelEntryPoint{L"PsMain"};
+
+        std::wstring_view computeShaderPath{};
+        std::wstring_view computeEntryPoint{L"CsMain"};
     };
 
     // Winding order will always be clockwise except for cube maps, where we want to see the inner faces of cube map.
@@ -47,13 +46,13 @@ namespace helios::gfx
         D3D12_COMPARISON_FUNC depthComparisonFunc{D3D12_COMPARISON_FUNC_LESS};
         FrontFaceWindingOrder frontFaceWindingOrder{FrontFaceWindingOrder::ClockWise};
         D3D12_CULL_MODE cullMode{D3D12_CULL_MODE_BACK};
-        std::wstring pipelineName{};
+        std::wstring_view pipelineName{};
     };
 
     struct ComputePipelineStateCreationDesc
     {
         std::wstring_view csShaderPath{};
-        std::wstring pipelineName{};
+        std::wstring_view pipelineName{};
     };
 
     // Resource related structs.
@@ -121,7 +120,7 @@ namespace helios::gfx
     struct BufferCreationDesc
     {
         BufferUsage usage{};
-        std::wstring name{};
+        std::wstring_view name{};
     };
 
     struct Buffer
@@ -129,8 +128,7 @@ namespace helios::gfx
         // To be used primarily for constant buffers.
         void update(const void* data);
 
-        std::unique_ptr<Allocation> allocation{};
-        std::wstring bufferName{};
+        Allocation allocation{};
         size_t sizeInBytes{};
 
         uint32_t srvIndex{INVALID_INDEX_U32};
@@ -161,5 +159,50 @@ namespace helios::gfx
 
             return resourceCreationDesc;
         }
+    };
+
+    // Texture related functions / enum's.
+    // The Depth stencil texture will not have a separate abstraction and will be created using the common CreateTexture
+    // function. Similarly, Render Targets will also be of type Texture. TextureUpload is used for intermediate buffers
+    // (as used in UpdateSubresources). If data is already loaded elsewhere, use the TextureFromData enum (this requires
+    // TextureCreateionDesc has all properties correctly set (specifically dimensions). UAV Texture is just a regular
+    // texture with flags to allow it to be used as a UAV.
+    enum class TextureUsage
+    {
+        DepthStencil,
+        RenderTarget,
+        TextureFromPath,
+        TextureFromData,
+        HDRTextureFromPath,
+        CubeMap,
+        UAVTexture
+    };
+
+    struct TextureCreationDesc
+    {
+        TextureUsage usage;
+        uint32_t width{};
+        uint32_t height{};
+        DXGI_FORMAT format{DXGI_FORMAT_R8G8B8A8_UNORM};
+        D3D12_RESOURCE_STATES optionalInitialState{D3D12_RESOURCE_STATE_COMMON};
+        uint32_t mipLevels{1u};
+        uint32_t depthOrArraySize{1u};
+        std::wstring_view name{};
+        std::wstring path{};
+    };
+
+    struct Texture
+    {
+        uint32_t width{};
+        uint32_t height{};
+        Allocation allocation{};
+
+        uint32_t srvIndex{INVALID_INDEX_U32};
+        uint32_t uavIndex{INVALID_INDEX_U32};
+        uint32_t dsvIndex{INVALID_INDEX_U32};
+        uint32_t rtvIndex{INVALID_INDEX_U32};
+
+        static bool isTextureSRGB(const DXGI_FORMAT format);
+        static DXGI_FORMAT getNonSRGBFormat(const DXGI_FORMAT format);
     };
 } // namespace helios::gfx

@@ -2,10 +2,6 @@
 
 include(FetchContent)
 
-set(D3D12MA_BUILD_SAMPLE OFF)
-set(BUILD_DOCUMENTATION OFF)
-set(BUILD_SHARED_LIBS OFF)
-
 FetchContent_Declare(
     D3D12MemoryAllocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
@@ -19,11 +15,6 @@ FetchContent_Declare(
     GIT_TAG 8b5f1f37b5b75829fc72d38e7b5d4bcbf8a26d55
     GIT_PROGRESS TRUE
 )
-
-# note(rtarun9) : When the switch to fastgltf is done, this must be removed.
-set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF)
-set(TINYGLTF_BUILD_GL_EXAMPLES OFF)
-set(TINYGLTF_BUILD_VALIDATOR_EXAMPLE OFF)
 
 FetchContent_Declare(
     tinygltf

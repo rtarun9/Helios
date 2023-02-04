@@ -22,9 +22,6 @@ namespace helios::gfx
             .RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
         };
 
-        // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
-        // Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA
-        // Topology type.
         D3D12_BLEND_DESC blendDesc = {
             .AlphaToCoverageEnable = FALSE,
             .IndependentBlendEnable = FALSE,
@@ -45,8 +42,19 @@ namespace helios::gfx
             .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
         };
 
-        const auto& vertexShaderBlob = pipelineStateCreationDesc.shaderModule.vertexShader.shaderBlob.Get();
-        const auto& pixelShaderBlob = pipelineStateCreationDesc.shaderModule.pixelShader.shaderBlob.Get();
+        const auto& vertexShaderBlob = core::ResourceManager::compileShader(
+            ShaderTypes::Vertex,
+            core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
+            pipelineStateCreationDesc.shaderModule.vertexEntryPoint).shaderBlob;
+
+        const auto& pixelShaderBlob = core::ResourceManager::compileShader(
+            ShaderTypes::Pixel,
+            core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
+            pipelineStateCreationDesc.shaderModule.pixelEntryPoint).shaderBlob;
+
+        // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
+        // Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA
+        // Topology type.
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {
             .pRootSignature = PipelineState::s_rootSignature.Get(),
@@ -79,13 +87,13 @@ namespace helios::gfx
 
         throwIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineStateObject)));
 
-        m_pipelineStateObject->SetName(pipelineStateCreationDesc.pipelineName.c_str());
+        m_pipelineStateObject->SetName(pipelineStateCreationDesc.pipelineName.data());
     }
 
     PipelineState::PipelineState(ID3D12Device5* const device,
                                  const ComputePipelineStateCreationDesc& pipelineStateCreationDesc)
     {
-        const auto csPath = core::ResourceManager::getAssetsPath(pipelineStateCreationDesc.csShaderPath);
+        const auto csPath = core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.csShaderPath);
 
         wrl::ComPtr<ID3DBlob> computeBlob{nullptr};
         ::D3DReadFileToBlob(csPath.c_str(), &computeBlob);
@@ -106,12 +114,12 @@ namespace helios::gfx
 
         throwIfFailed(device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineStateObject)));
 
-        m_pipelineStateObject->SetName(pipelineStateCreationDesc.pipelineName.c_str());
+        m_pipelineStateObject->SetName(pipelineStateCreationDesc.pipelineName.data());
     }
 
     void PipelineState::createBindlessRootSignature(ID3D12Device* const device, const std::wstring_view shaderPath)
     {
-        const auto path = core::ResourceManager::getAssetsPath(shaderPath);
+        const auto path = core::ResourceManager::getRootDirectoryPath(shaderPath);
         const auto shader = core::ResourceManager::compileShader(ShaderTypes::Vertex, path, L"VsMain", true);
 
         if (!shader.rootSignatureBlob.Get())

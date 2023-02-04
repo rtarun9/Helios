@@ -9,7 +9,7 @@ namespace helios::gfx
     class PipelineState
     {
       public:
-        PipelineState() = default;
+        explicit PipelineState() = default;
         PipelineState(ID3D12Device5* const device, const GraphicsPipelineStateCreationDesc& pipelineStateCreationDesc);
         PipelineState(ID3D12Device5* const device, const ComputePipelineStateCreationDesc& pipelineStateCreationDesc);
 

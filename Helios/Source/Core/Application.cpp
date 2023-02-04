@@ -17,7 +17,6 @@ namespace helios::core
         __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
     }
 
-
     Application::Application(const std::string_view windowTitle) : m_windowTitle(windowTitle)
     {
     }
@@ -77,9 +76,6 @@ namespace helios::core
         // Initialize the graphics device.
         m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>(m_windowWidth, m_windowHeight,
                                                                  DXGI_FORMAT_R10G10B10A2_UNORM, m_windowHandle);
-
-        // Setup bindless root signature.
-        gfx::PipelineState::createBindlessRootSignature(m_graphicsDevice->getDevice(), L"Shaders/Triangle.hlsl");
     }
 
     void Application::cleanup()
@@ -114,8 +110,9 @@ namespace helios::core
                         m_windowWidth = event.window.data1;
                         m_windowHeight = event.window.data2;
 
-                        //m_graphicsDevice->resizeWindow(event.window.data1, event.window.data2);
+                        m_graphicsDevice->resizeWindow(m_windowWidth, m_windowHeight);
                     }
+
                     const uint8_t* keyboardState = SDL_GetKeyboardState(nullptr);
                     if (keyboardState[SDL_SCANCODE_ESCAPE])
                     {

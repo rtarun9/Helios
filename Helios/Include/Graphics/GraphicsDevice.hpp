@@ -30,27 +30,6 @@ namespace helios::gfx
         GraphicsDevice(GraphicsDevice&& other) = delete;
         GraphicsDevice& operator=(GraphicsDevice&& other) = delete;
 
-        void beginFrame();
-        void present();
-        void endFrame();
-
-        void resizeWindow(const uint32_t windowWidth, const uint32_t windowHeight);
-
-        uint32_t createCbv(const CbvCreationDesc& cbvCreationDesc) const;
-        uint32_t createSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createSampler(const SamplerCreationDesc& cbvCreationDesc) const;
-
-        template <typename T>
-        Buffer createBuffer(const BufferCreationDesc& bufferCreationDesc, const std::span<const T> data = {}) const;
-
-        PipelineState createPipelineState(
-            const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
-        PipelineState createPipelineState(
-            const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const;
-
       public:
         CommandQueue* const getDirectCommandQueue() const
         {
@@ -82,26 +61,53 @@ namespace helios::gfx
             return m_backBuffers[m_currentFrameIndex];
         }
 
+        void beginFrame();
+        void present();
+        void endFrame();
+
+        void resizeWindow(const uint32_t windowWidth, const uint32_t windowHeight);
+
+        // Creates a GPU Buffer. If some data is passed in, it will recursively call itself to create a upload buffer (a
+        // buffer with CPU write and GPU read access and placed in a UploadHead). Then, a copy command is issued so that
+        // the final Buffer returned by the function has the requried data and is in exclusive GPU only memory.
+        template <typename T>
+        Buffer createBuffer(const BufferCreationDesc& bufferCreationDesc, const std::span<const T> data = {}) const;
+
+        // Creates a Texture that resides on GPU memory. The same Texture abstraction is used for render targets, depth
+        // stencil texture, etc. If data is non-null, stb will be used to load texture (HDR and non HDR textures
+        // supported). In that case, a upload buffer will be created, after which a copy command is issued so that
+        // finally the texture on GPU only memory has the required data.
+        Texture createTexture(const TextureCreationDesc& textureCreationDesc, const std::byte* data = nullptr) const;
+
+        PipelineState createPipelineState(
+            const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
+        PipelineState createPipelineState(
+            const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const;
+
       private:
         void initDeviceResources();
         void initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight);
 
-      private:
         void initD3D12Core();
         void initCommandQueues();
         void initDescriptorHeaps();
         void initMemoryAllocator();
-        void initPerFrameContexts();
+        void initContexts();
+        void initBindlessRootSignature();
 
         void createBackBufferRTVs();
+
+        uint32_t createCbv(const CbvCreationDesc& cbvCreationDesc) const;
+        uint32_t createSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* const resource) const;
+        uint32_t createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const;
+        uint32_t createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const;
+        uint32_t createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const;
+        uint32_t createSampler(const SamplerCreationDesc& cbvCreationDesc) const;
 
       public:
         static constexpr uint32_t FRAMES_IN_FLIGHT = 3u;
 
       private:
-        DXGI_FORMAT m_swapchainBackBufferFormat{};
-        HWND m_windowHandle{};
-
         wrl::ComPtr<IDXGIFactory6> m_factory{};
         wrl::ComPtr<ID3D12Debug3> m_debug{};
         wrl::ComPtr<ID3D12DebugDevice> m_debugDevice{};
@@ -113,18 +119,21 @@ namespace helios::gfx
         std::unique_ptr<CommandQueue> m_directCommandQueue{};
         std::unique_ptr<CommandQueue> m_copyCommandQueue{};
 
+        std::array<std::unique_ptr<GraphicsContext>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
+        std::unique_ptr<CopyContext> m_copyContext{};
+
         std::array<FenceValues, FRAMES_IN_FLIGHT> m_fenceValues{};
         std::array<BackBuffer, FRAMES_IN_FLIGHT> m_backBuffers{};
         uint64_t m_currentFrameIndex{};
+
+        DXGI_FORMAT m_swapchainBackBufferFormat{};
+        HWND m_windowHandle{};
 
         bool m_tearingSupported{false};
 
         std::unique_ptr<DescriptorHeap> m_rtvDescriptorHeap{};
         std::unique_ptr<DescriptorHeap> m_cbvSrvUavDescriptorHeap{};
         std::unique_ptr<DescriptorHeap> m_samplerDescriptorHeap{};
-
-        std::array<std::unique_ptr<GraphicsContext>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
-        std::unique_ptr<CopyContext> m_copyContext{};
 
         std::unique_ptr<MemoryAllocator> m_memoryAllocator{};
 
@@ -143,7 +152,7 @@ namespace helios::gfx
 
         buffer.sizeInBytes = numberComponents * sizeof(T);
 
-        ResourceCreationDesc resourceCreationDesc =
+        const ResourceCreationDesc resourceCreationDesc =
             ResourceCreationDesc::createBufferResourceCreationDesc(buffer.sizeInBytes);
 
         buffer.allocation = m_memoryAllocator->createBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
@@ -157,19 +166,19 @@ namespace helios::gfx
             // Create upload buffer.
             const BufferCreationDesc uploadBufferCreationDesc = {
                 .usage = BufferUsage::UploadBuffer,
-                .name = L"Upload buffer - " + bufferCreationDesc.name,
+                .name = L"Upload buffer - " + std::wstring(bufferCreationDesc.name),
             };
 
-            const std::unique_ptr<Allocation> uploadAllocation =
+            Allocation uploadAllocation =
                 m_memoryAllocator->createBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
 
-            uploadAllocation->update(data.data(), buffer.sizeInBytes);
+            uploadAllocation.update(data.data(), buffer.sizeInBytes);
 
             m_copyContext->reset();
 
             // Get a copy command and list and execute copy resource functions on the command queue.
-            m_copyContext->getCommandList()->CopyResource(buffer.allocation->resource.Get(),
-                                                          uploadAllocation->resource.Get());
+            m_copyContext->getCommandList()->CopyResource(buffer.allocation.resource.Get(),
+                                                          uploadAllocation.resource.Get());
 
             const std::array<helios::gfx::Context* const, 1u> contexts = {
                 m_copyContext.get(),
@@ -178,7 +187,7 @@ namespace helios::gfx
             m_copyCommandQueue->executeContext(contexts);
             m_copyCommandQueue->flush();
 
-            uploadAllocation->reset();
+            uploadAllocation.reset();
         }
 
         if (bufferCreationDesc.usage == BufferUsage::StructuredBuffer)
@@ -188,30 +197,31 @@ namespace helios::gfx
                     .Format = DXGI_FORMAT_UNKNOWN,
                     .ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
                     .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-                    .Buffer{
-                        .FirstElement = 0u,
-                        .NumElements = static_cast<UINT>(data.size()),
-                        .StructureByteStride = static_cast<UINT>(sizeof(T)),
-                    },
+                    .Buffer =
+                        {
+                            .FirstElement = 0u,
+                            .NumElements = static_cast<UINT>(data.size()),
+                            .StructureByteStride = static_cast<UINT>(sizeof(T)),
+                        },
                 },
             };
 
-            buffer.srvIndex = createSrv(srvCreationDesc, buffer.allocation->resource.Get());
+            buffer.srvIndex = createSrv(srvCreationDesc, buffer.allocation.resource.Get());
         }
 
         else if (bufferCreationDesc.usage == BufferUsage::ConstantBuffer)
         {
             const CbvCreationDesc cbvCreationDesc = {
-                .cbvDesc{
-                    .BufferLocation = buffer.allocation->resource->GetGPUVirtualAddress(),
-                    .SizeInBytes = static_cast<UINT>(buffer.sizeInBytes),
-                },
+                .cbvDesc =
+                    {
+                        .BufferLocation = buffer.allocation.resource->GetGPUVirtualAddress(),
+                        .SizeInBytes = static_cast<UINT>(buffer.sizeInBytes),
+                    },
             };
 
             buffer.cbvIndex = createCbv(cbvCreationDesc);
         }
 
-        buffer.bufferName = bufferCreationDesc.name;
         return buffer;
     }
 } // namespace helios::gfx

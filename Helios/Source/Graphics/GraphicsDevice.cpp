@@ -1,5 +1,10 @@
 #include "Graphics/GraphicsDevice.hpp"
 
+#include "Core/ResourceManager.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 namespace helios::gfx
 {
     GraphicsDevice::GraphicsDevice(const uint32_t windowWidth, const uint32_t windowHeight,
@@ -23,12 +28,13 @@ namespace helios::gfx
         initCommandQueues();
         initDescriptorHeaps();
         initMemoryAllocator();
-        initPerFrameContexts();
+        initContexts();
+        initBindlessRootSignature();
     }
 
     void GraphicsDevice::initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight)
     {
-        // Check if the tearing feature is supported.
+        // Check if the tearing feature is supported. Vsync currently not supported.
         BOOL tearingSupported = TRUE;
         if (FAILED(m_factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported,
                                                   sizeof(tearingSupported))))
@@ -38,39 +44,31 @@ namespace helios::gfx
 
         m_tearingSupported = tearingSupported;
 
-        if (!m_swapchain)
-        {
-            const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
-                .Width = windowWidth,
-                .Height = windowHeight,
-                .Format = m_swapchainBackBufferFormat,
-                .Stereo = FALSE,
-                .SampleDesc{
-                    .Count = 1,
-                    .Quality = 0,
-                },
-                .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                .BufferCount = FRAMES_IN_FLIGHT,
-                .Scaling = DXGI_SCALING_STRETCH,
-                .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
-                .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-                .Flags = m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u,
-            };
+        const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
+            .Width = windowWidth,
+            .Height = windowHeight,
+            .Format = m_swapchainBackBufferFormat,
+            .Stereo = FALSE,
+            .SampleDesc{
+                .Count = 1,
+                .Quality = 0,
+            },
+            .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            .BufferCount = FRAMES_IN_FLIGHT,
+            .Scaling = DXGI_SCALING_STRETCH,
+            .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+            .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
+            .Flags = m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u,
+        };
 
-            wrl::ComPtr<IDXGISwapChain1> swapChain1;
-            throwIfFailed(m_factory->CreateSwapChainForHwnd(m_directCommandQueue->getCommandQueue(), m_windowHandle,
-                                                            &swapChainDesc, nullptr, nullptr, &swapChain1));
+        wrl::ComPtr<IDXGISwapChain1> swapChain1;
+        throwIfFailed(m_factory->CreateSwapChainForHwnd(m_directCommandQueue->getCommandQueue(), m_windowHandle,
+                                                        &swapChainDesc, nullptr, nullptr, &swapChain1));
 
-            // Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
-            throwIfFailed(m_factory->MakeWindowAssociation(m_windowHandle, DXGI_MWA_NO_ALT_ENTER));
+        // Prevent DXGI from switching to full screen state automatically while using ALT + ENTER combination.
+        throwIfFailed(m_factory->MakeWindowAssociation(m_windowHandle, DXGI_MWA_NO_ALT_ENTER));
 
-            throwIfFailed(swapChain1.As(&m_swapchain));
-        }
-        else
-        {
-            m_swapchain->ResizeBuffers(FRAMES_IN_FLIGHT, windowWidth, windowHeight, m_swapchainBackBufferFormat,
-                                       m_tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u);
-        }
+        throwIfFailed(swapChain1.As(&m_swapchain));
 
         m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
 
@@ -141,7 +139,7 @@ namespace helios::gfx
         m_directCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, L"Direct Command Queue");
 
-         m_copyCommandQueue =
+        m_copyCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
     }
 
@@ -160,7 +158,7 @@ namespace helios::gfx
         m_memoryAllocator = std::make_unique<MemoryAllocator>(m_device.Get(), m_adapter.Get());
     }
 
-    void GraphicsDevice::initPerFrameContexts()
+    void GraphicsDevice::initContexts()
     {
         // Create graphics contexts (one per frame in flight).
         for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
@@ -171,10 +169,14 @@ namespace helios::gfx
         m_copyContext = std::make_unique<CopyContext>(this);
     }
 
+    void GraphicsDevice::initBindlessRootSignature()
+    {
+        // Setup bindless root signature.
+        gfx::PipelineState::createBindlessRootSignature(m_device.Get(), L"Shaders/Triangle.hlsl");
+    }
+
     void GraphicsDevice::createBackBufferRTVs()
     {
-        m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
-
         DescriptorHandle rtvHandle = m_rtvDescriptorHeap->getDescriptorHandleFromStart();
 
         // Create Backbuffer render target views.
@@ -187,7 +189,6 @@ namespace helios::gfx
 
             m_backBuffers[i].backBufferResource = backBuffer;
             m_backBuffers[i].backBufferResource->SetName(L"SwapChain BackBuffer");
-
             m_backBuffers[i].backBufferDescriptorHandle = rtvHandle;
 
             m_rtvDescriptorHeap->offsetDescriptor(rtvHandle);
@@ -199,7 +200,7 @@ namespace helios::gfx
         }
     }
 
-        void GraphicsDevice::beginFrame()
+    void GraphicsDevice::beginFrame()
     {
         m_perFrameGraphicsContexts[m_currentFrameIndex]->reset();
     }
@@ -223,7 +224,245 @@ namespace helios::gfx
         m_directCommandQueue->flush();
         m_copyCommandQueue->flush();
 
-        initSwapchainResources(windowWidth, windowHeight);
+        // All swapchain back buffers need to be released.
+        for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
+        {
+            m_backBuffers[i].backBufferResource.Reset();
+            m_fenceValues[i].directQueueFenceValue = m_directCommandQueue->getCurrentFenceValue();
+        }
+
+        DXGI_SWAP_CHAIN_DESC swapchainDesc{};
+        throwIfFailed(m_swapchain->GetDesc(&swapchainDesc));
+
+        throwIfFailed(m_swapchain->ResizeBuffers(FRAMES_IN_FLIGHT, windowWidth, windowHeight,
+                                                 m_swapchainBackBufferFormat, swapchainDesc.Flags));
+
+        m_currentFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
+
+        createBackBufferRTVs();
+    }
+
+    Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc, const std::byte* data) const
+    {
+        Texture texture{};
+        
+        TextureCreationDesc textureCreationDesc = paramTextureCreationDesc;
+
+        textureCreationDesc.path = core::ResourceManager::getRootDirectoryPath(textureCreationDesc.path);
+
+        int32_t componentCount{4}, width{}, height{};
+
+        // For use only by HDR textures (mostly for Cube Map equirectangular textures).
+        float* hdrTextureData{nullptr};
+
+        // For use by textures that are non HDR and going to be loaded using stbi.
+        void* textureData{reinterpret_cast<void*>(&data)};
+
+        if (textureCreationDesc.usage == TextureUsage::TextureFromData)
+        {
+            width = textureCreationDesc.width;
+            height = textureCreationDesc.height;
+        }
+
+        if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
+        {
+            textureData =
+                stbi_load(wStringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+            if (!textureData)
+            {
+                fatalError(std::format("Failed to load texture from path : {}.", wStringToString(textureCreationDesc.path)));
+            }
+
+            textureCreationDesc.width = width;
+            textureCreationDesc.height = height;
+        }
+
+        // Create a Allocation for the texture (GPU only memory).
+        texture.allocation = m_memoryAllocator->createTextureResourceAllocation(textureCreationDesc);
+
+        texture.width = textureCreationDesc.width;
+        texture.height = textureCreationDesc.height;
+
+        const uint32_t mipLevels = textureCreationDesc.mipLevels;
+
+        // Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D32_FLOAT) or formats used
+        // by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
+        DXGI_FORMAT format{textureCreationDesc.format};
+        DXGI_FORMAT dsFormat{};
+
+        switch (textureCreationDesc.format)
+        {
+        case DXGI_FORMAT_R32_FLOAT:
+        case DXGI_FORMAT_D32_FLOAT:
+        case DXGI_FORMAT_R32_TYPELESS: {
+            dsFormat = DXGI_FORMAT_D32_FLOAT;
+            format = DXGI_FORMAT_R32_FLOAT;
+        }
+        break;
+
+        case DXGI_FORMAT_D24_UNORM_S8_UINT: {
+            throw std::runtime_error("Currently, the renderer does not support depth format of the type D24_S8_UINT. "
+                                     "Please use one of the X32 types.");
+        }
+        break;
+        }
+
+        std::lock_guard<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
+
+        // Create SRV.
+        SrvCreationDesc srvCreationDesc{};
+
+        if (textureCreationDesc.depthOrArraySize == 1u)
+        {
+            srvCreationDesc = {
+                .srvDesc =
+                    {
+
+                        .Format = format,
+                        .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+                        .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+                        .Texture2D =
+                            {
+                                .MostDetailedMip = 0u,
+                                .MipLevels = mipLevels,
+                            },
+                    },
+            };
+        }
+        else if (textureCreationDesc.depthOrArraySize == 6u)
+        {
+            srvCreationDesc = {
+                .srvDesc =
+                    {
+                        .Format = format,
+                        .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE,
+                        .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+                        .TextureCube =
+                            {
+                                .MostDetailedMip = 0u,
+                                .MipLevels = mipLevels,
+                            },
+                    },
+            };
+        }
+
+        texture.srvIndex = createSrv(srvCreationDesc, texture.allocation.resource.Get());
+
+        // Create DSV (if applicable).
+        if (textureCreationDesc.usage == TextureUsage::DepthStencil)
+        {
+            const DsvCreationDesc dsvCreationDesc = {
+                .dsvDesc =
+                    {
+                        .Format = dsFormat,
+                        .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
+                        .Flags = D3D12_DSV_FLAG_NONE,
+                        .Texture2D{
+                            .MipSlice = 0u,
+                        },
+                    },
+            };
+
+            texture.dsvIndex = createDsv(dsvCreationDesc, texture.allocation.resource.Get());
+        }
+
+        // Create RTV (if applicable).
+        if (textureCreationDesc.usage == TextureUsage::RenderTarget)
+        {
+            const RtvCreationDesc rtvCreationDesc = {
+                .rtvDesc =
+                    {
+                        .Format = format,
+                        .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+                        .Texture2D{.MipSlice = 0u, .PlaneSlice = 0u},
+                    },
+            };
+
+            texture.rtvIndex = createRtv(rtvCreationDesc, texture.allocation.resource.Get());
+        }
+
+        // If texture created from file, load data (etc using stb_image) into a upload buffer and copy subresource data
+        // accordingly.
+        if (!data)
+        {
+            // Create upload buffer.
+            const BufferCreationDesc uploadBufferCreationDesc = {
+                .usage = BufferUsage::UploadBuffer,
+                .name = L"Upload buffer - " + std::wstring(textureCreationDesc.name),
+            };
+
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.allocation.resource.Get(), 0, 1);
+
+            const ResourceCreationDesc resourceCreationDesc =
+                ResourceCreationDesc::createBufferResourceCreationDesc(uploadBufferSize);
+
+            Allocation uploadAllocation =
+                m_memoryAllocator->createBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+
+            // Specify data to copy.
+            D3D12_SUBRESOURCE_DATA textureSubresourceData{};
+
+            if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
+            {
+                textureSubresourceData = {
+                    .pData = hdrTextureData,
+                    .RowPitch = width * componentCount * 4,
+                    .SlicePitch = width * height * componentCount * 4,
+                };
+            }
+            else
+            {
+                textureSubresourceData = {
+                    .pData = textureData,
+                    .RowPitch = width * componentCount,
+                    .SlicePitch = width * height * componentCount,
+                };
+            }
+
+            // Get a copy command and list and execute UpdateSubresources functions on the command queue.
+            m_copyContext->reset();
+
+            UpdateSubresources(m_copyContext->getCommandList(), texture.allocation.resource.Get(),
+                               uploadAllocation.resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
+
+            const std::array<helios::gfx::Context* const, 1u> contexts = {
+                m_copyContext.get(),
+            };
+
+            m_copyCommandQueue->executeContext(contexts);
+            m_copyCommandQueue->flush();
+
+            uploadAllocation.reset();
+        }
+
+        // Now that data is copied / set into GPU memory, freeing it.
+        if (textureData)
+        {
+            stbi_image_free((void*)textureData);
+        }
+
+        if (hdrTextureData)
+        {
+            stbi_image_free(hdrTextureData);
+        }
+
+        return texture;
+    }
+
+    PipelineState GraphicsDevice::createPipelineState(
+        const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
+    {
+        PipelineState pipelineState(m_device.Get(), graphicsPipelineStateCreationDesc);
+
+        return pipelineState;
+    }
+
+    PipelineState GraphicsDevice::createPipelineState(
+        const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const
+    {
+        PipelineState pipelineState(m_device.Get(), computePipelineStateCreationDesc);
+
+        return pipelineState;
     }
 
     uint32_t GraphicsDevice::createCbv(const CbvCreationDesc& cbvCreationDesc) const
@@ -276,23 +515,5 @@ namespace helios::gfx
     {
         return INVALID_INDEX_U32;
     }
-
-    
-	PipelineState GraphicsDevice::createPipelineState(
-        const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
-    {
-        PipelineState pipelineState(m_device.Get(), graphicsPipelineStateCreationDesc);
-
-        return pipelineState;
-    }
-
-    PipelineState GraphicsDevice::createPipelineState(
-        const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const
-    {
-        PipelineState pipelineState(m_device.Get(), computePipelineStateCreationDesc);
-
-        return pipelineState;
-    }
-
 
 } // namespace helios::gfx
