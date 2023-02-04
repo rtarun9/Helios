@@ -228,7 +228,7 @@ namespace helios::gfx
         for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
         {
             m_backBuffers[i].backBufferResource.Reset();
-            m_fenceValues[i].directQueueFenceValue = m_directCommandQueue->getCurrentFenceValue();
+            m_fenceValues[i].directQueueFenceValue = m_directCommandQueue->getCurrentCompletedFenceValue();
         }
 
         DXGI_SWAP_CHAIN_DESC swapchainDesc{};
@@ -246,11 +246,15 @@ namespace helios::gfx
     {
         Texture texture{};
         
+        // The memory allocator changes some variables of the TextureCreationDesc, so to prevent making the function's input parameter non const, this approach 
+        // of making a local copy is taken.
         TextureCreationDesc textureCreationDesc = paramTextureCreationDesc;
 
         textureCreationDesc.path = core::ResourceManager::getRootDirectoryPath(textureCreationDesc.path);
 
-        int32_t componentCount{4}, width{}, height{};
+        int32_t componentCount = 4;
+        int32_t width{};
+        int32_t height{};
 
         // For use only by HDR textures (mostly for Cube Map equirectangular textures).
         float* hdrTextureData{nullptr};
@@ -263,11 +267,11 @@ namespace helios::gfx
             width = textureCreationDesc.width;
             height = textureCreationDesc.height;
         }
-
-        if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
+        else if (textureCreationDesc.usage == TextureUsage::TextureFromPath)
         {
             textureData =
                 stbi_load(wStringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+
             if (!textureData)
             {
                 fatalError(std::format("Failed to load texture from path : {}.", wStringToString(textureCreationDesc.path)));
@@ -287,7 +291,7 @@ namespace helios::gfx
 
         // Needed here as we can pass formats specific for depth stencil texture (DXGI_FORMAT_D32_FLOAT) or formats used
         // by textures / render targets (DXGI_FORMAT_R32G32B32A32_FLOAT).
-        DXGI_FORMAT format{textureCreationDesc.format};
+        DXGI_FORMAT format = textureCreationDesc.format;
         DXGI_FORMAT dsFormat{};
 
         switch (textureCreationDesc.format)
@@ -301,7 +305,7 @@ namespace helios::gfx
         break;
 
         case DXGI_FORMAT_D24_UNORM_S8_UINT: {
-            throw std::runtime_error("Currently, the renderer does not support depth format of the type D24_S8_UINT. "
+            fatalError("Currently, the renderer does not support depth format of the type D24_S8_UINT. "
                                      "Please use one of the X32 types.");
         }
         break;
@@ -309,6 +313,62 @@ namespace helios::gfx
 
         std::lock_guard<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
 
+        // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub resource data
+        // from a upload buffer into the GPU only texture.
+        if (!data)
+        {
+            // Create upload buffer.
+            const BufferCreationDesc uploadBufferCreationDesc = {
+                .usage = BufferUsage::UploadBuffer,
+                .name = L"Upload buffer - " + std::wstring(textureCreationDesc.name),
+            };
+
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.allocation.resource.Get(), 0, 1);
+
+            const ResourceCreationDesc resourceCreationDesc =
+                ResourceCreationDesc::createBufferResourceCreationDesc(uploadBufferSize);
+
+            Allocation uploadAllocation =
+                m_memoryAllocator->createBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
+
+            // Specify data to copy.
+            D3D12_SUBRESOURCE_DATA textureSubresourceData{};
+
+            if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
+            {
+                textureSubresourceData = {
+                    .pData = hdrTextureData,
+                    .RowPitch = width * componentCount * 4,
+                    .SlicePitch = width * height * componentCount * 4,
+                };
+            }
+            else // TexureUsage:: TextureFromPath (non HDR).
+            {
+                textureSubresourceData = {
+                    .pData = textureData,
+                    .RowPitch = width * componentCount,
+                    .SlicePitch = width * height * componentCount,
+                };
+            }
+
+            // Use the copy context and execute UpdateSubresources functions on the copy command queue.
+            m_copyContext->reset();
+
+            UpdateSubresources(m_copyContext->getCommandList(), texture.allocation.resource.Get(),
+                               uploadAllocation.resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
+
+            const std::array<helios::gfx::Context* const, 1u> contexts = {
+                m_copyContext.get(),
+            };
+
+            m_copyCommandQueue->executeContext(contexts);
+            m_copyCommandQueue->flush();
+
+            uploadAllocation.reset();
+        }
+
+        // Create descriptors.
+        
         // Create SRV.
         SrvCreationDesc srvCreationDesc{};
 
@@ -379,60 +439,6 @@ namespace helios::gfx
             };
 
             texture.rtvIndex = createRtv(rtvCreationDesc, texture.allocation.resource.Get());
-        }
-
-        // If texture created from file, load data (etc using stb_image) into a upload buffer and copy subresource data
-        // accordingly.
-        if (!data)
-        {
-            // Create upload buffer.
-            const BufferCreationDesc uploadBufferCreationDesc = {
-                .usage = BufferUsage::UploadBuffer,
-                .name = L"Upload buffer - " + std::wstring(textureCreationDesc.name),
-            };
-
-            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.allocation.resource.Get(), 0, 1);
-
-            const ResourceCreationDesc resourceCreationDesc =
-                ResourceCreationDesc::createBufferResourceCreationDesc(uploadBufferSize);
-
-            Allocation uploadAllocation =
-                m_memoryAllocator->createBufferResourceAllocation(uploadBufferCreationDesc, resourceCreationDesc);
-
-            // Specify data to copy.
-            D3D12_SUBRESOURCE_DATA textureSubresourceData{};
-
-            if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
-            {
-                textureSubresourceData = {
-                    .pData = hdrTextureData,
-                    .RowPitch = width * componentCount * 4,
-                    .SlicePitch = width * height * componentCount * 4,
-                };
-            }
-            else
-            {
-                textureSubresourceData = {
-                    .pData = textureData,
-                    .RowPitch = width * componentCount,
-                    .SlicePitch = width * height * componentCount,
-                };
-            }
-
-            // Get a copy command and list and execute UpdateSubresources functions on the command queue.
-            m_copyContext->reset();
-
-            UpdateSubresources(m_copyContext->getCommandList(), texture.allocation.resource.Get(),
-                               uploadAllocation.resource.Get(), 0u, 0u, 1u, &textureSubresourceData);
-
-            const std::array<helios::gfx::Context* const, 1u> contexts = {
-                m_copyContext.get(),
-            };
-
-            m_copyCommandQueue->executeContext(contexts);
-            m_copyCommandQueue->flush();
-
-            uploadAllocation.reset();
         }
 
         // Now that data is copied / set into GPU memory, freeing it.

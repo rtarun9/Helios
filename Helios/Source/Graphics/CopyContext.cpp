@@ -8,6 +8,7 @@ namespace helios::gfx
     {
         throwIfFailed(device->getDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY,
                                                                   IID_PPV_ARGS(&m_commandAllocator)));
+
         throwIfFailed(device->getDevice()->CreateCommandList(0u, D3D12_COMMAND_LIST_TYPE_COPY, m_commandAllocator.Get(),
                                                              nullptr, IID_PPV_ARGS(&m_commandList)));
 

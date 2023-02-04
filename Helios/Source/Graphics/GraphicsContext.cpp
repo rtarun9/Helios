@@ -25,6 +25,7 @@ namespace helios::gfx
     void GraphicsContext::reset()
     {
         Context::reset();
+
         const std::array<const DescriptorHeap* const, 1u> descriptorHeaps = {
             graphicsDevice.getCbvSrvUavDescriptorHeap(),
         };

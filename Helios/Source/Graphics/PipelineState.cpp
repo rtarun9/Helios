@@ -10,7 +10,7 @@ namespace helios::gfx
         // note(rtarun9) : Blending not used for now, but the code is setup if needed.
         // Set up blend state (as d3dx12 doesn't seem to provide a automatic way to create pipeline state with blending
         // enabled).
-        const D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {
+        constexpr D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {
             .BlendEnable = FALSE,
             .LogicOpEnable = FALSE,
             .SrcBlend = D3D12_BLEND_SRC_ALPHA,

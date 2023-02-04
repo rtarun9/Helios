@@ -51,37 +51,43 @@ namespace helios::gfx
             return m_samplerDescriptorHeap.get();
         }
 
-        std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
+        [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];
         }
 
-        BackBuffer& getCurrentBackBuffer()
+        [[nodiscard]] BackBuffer& getCurrentBackBuffer()
         {
             return m_backBuffers[m_currentFrameIndex];
         }
 
+        // Resets the current context (i.e the command list and the allocator).
         void beginFrame();
         void present();
+
+        // Signals the direct command queue, and also waits for execution of the commands for next frame.
         void endFrame();
 
         void resizeWindow(const uint32_t windowWidth, const uint32_t windowHeight);
 
         // Creates a GPU Buffer. If some data is passed in, it will recursively call itself to create a upload buffer (a
         // buffer with CPU write and GPU read access and placed in a UploadHead). Then, a copy command is issued so that
-        // the final Buffer returned by the function has the requried data and is in exclusive GPU only memory.
+        // the final Buffer returned by the function has the required data and is in exclusive GPU only memory.
         template <typename T>
-        Buffer createBuffer(const BufferCreationDesc& bufferCreationDesc, const std::span<const T> data = {}) const;
+        [[nodiscard]] Buffer createBuffer(const BufferCreationDesc& bufferCreationDesc,
+                                          const std::span<const T> data = {}) const;
 
         // Creates a Texture that resides on GPU memory. The same Texture abstraction is used for render targets, depth
-        // stencil texture, etc. If data is non-null, stb will be used to load texture (HDR and non HDR textures
+        // stencil texture, etc. If data is non-null, stb_image will be used to load texture (HDR and non HDR textures
         // supported). In that case, a upload buffer will be created, after which a copy command is issued so that
         // finally the texture on GPU only memory has the required data.
-        Texture createTexture(const TextureCreationDesc& textureCreationDesc, const std::byte* data = nullptr) const;
+        [[nodiscard]] Texture createTexture(const TextureCreationDesc& textureCreationDesc,
+                                            const std::byte* data = nullptr) const;
 
-        PipelineState createPipelineState(
+        [[nodiscard]] PipelineState createPipelineState(
             const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
-        PipelineState createPipelineState(
+
+        [[nodiscard]] PipelineState createPipelineState(
             const ComputePipelineStateCreationDesc& computePipelineStateCreationDesc) const;
 
       private:
@@ -97,12 +103,12 @@ namespace helios::gfx
 
         void createBackBufferRTVs();
 
-        uint32_t createCbv(const CbvCreationDesc& cbvCreationDesc) const;
-        uint32_t createSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const;
-        uint32_t createSampler(const SamplerCreationDesc& cbvCreationDesc) const;
+        [[nodiscard]] uint32_t createCbv(const CbvCreationDesc& cbvCreationDesc) const;
+        [[nodiscard]] uint32_t createSrv(const SrvCreationDesc& srvCreationDesc, ID3D12Resource* const resource) const;
+        [[nodiscard]] uint32_t createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const;
+        [[nodiscard]] uint32_t createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const;
+        [[nodiscard]] uint32_t createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const;
+        [[nodiscard]] uint32_t createSampler(const SamplerCreationDesc& cbvCreationDesc) const;
 
       public:
         static constexpr uint32_t FRAMES_IN_FLIGHT = 3u;
@@ -148,7 +154,7 @@ namespace helios::gfx
 
         // If data.size() == 0, it means that the data to fill the buffer will be passed later on (via the Update
         // functions).
-        uint32_t numberComponents = data.size() == 0 ? 1 : static_cast<uint32_t>(data.size());
+        const uint32_t numberComponents = data.size() == 0 ? 1 : static_cast<uint32_t>(data.size());
 
         buffer.sizeInBytes = numberComponents * sizeof(T);
 
@@ -190,20 +196,22 @@ namespace helios::gfx
             uploadAllocation.reset();
         }
 
+        // Create relevant descriptor's.
         if (bufferCreationDesc.usage == BufferUsage::StructuredBuffer)
         {
             const SrvCreationDesc srvCreationDesc = {
-                .srvDesc{
-                    .Format = DXGI_FORMAT_UNKNOWN,
-                    .ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-                    .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-                    .Buffer =
-                        {
-                            .FirstElement = 0u,
-                            .NumElements = static_cast<UINT>(data.size()),
-                            .StructureByteStride = static_cast<UINT>(sizeof(T)),
-                        },
-                },
+                .srvDesc =
+                    {
+                        .Format = DXGI_FORMAT_UNKNOWN,
+                        .ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+                        .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+                        .Buffer =
+                            {
+                                .FirstElement = 0u,
+                                .NumElements = static_cast<UINT>(data.size()),
+                                .StructureByteStride = static_cast<UINT>(sizeof(T)),
+                            },
+                    },
             };
 
             buffer.srvIndex = createSrv(srvCreationDesc, buffer.allocation.resource.Get());

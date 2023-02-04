@@ -17,9 +17,10 @@ namespace helios::gfx
         }
     };
 
-    // Descriptor abstraction that has a 'current descriptor' that comes in handy while initializing resource
+    // DescriptorHeap abstraction that has a 'current descriptor' that comes in handy while initializing resource
     // (Texture's, buffer's etc). Has methods to return index of current descriptor : most resource abstractions
     // (texture's, buffer's) etc store this index and use for bindless rendering.
+    // DescriptorHeap is a contiguous linear allocation which stores descriptor's, which are tiny blocks of memory describing a resource.
     class DescriptorHeap
     {
       public:
@@ -56,8 +57,8 @@ namespace helios::gfx
         DescriptorHandle getDescriptorHandleFromIndex(const uint32_t index) const;
 
         // Returns a index that can be used to directly index into a descriptor heap.
-        uint32_t getDescriptorIndex(const DescriptorHandle& descriptorHandle) const;
-        uint32_t getCurrentDescriptorIndex() const;
+        [[nodiscard]] uint32_t getDescriptorIndex(const DescriptorHandle& descriptorHandle) const;
+        [[nodiscard]] uint32_t getCurrentDescriptorIndex() const;
 
         // Used to offset a X_Handle passed into function.
         void offsetDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE& handle, const uint32_t offset = 1u) const;

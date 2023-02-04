@@ -5,11 +5,9 @@
 
 namespace helios::gfx
 {
-    class DescriptorHeap;
     class GraphicsDevice;
 
-    // Wrapper class for Compute CommandList, which provides a set of easy and simple functions to record commands for
-    // execution by GPU (related to copying data).
+    // Wrapper class for Copy CommandList, which provides a set of easy and simple functions related to copying data from one resource to another.
     class CopyContext : public Context
     {
       public:

@@ -57,11 +57,6 @@ namespace helios::gfx
         }
     }
 
-    uint64_t CommandQueue::getCurrentFenceValue() const
-    {
-        return m_fence->GetCompletedValue();
-    }
-
     void CommandQueue::flush()
     {
         const uint64_t fenceValueToWaitFor = signal();

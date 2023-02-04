@@ -10,7 +10,8 @@ namespace helios::gfx
     class GraphicsDevice;
 
     // Wrapper class for Graphics CommandList, which provides a set of easy and simple functions to record commands for
-    // execution by GPU.
+    // execution by GPU. The GraphicsContext command list is of type Direct, which means it can issue basically all commands (copy, compute, and rendering 
+    // related).
     class GraphicsContext : public Context
     {
       public:
@@ -23,7 +24,7 @@ namespace helios::gfx
         void clearRenderTargetView(BackBuffer& backBuffer, const std::span<const float, 4> color);
         void setDescriptorHeaps(const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const;
 
-        // COnfigure pipeline / root signature related functions.
+        // Configure pipeline / root signature related functions.
         void setGraphicsPipelineState(const PipelineState& pipelineState) const;
         void setGraphicsRootSignature(const PipelineState& pipelineState) const;
         void setGraphicsRootSignatureAndPipeline(const PipelineState& pipelineState) const;

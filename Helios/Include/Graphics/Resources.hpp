@@ -141,7 +141,7 @@ namespace helios::gfx
     {
         D3D12_RESOURCE_DESC resourceDesc{};
 
-        static ResourceCreationDesc createBufferResourceCreationDesc(const uint64_t size)
+        [[nodiscard]] static ResourceCreationDesc createBufferResourceCreationDesc(const uint64_t size)
         {
             ResourceCreationDesc resourceCreationDesc = {
                 .resourceDesc{
@@ -167,6 +167,7 @@ namespace helios::gfx
     // (as used in UpdateSubresources). If data is already loaded elsewhere, use the TextureFromData enum (this requires
     // TextureCreateionDesc has all properties correctly set (specifically dimensions). UAV Texture is just a regular
     // texture with flags to allow it to be used as a UAV.
+    // note(rtarun9) : These usages correspond more with how textures are being created then how they are being used, consider changing this in the future.
     enum class TextureUsage
     {
         DepthStencil,
@@ -180,7 +181,7 @@ namespace helios::gfx
 
     struct TextureCreationDesc
     {
-        TextureUsage usage;
+        TextureUsage usage{};
         uint32_t width{};
         uint32_t height{};
         DXGI_FORMAT format{DXGI_FORMAT_R8G8B8A8_UNORM};

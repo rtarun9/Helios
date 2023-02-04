@@ -28,7 +28,7 @@ namespace helios::gfx
         {
         case BufferUsage::UploadBuffer:
         case BufferUsage::ConstantBuffer: {
-            // GenericRead implies readable data from the GPU memory.
+            // GenericRead implies readable data from the GPU memory. Required resourceState for upload heaps.
             // UploadHeap : CPU writable access, GPU readable access.
             resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
             heapType = D3D12_HEAP_TYPE_UPLOAD;
@@ -48,6 +48,8 @@ namespace helios::gfx
         const D3D12MA::ALLOCATION_DESC allocationDesc = {
             .HeapType = heapType,
         };
+
+        std::lock_guard<std::recursive_mutex> resourceAllocationLockGuard(m_resourceAllocationMutex);
 
         throwIfFailed(m_allocator->CreateResource(&allocationDesc, &resourceCreationDesc.resourceDesc, resourceState,
                                                   nullptr, &allocation.allocation, IID_PPV_ARGS(&allocation.resource)));
@@ -69,7 +71,7 @@ namespace helios::gfx
     {
         Allocation allocation{};
 
-        DXGI_FORMAT format{textureCreationDesc.format};
+        DXGI_FORMAT format = textureCreationDesc.format;
         DXGI_FORMAT dsFormat{};
 
         switch (textureCreationDesc.format)
@@ -125,6 +127,7 @@ namespace helios::gfx
             .HeapType = heapType,
         };
 
+        // In the case of large resource (such as a render target, etc), its better for the resource to be a committed resource and have a heap to itself.
         switch (textureCreationDesc.usage)
         {
         case TextureUsage::DepthStencil: {
@@ -142,7 +145,8 @@ namespace helios::gfx
         }
         break;
 
-        // Note : All textures that are not DS or RTV need unordered access.
+        // Note : All textures that are not DS or RTV will have unordered access. Primarily because of mip map generation, and creation of equirectangular textures etc
+        // in the compute shader.
         default: {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
