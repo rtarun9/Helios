@@ -51,6 +51,11 @@ namespace helios::gfx
             return m_samplerDescriptorHeap.get();
         }
 
+        DescriptorHeap* const getDsvDescriptorHeap() const
+        {
+            return m_dsvDescriptorHeap.get();
+        }
+
         [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];
@@ -84,6 +89,11 @@ namespace helios::gfx
         [[nodiscard]] Texture createTexture(const TextureCreationDesc& textureCreationDesc,
                                             const std::byte* data = nullptr) const;
 
+        // Create a sampler (which is just an index into the sampler descriptor heap).
+        // Do note that unlike createCbv/Srv/Uav this is placed in public access and not with the other create function's which return indices into respective descriptor heaps.
+        // This is because we are not creating a 'View' into the sampler. Samplers have no views, and the ID3D12Device function call itself is named 'CreateSampler', and not 'Create Ssampler View'.
+        [[nodiscard]] Sampler createSampler(const SamplerCreationDesc& samplerCreationDesc) const;
+
         [[nodiscard]] PipelineState createPipelineState(
             const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const;
 
@@ -108,7 +118,6 @@ namespace helios::gfx
         [[nodiscard]] uint32_t createUav(const UavCreationDesc& uavCreationDesc, ID3D12Resource* const resource) const;
         [[nodiscard]] uint32_t createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const;
         [[nodiscard]] uint32_t createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const;
-        [[nodiscard]] uint32_t createSampler(const SamplerCreationDesc& cbvCreationDesc) const;
 
       public:
         static constexpr uint32_t FRAMES_IN_FLIGHT = 3u;
@@ -138,6 +147,7 @@ namespace helios::gfx
         bool m_tearingSupported{false};
 
         std::unique_ptr<DescriptorHeap> m_rtvDescriptorHeap{};
+        std::unique_ptr<DescriptorHeap> m_dsvDescriptorHeap{};
         std::unique_ptr<DescriptorHeap> m_cbvSrvUavDescriptorHeap{};
         std::unique_ptr<DescriptorHeap> m_samplerDescriptorHeap{};
 

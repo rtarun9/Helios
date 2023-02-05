@@ -16,14 +16,22 @@ FetchContent_Declare(
     GIT_PROGRESS TRUE
 )
 
+set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF)
+set (TINYGLTF_BUILD_LOADER_EXAMPLE OFF)
+set(TINYGLTF_BUILD_GL_EXAMPLES OFF)
+set(TINYGLTF_BUILD_VALIDATOR_EXAMPLE OFF)
+set(TINYGLTF_BUILD_BUILDER_EXAMPLE OFF)
+
+set(TINYGLTF_HEADER_ONLY OFF)
+set(TINYGLTF_INSTALL OFF)
+
 FetchContent_Declare(
     tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
     GIT_TAG        544969b7324cd6bba29f6203c7d78c7ea92dbab0
-    GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(D3D12MemoryAllocator stb tinygltf)
+FetchContent_MakeAvailable(tinygltf D3D12MemoryAllocator stb)
 
 FetchContent_Declare(
     SDL2
@@ -63,4 +71,4 @@ target_link_libraries(libimgui PUBLIC SDL2::SDL2main SDL2::SDL2-static)
 
 add_library(External INTERFACE)
 target_link_libraries(External INTERFACE D3D12MemoryAllocator tinygltf libimgui SDL2::SDL2main SDL2::SDL2test)
-target_include_directories(External INTERFACE ${sdl2_SOURCE_DIR}/include ${D3D12MemoryAllocator_SOURCE_DIR}/include ${stb_SOURCE_DIR})
+target_include_directories(External INTERFACE ${sdl2_SOURCE_DIR}/include ${D3D12MemoryAllocator_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinygltf_SOURCE_DIR})

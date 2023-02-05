@@ -118,6 +118,8 @@ namespace helios::core
                     {
                         quit = true;
                     }
+
+                    m_input.processInput(keyboardState);
                 }
 
                 const std::chrono::high_resolution_clock::time_point currentFrameTimePoint = clock.now();

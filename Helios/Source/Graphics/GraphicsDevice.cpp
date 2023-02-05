@@ -2,7 +2,6 @@
 
 #include "Core/ResourceManager.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 namespace helios::gfx
@@ -147,10 +146,16 @@ namespace helios::gfx
     {
         // Create descriptor heaps.
         m_cbvSrvUavDescriptorHeap = std::make_unique<DescriptorHeap>(
-            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 100u, L"CBV SRV UAV Descriptor Heap");
+            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 500u, L"CBV SRV UAV Descriptor Heap");
 
         m_rtvDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 10u,
                                                                L"RTV Descriptor Heap");
+
+        m_dsvDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 5u,
+                                                               L"DSV Descriptor Heap");
+
+        m_samplerDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+                                                                   250u, L"Sampler Descriptor Heap");
     }
 
     void GraphicsDevice::initMemoryAllocator()
@@ -242,15 +247,16 @@ namespace helios::gfx
         createBackBufferRTVs();
     }
 
-    Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc, const std::byte* data) const
+    Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc,
+                                          const std::byte* data) const
     {
         Texture texture{};
-        
-        // The memory allocator changes some variables of the TextureCreationDesc, so to prevent making the function's input parameter non const, this approach 
-        // of making a local copy is taken.
+
+        // The memory allocator changes some variables of the TextureCreationDesc, so to prevent making the function's
+        // input parameter non const, this approach of making a local copy is taken.
         TextureCreationDesc textureCreationDesc = paramTextureCreationDesc;
 
-        textureCreationDesc.path = core::ResourceManager::getRootDirectoryPath(textureCreationDesc.path);
+        textureCreationDesc.path = core::ResourceManager::getFullPath(textureCreationDesc.path);
 
         int32_t componentCount = 4;
         int32_t width{};
@@ -260,7 +266,7 @@ namespace helios::gfx
         float* hdrTextureData{nullptr};
 
         // For use by textures that are non HDR and going to be loaded using stbi.
-        void* textureData{reinterpret_cast<void*>(&data)};
+        void* textureData{(void*)(data)};
 
         if (textureCreationDesc.usage == TextureUsage::TextureFromData)
         {
@@ -274,7 +280,8 @@ namespace helios::gfx
 
             if (!textureData)
             {
-                fatalError(std::format("Failed to load texture from path : {}.", wStringToString(textureCreationDesc.path)));
+                fatalError(
+                    std::format("Failed to load texture from path : {}.", wStringToString(textureCreationDesc.path)));
             }
 
             textureCreationDesc.width = width;
@@ -306,16 +313,16 @@ namespace helios::gfx
 
         case DXGI_FORMAT_D24_UNORM_S8_UINT: {
             fatalError("Currently, the renderer does not support depth format of the type D24_S8_UINT. "
-                                     "Please use one of the X32 types.");
+                       "Please use one of the X32 types.");
         }
         break;
         }
 
         std::lock_guard<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
 
-        // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub resource data
-        // from a upload buffer into the GPU only texture.
-        if (!data)
+        // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub
+        // resource data from a upload buffer into the GPU only texture.
+        if (textureData || hdrTextureData)
         {
             // Create upload buffer.
             const BufferCreationDesc uploadBufferCreationDesc = {
@@ -368,7 +375,7 @@ namespace helios::gfx
         }
 
         // Create descriptors.
-        
+
         // Create SRV.
         SrvCreationDesc srvCreationDesc{};
 
@@ -455,6 +462,18 @@ namespace helios::gfx
         return texture;
     }
 
+    Sampler GraphicsDevice::createSampler(const SamplerCreationDesc& samplerCreationDesc) const
+    {
+        Sampler sampler{};
+
+        sampler.samplerIndex = m_samplerDescriptorHeap->getCurrentDescriptorIndex();
+        gfx::DescriptorHandle samplerDescriptorHandle = m_samplerDescriptorHeap->getCurrentDescriptorHandle();
+
+        m_device->CreateSampler(&samplerCreationDesc.samplerDesc, samplerDescriptorHandle.cpuDescriptorHandle);
+
+        return sampler;
+    }
+
     PipelineState GraphicsDevice::createPipelineState(
         const GraphicsPipelineStateCreationDesc& graphicsPipelineStateCreationDesc) const
     {
@@ -512,14 +531,16 @@ namespace helios::gfx
     {
         return INVALID_INDEX_U32;
     }
+
     uint32_t GraphicsDevice::createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const
     {
-        return INVALID_INDEX_U32;
-    }
+        const uint32_t dsvIndex = m_dsvDescriptorHeap->getCurrentDescriptorIndex();
 
-    uint32_t GraphicsDevice::createSampler(const SamplerCreationDesc& cbvCreationDesc) const
-    {
-        return INVALID_INDEX_U32;
-    }
+        m_device->CreateDepthStencilView(resource, &dsvCreationDesc.dsvDesc,
+                                         m_dsvDescriptorHeap->getCurrentDescriptorHandle().cpuDescriptorHandle);
 
+        m_dsvDescriptorHeap->offsetCurrentHandle();
+
+        return dsvIndex;
+    }
 } // namespace helios::gfx

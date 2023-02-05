@@ -13,8 +13,9 @@ namespace helios::gfx
 
         // As all graphics context's require to set the descriptor heap before hand, the user has option to set them
         // manually (for explicitness) or just let the constructor take care of this.
-        const std::array<const DescriptorHeap* const, 1u> descriptorHeaps = {
+        const std::array<const DescriptorHeap* const, 2u> descriptorHeaps = {
             device->getCbvSrvUavDescriptorHeap(),
+            device->getSamplerDescriptorHeap(),
         };
 
         setDescriptorHeaps(descriptorHeaps);
@@ -26,8 +27,9 @@ namespace helios::gfx
     {
         Context::reset();
 
-        const std::array<const DescriptorHeap* const, 1u> descriptorHeaps = {
+        const std::array<const DescriptorHeap* const, 2u> descriptorHeaps = {
             graphicsDevice.getCbvSrvUavDescriptorHeap(),
+            graphicsDevice.getSamplerDescriptorHeap(),
         };
 
         setDescriptorHeaps(descriptorHeaps);
@@ -49,6 +51,15 @@ namespace helios::gfx
     void GraphicsContext::clearRenderTargetView(BackBuffer& backBuffer, std::span<const float, 4> color)
     {
         m_commandList->ClearRenderTargetView(backBuffer.backBufferDescriptorHandle.cpuDescriptorHandle, color.data(),
+                                             0u, nullptr);
+    }
+
+    void GraphicsContext::clearDepthStencilView(Texture& texture)
+    {
+        const auto dsvDescriptorHandle =
+            graphicsDevice.getDsvDescriptorHeap()->getDescriptorHandleFromIndex(texture.dsvIndex);
+
+        m_commandList->ClearDepthStencilView(dsvDescriptorHandle.cpuDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 1u,
                                              0u, nullptr);
     }
 
@@ -105,6 +116,14 @@ namespace helios::gfx
                                           nullptr);
     }
 
+    void GraphicsContext::setRenderTarget(const BackBuffer& renderTarget, const Texture& depthStencilTexture) const
+    {
+        const auto dsvDescriptorHandle =
+            graphicsDevice.getDsvDescriptorHeap()->getDescriptorHandleFromIndex(depthStencilTexture.dsvIndex);
+
+        m_commandList->OMSetRenderTargets(1u, &renderTarget.backBufferDescriptorHandle.cpuDescriptorHandle, FALSE,
+                                          &dsvDescriptorHandle.cpuDescriptorHandle);
+    }
     void GraphicsContext::drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
     {
         m_commandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);

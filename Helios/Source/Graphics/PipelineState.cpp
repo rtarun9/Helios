@@ -44,12 +44,12 @@ namespace helios::gfx
 
         const auto& vertexShaderBlob = core::ResourceManager::compileShader(
             ShaderTypes::Vertex,
-            core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
+                core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
             pipelineStateCreationDesc.shaderModule.vertexEntryPoint).shaderBlob;
 
         const auto& pixelShaderBlob = core::ResourceManager::compileShader(
             ShaderTypes::Pixel,
-            core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
+                core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
             pipelineStateCreationDesc.shaderModule.pixelEntryPoint).shaderBlob;
 
         // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
@@ -93,7 +93,7 @@ namespace helios::gfx
     PipelineState::PipelineState(ID3D12Device5* const device,
                                  const ComputePipelineStateCreationDesc& pipelineStateCreationDesc)
     {
-        const auto csPath = core::ResourceManager::getRootDirectoryPath(pipelineStateCreationDesc.csShaderPath);
+        const auto csPath = core::ResourceManager::getFullPath(pipelineStateCreationDesc.csShaderPath);
 
         wrl::ComPtr<ID3DBlob> computeBlob{nullptr};
         ::D3DReadFileToBlob(csPath.c_str(), &computeBlob);
@@ -119,7 +119,7 @@ namespace helios::gfx
 
     void PipelineState::createBindlessRootSignature(ID3D12Device* const device, const std::wstring_view shaderPath)
     {
-        const auto path = core::ResourceManager::getRootDirectoryPath(shaderPath);
+        const auto path = core::ResourceManager::getFullPath(shaderPath);
         const auto shader = core::ResourceManager::compileShader(ShaderTypes::Vertex, path, L"VsMain", true);
 
         if (!shader.rootSignatureBlob.Get())

@@ -5,6 +5,7 @@
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <cmath>
 #include <span>
 #include <ranges>
 #include <vector>
@@ -13,6 +14,7 @@
 #include <format>
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 
 #include <d3d12.h>

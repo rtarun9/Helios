@@ -1,7 +1,6 @@
-#ifndef __BINDLESS_RS_HLSLI__
-#define __BINDLESS_RS_HLSLI__
+#pragma once
 
-// Set the matrix packing to row major by default. Prevents needing to transpose matrice's on the C++ side.
+// Set the matrix packing to row major by default. Prevents needing to transpose matrices on the C++ side.
 #pragma pack_matrix(row_major)
 
 #define BindlessRootSignature                                                                                          \
@@ -37,4 +36,3 @@ SamplerState minMapPointMipLinearClampSampler : register(s6);
 SamplerState minMapPointMipLinearWrapSampler : register(s7);
 SamplerState anisotropicSampler : register(s8);
 
-#endif

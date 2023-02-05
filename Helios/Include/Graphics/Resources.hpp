@@ -167,7 +167,8 @@ namespace helios::gfx
     // (as used in UpdateSubresources). If data is already loaded elsewhere, use the TextureFromData enum (this requires
     // TextureCreateionDesc has all properties correctly set (specifically dimensions). UAV Texture is just a regular
     // texture with flags to allow it to be used as a UAV.
-    // note(rtarun9) : These usages correspond more with how textures are being created then how they are being used, consider changing this in the future.
+    // note(rtarun9) : These usages correspond more with how textures are being created then how they are being used,
+    // consider changing this in the future.
     enum class TextureUsage
     {
         DepthStencil,
@@ -205,5 +206,10 @@ namespace helios::gfx
 
         static bool isTextureSRGB(const DXGI_FORMAT format);
         static DXGI_FORMAT getNonSRGBFormat(const DXGI_FORMAT format);
+    };
+
+    struct Sampler
+    {
+        uint32_t samplerIndex{INVALID_INDEX_U32};
     };
 } // namespace helios::gfx

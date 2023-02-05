@@ -22,6 +22,7 @@ namespace helios::gfx
         void reset() override;
 
         void clearRenderTargetView(BackBuffer& backBuffer, const std::span<const float, 4> color);
+        void clearDepthStencilView(Texture& texture);
         void setDescriptorHeaps(const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const;
 
         // Configure pipeline / root signature related functions.
@@ -37,6 +38,7 @@ namespace helios::gfx
         void setPrimitiveTopologyLayout(const D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
 
         void setRenderTarget(const BackBuffer& renderTarget) const;
+        void setRenderTarget(const BackBuffer& renderTarget, const Texture& depthStencilTexture) const;
 
         // Draw functions.
         void drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount = 1u) const;

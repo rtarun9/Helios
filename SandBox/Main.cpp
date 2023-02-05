@@ -1,4 +1,4 @@
-#include "Core/Application.hpp"
+#include "Helios.hpp"
 
 using namespace helios;
 
@@ -11,44 +11,12 @@ class SandBox final : public helios::core::Application
 
     void loadContent() override
     {
-        static constexpr std::array<math::XMFLOAT3, 3> trianglePositionData = {
-            math::XMFLOAT3{-0.5f, -0.5f, 0.0f},
-            math::XMFLOAT3{0.0f, 0.5f, 0.0f},
-            math::XMFLOAT3{0.5f, -0.5f, 0.0f},
-        };
-
-        m_trianglePositionBuffer = m_graphicsDevice->createBuffer<math::XMFLOAT3>(
+        m_sceneBuffer = m_graphicsDevice->createBuffer<interlop::SceneBuffer>({
             gfx::BufferCreationDesc{
-                .usage = gfx::BufferUsage::StructuredBuffer,
-                .name = L"Triangle Position Buffer",
+                .usage = gfx::BufferUsage::ConstantBuffer,
+                .name = L"Scene Buffer",
             },
-            trianglePositionData);
-
-        static constexpr std::array<math::XMFLOAT2, 3> triangleTextureCoordData = {
-            math::XMFLOAT2{1.0f, 0.0f},
-            math::XMFLOAT2{0.5f, 0.0f},
-            math::XMFLOAT2{0.0f, 1.0f},
-        };
-
-        m_triangleTextureCoordBuffer = m_graphicsDevice->createBuffer<math::XMFLOAT2>(
-            gfx::BufferCreationDesc{
-                .usage = gfx::BufferUsage::StructuredBuffer,
-                .name = L"Triangle Color Buffer",
-            },
-            triangleTextureCoordData);
-
-        static constexpr std::array<uint32_t, 3> triangleIndicesData = {
-            0u,
-            1u,
-            2u,
-        };
-
-        m_triangleIndexBuffer = m_graphicsDevice->createBuffer<uint32_t>(
-            gfx::BufferCreationDesc{
-                .usage = gfx::BufferUsage::IndexBuffer,
-                .name = L"Triangle Index Buffer",
-            },
-            triangleIndicesData);
+        });
 
         m_texture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::TextureFromPath,
@@ -56,19 +24,45 @@ class SandBox final : public helios::core::Application
             .path = L"Assets/Models/DamagedHelmet/glTF/Default_AO.jpg",
         });
 
-        m_trianglePipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
+        m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
                 {
-                    .vertexShaderPath = L"Shaders/Triangle.hlsl",
-                    .pixelShaderPath = L"Shaders/Triangle.hlsl",
+                    .vertexShaderPath = L"Shaders/ModelViewer.hlsl",
+                    .pixelShaderPath = L"Shaders/ModelViewer.hlsl",
                 },
-            .depthFormat = DXGI_FORMAT_UNKNOWN,
-            .pipelineName = L"Triangle Pipeline",
+            .depthFormat = DXGI_FORMAT_D32_FLOAT,
+            .pipelineName = L"ModelViewer Pipeline",
         });
+
+        m_depthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
+            .usage = gfx::TextureUsage::DepthStencil,
+            .width = m_windowWidth,
+            .height = m_windowHeight,
+            .format = DXGI_FORMAT_D32_FLOAT,
+            .name = L"Depth Texture",
+        });
+
+        m_model = std::make_unique<scene::Model>(
+            m_graphicsDevice.get(), scene::ModelCreationDesc{
+                                        .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+                                        .modelName = L"DamagedHelmet",
+                                    });
     }
 
     void update(const float deltaTime) override
     {
+        m_camera.update(deltaTime, m_input);
+
+        const interlop::SceneBuffer sceneBufferData = {
+            .viewProjectionMatrix =
+                m_camera.computeAndGetViewMatrix() *
+                math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f),
+                                               static_cast<float>(m_windowWidth) / m_windowHeight, 0.1f, 100.0f),
+        };
+
+        m_sceneBuffer.update(&sceneBufferData);
+
+        m_model->getTransformComponent().update();
     }
 
     void render() override
@@ -83,14 +77,16 @@ class SandBox final : public helios::core::Application
                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
         gctx->executeResourceBarriers();
 
-        const std::array<float, 4> clearColor = {std::abs(std::cosf(m_frameCount / 120.0f)), 0.0f,
-                                                 std::abs(std::sinf(m_frameCount / 120.0f)), 1.0f};
+        // const std::array<float, 4> clearColor = {std::abs(std::cosf(m_frameCount / 120.0f)), 0.0f,
+        //                                          std::abs(std::sinf(m_frameCount / 120.0f)), 1.0f};
+        static constexpr std::array<float, 4> clearColor = {0.2f, 0.2f, 0.2f, 1.0f};
 
         gctx->clearRenderTargetView(currentBackBuffer, clearColor);
+        gctx->clearDepthStencilView(m_depthTexture);
 
         // Prepare for rendering.
 
-        gctx->setGraphicsRootSignatureAndPipeline(m_trianglePipelineState);
+        gctx->setGraphicsRootSignatureAndPipeline(m_pipelineState);
         gctx->setViewport(D3D12_VIEWPORT{
             .TopLeftX = 0.0f,
             .TopLeftY = 0.0f,
@@ -101,25 +97,13 @@ class SandBox final : public helios::core::Application
         });
 
         gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        gctx->setIndexBuffer(m_triangleIndexBuffer);
-        gctx->setRenderTarget(currentBackBuffer);
+        gctx->setRenderTarget(currentBackBuffer, m_depthTexture);
 
-        struct TriangleRenderResources
-        {
-            uint32_t positionBufferIndex;
-            uint32_t textureCoordBufferIndex;
-            uint32_t textureIndex;
+        interlop::ModelViewerRenderResources renderResources = {
+            .sceneBufferIndex = m_sceneBuffer.cbvIndex,
         };
 
-        const TriangleRenderResources renderResources = {
-            .positionBufferIndex = m_trianglePositionBuffer.srvIndex,
-            .textureCoordBufferIndex = m_triangleTextureCoordBuffer.srvIndex,
-            .textureIndex = m_texture.srvIndex,
-        };
-
-        gctx->set32BitGraphicsConstants(&renderResources);
-
-        gctx->drawInstanceIndexed(3u, 1u);
+        m_model->render(gctx.get(), renderResources);
 
         // Prepare back buffer for presentation.
         gctx->addResourceBarrier(currentBackBuffer.backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -140,14 +124,18 @@ class SandBox final : public helios::core::Application
     }
 
   private:
-    uint64_t m_frameCount{};
-    gfx::Buffer m_trianglePositionBuffer{};
-    gfx::Buffer m_triangleTextureCoordBuffer{};
-    gfx::Buffer m_triangleIndexBuffer{};
+    gfx::Buffer m_sceneBuffer{};
 
     gfx::Texture m_texture{};
 
-    gfx::PipelineState m_trianglePipelineState{};
+    gfx::PipelineState m_pipelineState{};
+
+    gfx::Texture m_depthTexture{};
+
+    std::unique_ptr<scene::Model> m_model{};
+
+    scene::Camera m_camera{};
+    uint64_t m_frameCount{};
 };
 
 int main()

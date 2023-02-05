@@ -22,7 +22,7 @@ namespace helios::gfx::ShaderCompiler
             throwIfFailed(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
             throwIfFailed(utils->CreateDefaultIncludeHandler(&includeHandler));
 
-            shaderDirectory = core::ResourceManager::getRootDirectoryPath(L"Shaders");
+            shaderDirectory = core::ResourceManager::getFullPath(L"Shaders");
             log(std::format(L"Shader base directory : {}.", shaderDirectory));
         }
 

@@ -1,12 +1,16 @@
 #pragma once
 
+#include "Core/Input.hpp"
 #include "Core/ResourceManager.hpp"
+
 #include "Graphics/GraphicsDevice.hpp"
 
 struct SDL_Window;
 
 namespace helios::core
 {
+    // All Helios 'Applications', are required to inherit from this class.
+    // The main game loop is located within the application class.
     class Application
     {
       public:
@@ -21,7 +25,7 @@ namespace helios::core
 
         void run();
 
-    private:
+      private:
         void initPlatformBackend();
 
       protected:
@@ -41,5 +45,7 @@ namespace helios::core
         HWND m_windowHandle{};
 
         std::unique_ptr<gfx::GraphicsDevice> m_graphicsDevice{};
+
+        Input m_input{};
     };
 } // namespace helios::core

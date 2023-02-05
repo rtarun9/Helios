@@ -14,12 +14,12 @@ namespace helios::core
     class ResourceManager
     {
       public:
-        static inline std::string getRootDirectoryPath(const std::string_view assetPath)
+        static inline std::string getFullPath(const std::string_view assetPath)
         {
             return std::move(s_rootDirectoryPath + assetPath.data());
         }
 
-        static inline std::wstring getRootDirectoryPath(const std::wstring_view assetPath)
+        static inline std::wstring getFullPath(const std::wstring_view assetPath)
         {
             return std::move(stringToWString(s_rootDirectoryPath) + assetPath.data());
         }

@@ -5,6 +5,9 @@ set(SRC_FILES
     "Source/Core/ResourceManager.cpp"
     "Include/Core/ResourceManager.hpp"
     
+    "Source/Core/Input.cpp"
+    "Include/Core/Input.hpp"
+
     "Include/Graphics/d3dx12.hpp"
 
     "Source/Graphics/GraphicsDevice.cpp"
@@ -36,10 +39,21 @@ set(SRC_FILES
 
     "Source/Graphics/MemoryAllocator.cpp"
     "Include/Graphics/MemoryAllocator.hpp"
+
+    "Source/Scene/Camera.cpp"
+    "Include/Scene/Camera.hpp"
+
+    "Source/Scene/Model.cpp"
+    "Include/Scene/Model.hpp"
+    
+    "Include/Scene/Materials.hpp"
+    "Include/Scene/Mesh.hpp"
+    
+    "Include/Helios.hpp"
 )
 
 add_library(Helios STATIC ${SRC_FILES})
-target_include_directories(Helios PUBLIC "Include")
+target_include_directories(Helios PUBLIC "Include" "../Shaders")
 target_link_libraries(Helios PUBLIC External d3d12.lib d3dcompiler.lib dxcompiler.lib)
 
 # Setup precompiled headers.
