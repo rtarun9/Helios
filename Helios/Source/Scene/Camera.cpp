@@ -15,12 +15,13 @@ namespace helios::scene
 
         // Their values (of the persistent static variables) are linearly interpolated over frames. If no input given
         // (for the specific movement), the values are slowly interpolated to
-        // the current frame value (i.e the movements are not instantaneous). By this logic, the values will be 
+        // the current frame value (i.e the movements are not instantaneous). By this logic, the values will be
         // interpolated to 0 when no input is given. Hence, this case (of no input) need not be separately handled.
         // In short, we want our camera position and euler angle orientation values to lerp between frames.
-        
+
         // The friction "smooth" or how slowly / fast
-        //  Reference (WickedEngine) : https://github.com/turanszkij/WickedEngine/commit/42d7592444ff74180f8b48d14a05e947b37fd387.
+        //  Reference (WickedEngine) :
+        //  https://github.com/turanszkij/WickedEngine/commit/42d7592444ff74180f8b48d14a05e947b37fd387.
 
         const float movementSpeed = m_movementSpeed * deltaTime;
         const float rotationSpeed = m_rotationSpeed * deltaTime;

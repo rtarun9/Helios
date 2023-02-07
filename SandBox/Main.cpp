@@ -11,18 +11,20 @@ class SandBox final : public helios::core::Application
 
     void loadContent() override
     {
-        m_sceneBuffer = m_graphicsDevice->createBuffer<interlop::SceneBuffer>({
-            gfx::BufferCreationDesc{
-                .usage = gfx::BufferUsage::ConstantBuffer,
-                .name = L"Scene Buffer",
-            },
-        });
+        m_scene->addModel(m_graphicsDevice.get(),
+                          scene::ModelCreationDesc{
+                              .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+                              .modelName = L"Damaged Helmet",
+                          });
 
-        m_texture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
-            .usage = gfx::TextureUsage::TextureFromPath,
-            .name = L"Test Texture",
-            .path = L"Assets/Models/DamagedHelmet/glTF/Default_AO.jpg",
-        });
+        m_scene->addModel(m_graphicsDevice.get(),
+                          scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+                                                   .modelName = L"Sponza",
+                                                   .scale = {
+                                                       0.1f,
+                                                       0.1f,
+                                                       0.1f,
+                                                   }});
 
         m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
@@ -41,28 +43,11 @@ class SandBox final : public helios::core::Application
             .format = DXGI_FORMAT_D32_FLOAT,
             .name = L"Depth Texture",
         });
-
-        m_model = std::make_unique<scene::Model>(
-            m_graphicsDevice.get(), scene::ModelCreationDesc{
-                                        .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-                                        .modelName = L"DamagedHelmet",
-                                    });
     }
 
     void update(const float deltaTime) override
     {
-        m_camera.update(deltaTime, m_input);
-
-        const interlop::SceneBuffer sceneBufferData = {
-            .viewProjectionMatrix =
-                m_camera.computeAndGetViewMatrix() *
-                math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(45.0f),
-                                               static_cast<float>(m_windowWidth) / m_windowHeight, 0.1f, 100.0f),
-        };
-
-        m_sceneBuffer.update(&sceneBufferData);
-
-        m_model->getTransformComponent().update();
+        m_scene->update(deltaTime, m_input, static_cast<float>(m_windowWidth) / m_windowHeight);
     }
 
     void render() override
@@ -70,10 +55,10 @@ class SandBox final : public helios::core::Application
         m_graphicsDevice->beginFrame();
 
         std::unique_ptr<gfx::GraphicsContext>& gctx = m_graphicsDevice->getCurrentGraphicsContext();
-        gfx::BackBuffer& currentBackBuffer = m_graphicsDevice->getCurrentBackBuffer();
+        gfx::Texture& currentBackBuffer = m_graphicsDevice->getCurrentBackBuffer();
 
         // Prepare back buffer for rendering into it (i.e using it as a render target).
-        gctx->addResourceBarrier(currentBackBuffer.backBufferResource.Get(), D3D12_RESOURCE_STATE_PRESENT,
+        gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_PRESENT,
                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
         gctx->executeResourceBarriers();
 
@@ -99,14 +84,10 @@ class SandBox final : public helios::core::Application
         gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         gctx->setRenderTarget(currentBackBuffer, m_depthTexture);
 
-        interlop::ModelViewerRenderResources renderResources = {
-            .sceneBufferIndex = m_sceneBuffer.cbvIndex,
-        };
-
-        m_model->render(gctx.get(), renderResources);
+        m_scene->renderModels(gctx.get());
 
         // Prepare back buffer for presentation.
-        gctx->addResourceBarrier(currentBackBuffer.backBufferResource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
+        gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
                                  D3D12_RESOURCE_STATE_PRESENT);
 
         gctx->executeResourceBarriers();
@@ -124,17 +105,12 @@ class SandBox final : public helios::core::Application
     }
 
   private:
-    gfx::Buffer m_sceneBuffer{};
-
     gfx::Texture m_texture{};
 
     gfx::PipelineState m_pipelineState{};
 
     gfx::Texture m_depthTexture{};
 
-    std::unique_ptr<scene::Model> m_model{};
-
-    scene::Camera m_camera{};
     uint64_t m_frameCount{};
 };
 

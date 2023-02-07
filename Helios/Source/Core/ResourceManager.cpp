@@ -30,10 +30,4 @@ namespace helios::core
 
         log(std::format("Detected root directory at path : {}.", s_rootDirectoryPath));
     }
-
-    gfx::Shader ResourceManager::compileShader(const gfx::ShaderTypes& shaderType, const std::wstring_view shaderPath,
-                                               const std::wstring_view entryPoint, const bool extractRootSignature)
-    {
-        return gfx::ShaderCompiler::compile(shaderType, shaderPath, entryPoint, extractRootSignature);
-    }
 } // namespace helios::core

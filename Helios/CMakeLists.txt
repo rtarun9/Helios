@@ -46,6 +46,9 @@ set(SRC_FILES
     "Source/Scene/Model.cpp"
     "Include/Scene/Model.hpp"
     
+    "Source/Scene/Scene.cpp"
+    "Include/Scene/Scene.hpp"
+
     "Include/Scene/Materials.hpp"
     "Include/Scene/Mesh.hpp"
     

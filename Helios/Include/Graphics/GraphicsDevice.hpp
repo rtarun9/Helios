@@ -56,12 +56,17 @@ namespace helios::gfx
             return m_dsvDescriptorHeap.get();
         }
 
+        DescriptorHeap* const getRtvDescriptorHeap() const
+        {
+            return m_rtvDescriptorHeap.get();
+        }
+
         [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];
         }
 
-        [[nodiscard]] BackBuffer& getCurrentBackBuffer()
+        [[nodiscard]] Texture& getCurrentBackBuffer()
         {
             return m_backBuffers[m_currentFrameIndex];
         }
@@ -90,8 +95,10 @@ namespace helios::gfx
                                             const std::byte* data = nullptr) const;
 
         // Create a sampler (which is just an index into the sampler descriptor heap).
-        // Do note that unlike createCbv/Srv/Uav this is placed in public access and not with the other create function's which return indices into respective descriptor heaps.
-        // This is because we are not creating a 'View' into the sampler. Samplers have no views, and the ID3D12Device function call itself is named 'CreateSampler', and not 'Create Ssampler View'.
+        // Do note that unlike createCbv/Srv/Uav this is placed in public access and not with the other create
+        // function's which return indices into respective descriptor heaps. This is because we are not creating a
+        // 'View' into the sampler. Samplers have no views, and the ID3D12Device function call itself is named
+        // 'CreateSampler', and not 'Create Ssampler View'.
         [[nodiscard]] Sampler createSampler(const SamplerCreationDesc& samplerCreationDesc) const;
 
         [[nodiscard]] PipelineState createPipelineState(
@@ -138,7 +145,7 @@ namespace helios::gfx
         std::unique_ptr<CopyContext> m_copyContext{};
 
         std::array<FenceValues, FRAMES_IN_FLIGHT> m_fenceValues{};
-        std::array<BackBuffer, FRAMES_IN_FLIGHT> m_backBuffers{};
+        std::array<Texture, FRAMES_IN_FLIGHT> m_backBuffers{};
         uint64_t m_currentFrameIndex{};
 
         DXGI_FORMAT m_swapchainBackBufferFormat{};

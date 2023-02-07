@@ -1,5 +1,6 @@
 #include "Core/Application.hpp"
 
+#include "Core/ResourceManager.hpp"
 #include "Graphics/PipelineState.hpp"
 
 #include <SDL.h>
@@ -67,6 +68,11 @@ namespace helios::core
         m_windowHandle = wmInfo.info.win.window;
     }
 
+    void Application::initScene()
+    {
+        m_scene = std::make_unique<scene::Scene>(m_graphicsDevice.get());
+    }
+
     void Application::init()
     {
         ResourceManager::locateRootDirectory();
@@ -76,6 +82,8 @@ namespace helios::core
         // Initialize the graphics device.
         m_graphicsDevice = std::make_unique<gfx::GraphicsDevice>(m_windowWidth, m_windowHeight,
                                                                  DXGI_FORMAT_R10G10B10A2_UNORM, m_windowHandle);
+
+        initScene();
     }
 
     void Application::cleanup()
@@ -90,6 +98,9 @@ namespace helios::core
         {
             init();
             loadContent();
+            
+            // Ensure that all resources all loaded for the scene before game loop begins.
+            m_scene->completeResourceLoading();
 
             std::chrono::high_resolution_clock clock{};
             std::chrono::high_resolution_clock::time_point previousFrameTimePoint{};

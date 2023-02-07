@@ -5,10 +5,10 @@ namespace helios::gfx
     DescriptorHeap::DescriptorHeap(ID3D12Device* const device, const D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType,
                                    const uint32_t descriptorCount, const std::wstring_view descriptorHeapName)
     {
-        const D3D12_DESCRIPTOR_HEAP_FLAGS descriptorHeapFlags =
-            (descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_DSV || descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
-                ? D3D12_DESCRIPTOR_HEAP_FLAG_NONE
-                : D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        const D3D12_DESCRIPTOR_HEAP_FLAGS descriptorHeapFlags = (descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_DSV ||
+                                                                 descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+                                                                    ? D3D12_DESCRIPTOR_HEAP_FLAG_NONE
+                                                                    : D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
         const D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {
             .Type = descriptorHeapType,

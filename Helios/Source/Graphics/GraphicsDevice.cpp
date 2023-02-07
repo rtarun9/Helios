@@ -192,9 +192,9 @@ namespace helios::gfx
 
             m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle.cpuDescriptorHandle);
 
-            m_backBuffers[i].backBufferResource = backBuffer;
-            m_backBuffers[i].backBufferResource->SetName(L"SwapChain BackBuffer");
-            m_backBuffers[i].backBufferDescriptorHandle = rtvHandle;
+            m_backBuffers[i].allocation.resource = backBuffer;
+            m_backBuffers[i].allocation.resource->SetName(L"SwapChain BackBuffer");
+            m_backBuffers[i].rtvIndex = m_rtvDescriptorHeap->getDescriptorIndex(rtvHandle);
 
             m_rtvDescriptorHeap->offsetDescriptor(rtvHandle);
         }
@@ -232,7 +232,7 @@ namespace helios::gfx
         // All swapchain back buffers need to be released.
         for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
         {
-            m_backBuffers[i].backBufferResource.Reset();
+            m_backBuffers[i].allocation.resource.Reset();
             m_fenceValues[i].directQueueFenceValue = m_directCommandQueue->getCurrentCompletedFenceValue();
         }
 

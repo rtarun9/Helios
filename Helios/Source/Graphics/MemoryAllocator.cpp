@@ -86,20 +86,22 @@ namespace helios::gfx
         }
 
         ResourceCreationDesc resourceCreationDesc = {
-            .resourceDesc{
-                .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-                .Alignment = 0u,
-                .Width = textureCreationDesc.width,
-                .Height = textureCreationDesc.height,
-                .DepthOrArraySize = static_cast<UINT16>(textureCreationDesc.depthOrArraySize),
-                .MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
-                .Format = format,
-                .SampleDesc{
-                    .Count = 1u,
-                    .Quality = 0u,
+            .resourceDesc =
+                {
+                    .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                    .Alignment = 0u,
+                    .Width = textureCreationDesc.width,
+                    .Height = textureCreationDesc.height,
+                    .DepthOrArraySize = static_cast<UINT16>(textureCreationDesc.depthOrArraySize),
+                    .MipLevels = static_cast<UINT16>(textureCreationDesc.mipLevels),
+                    .Format = format,
+                    .SampleDesc =
+                        {
+                            .Count = 1u,
+                            .Quality = 0u,
+                        },
+                    .Flags = D3D12_RESOURCE_FLAG_NONE,
                 },
-                .Flags = D3D12_RESOURCE_FLAG_NONE,
-            },
         };
 
         // Clamp the mip level.
@@ -123,11 +125,12 @@ namespace helios::gfx
         D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
         constexpr D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        D3D12MA::ALLOCATION_DESC allocationDesc{
+        D3D12MA::ALLOCATION_DESC allocationDesc = {
             .HeapType = heapType,
         };
 
-        // In the case of large resource (such as a render target, etc), its better for the resource to be a committed resource and have a heap to itself.
+        // In the case of large resource (such as a render target, etc), its better for the resource to be a committed
+        // resource and have a heap to itself.
         switch (textureCreationDesc.usage)
         {
         case TextureUsage::DepthStencil: {
@@ -145,8 +148,8 @@ namespace helios::gfx
         }
         break;
 
-        // Note : All textures that are not DS or RTV will have unordered access. Primarily because of mip map generation, and creation of equirectangular textures etc
-        // in the compute shader.
+        // Note : All textures that are not DS or RTV will have unordered access. Primarily because of mip map
+        // generation, and creation of equirectangular textures etc in the compute shader.
         default: {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
@@ -170,7 +173,7 @@ namespace helios::gfx
         }
         else if (textureCreationDesc.usage == TextureUsage::DepthStencil)
         {
-            constexpr D3D12_DEPTH_STENCIL_VALUE dsValue{
+            constexpr D3D12_DEPTH_STENCIL_VALUE dsValue = {
                 .Depth = 1.0f,
                 .Stencil = 1u,
             };

@@ -31,9 +31,10 @@ namespace helios::gfx
             return m_fence->GetCompletedValue();
         }
 
-        // The user / engine must take care that a context passed into the execute function can be used in the future 
+        // The user / engine must take care that a context passed into the execute function can be used in the future
         // (i.e proper synchronization must occur).
-        // For now, each context consist of a command list and command allocator, and there is one command list per frame in flight (for direct command queue).
+        // For now, each context consist of a command list and command allocator, and there is one command list per
+        // frame in flight (for direct command queue).
         void executeContext(const std::span<const Context* const> contexts);
 
       public:

@@ -3,8 +3,8 @@
 namespace helios::gfx
 {
     // Base class for Context (i.e wrapper for command list and a command allocator). Provides batching of resource
-    // barriers for optimal performance. It uses a ID3D12GraphicsCommandList and is can execute commands of any type (copy,
-    // compute, graphics, etc).
+    // barriers for optimal performance. It uses a ID3D12GraphicsCommandList and is can execute commands of any type
+    // (copy, compute, graphics, etc).
     class Context
     {
       public:

@@ -7,7 +7,8 @@ namespace helios::gfx
 {
     class GraphicsDevice;
 
-    // Wrapper class for Copy CommandList, which provides a set of easy and simple functions related to copying data from one resource to another.
+    // Wrapper class for Copy CommandList, which provides a set of easy and simple functions related to copying data
+    // from one resource to another.
     class CopyContext : public Context
     {
       public:

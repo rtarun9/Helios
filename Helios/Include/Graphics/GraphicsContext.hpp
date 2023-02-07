@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Context.hpp"
-#include "Resources.hpp"
 #include "PipelineState.hpp"
+#include "Resources.hpp"
 
 namespace helios::gfx
 {
@@ -10,8 +10,8 @@ namespace helios::gfx
     class GraphicsDevice;
 
     // Wrapper class for Graphics CommandList, which provides a set of easy and simple functions to record commands for
-    // execution by GPU. The GraphicsContext command list is of type Direct, which means it can issue basically all commands (copy, compute, and rendering 
-    // related).
+    // execution by GPU. The GraphicsContext command list is of type Direct, which means it can issue basically all
+    // commands (copy, compute, and rendering related).
     class GraphicsContext : public Context
     {
       public:
@@ -21,8 +21,8 @@ namespace helios::gfx
 
         void reset() override;
 
-        void clearRenderTargetView(BackBuffer& backBuffer, const std::span<const float, 4> color);
-        void clearDepthStencilView(Texture& texture);
+        void clearRenderTargetView(const Texture& backBuffer, const std::span<const float, 4> color);
+        void clearDepthStencilView(const Texture& texture);
         void setDescriptorHeaps(const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const;
 
         // Configure pipeline / root signature related functions.
@@ -37,8 +37,8 @@ namespace helios::gfx
 
         void setPrimitiveTopologyLayout(const D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
 
-        void setRenderTarget(const BackBuffer& renderTarget) const;
-        void setRenderTarget(const BackBuffer& renderTarget, const Texture& depthStencilTexture) const;
+        void setRenderTarget(const Texture& renderTarget) const;
+        void setRenderTarget(const Texture& renderTarget, const Texture& depthStencilTexture) const;
 
         // Draw functions.
         void drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount = 1u) const;

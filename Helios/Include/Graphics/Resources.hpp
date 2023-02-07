@@ -4,12 +4,6 @@
 
 namespace helios::gfx
 {
-    struct BackBuffer
-    {
-        wrl::ComPtr<ID3D12Resource> backBufferResource;
-        DescriptorHandle backBufferDescriptorHandle;
-    };
-
     struct Shader
     {
         wrl::ComPtr<IDxcBlob> shaderBlob{};

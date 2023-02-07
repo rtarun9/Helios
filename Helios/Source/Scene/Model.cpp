@@ -7,6 +7,24 @@
 
 namespace helios::scene
 {
+    void TransformComponent::update()
+    {
+        const math::XMVECTOR scalingVector = math::XMLoadFloat3(&scale);
+        const math::XMVECTOR rotationVector = math::XMLoadFloat3(&rotation);
+        const math::XMVECTOR translationVector = math::XMLoadFloat3(&translate);
+
+        const math::XMMATRIX modelMatrix = math::XMMatrixScalingFromVector(scalingVector) *
+                                           math::XMMatrixRotationRollPitchYawFromVector(rotationVector) *
+                                           math::XMMatrixTranslationFromVector(translationVector);
+
+        const interlop::TransformBuffer transformBufferData = {
+            .modelMatrix = modelMatrix,
+            .inverseModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix),
+        };
+
+        transformBuffer.update(&transformBufferData);
+    }
+
     Model::Model(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc)
         : m_modelName(modelCreationDesc.modelName)
     {
@@ -18,6 +36,12 @@ namespace helios::scene
                 .usage = gfx::BufferUsage::ConstantBuffer,
                 .name = m_modelName + L" Transform Buffer",
             });
+
+        m_transformComponent.scale = modelCreationDesc.scale;
+        m_transformComponent.rotation = modelCreationDesc.rotation;
+        m_transformComponent.translate = modelCreationDesc.translation;
+
+        m_transformComponent.update();
 
         const std::string modelPathStr = wStringToString(m_modelPath);
         std::string modelDirectoryPathStr{};
@@ -67,11 +91,10 @@ namespace helios::scene
             }
         }
 
-        // Load textures and materials.
-        const std::jthread loadSamplerAndMaterialThread([&]() {
-            loadSamplers(graphicsDevice, model);
-            loadMaterials(graphicsDevice, model);
-        });
+        // Load samplers and materials.
+        const std::jthread loadSamplerThread([&]() { loadSamplers(graphicsDevice, model); });
+
+        const std::jthread loadMaterialThread([&]() { loadMaterials(graphicsDevice, model); });
 
         // Build meshes.
         const tinygltf::Scene& scene = model.scenes[model.defaultScene];
@@ -81,7 +104,7 @@ namespace helios::scene
             {
                 loadNode(graphicsDevice, modelCreationDesc, nodeIndex, model);
             }
-            });
+        });
     }
 
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
@@ -166,50 +189,58 @@ namespace helios::scene
             const int normalByteStride = normalAccesor.ByteStride(normalBufferView);
             const uint8_t* normals = &normalBuffer.data[normalBufferView.byteOffset + normalAccesor.byteOffset];
 
-            // Fill in the vertices array.
-            for (size_t i : std::views::iota(0u, positionAccesor.count))
-            {
-                const math::XMFLOAT3 position = {
-                    (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0],
-                    (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1],
-                    (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2],
-                };
-
-                const math::XMFLOAT2 textureCoord = {
-                    (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
-                    (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
-                };
-
-                const math::XMFLOAT3 normal = {
-                    (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0],
-                    (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1],
-                    (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2],
-                };
-
-                modelPositions.emplace_back(position);
-                modelTextureCoords.emplace_back(textureCoord);
-                modelNormals.emplace_back(normal);
-            }
-
             // Get the index buffer data.
             const tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccesor.bufferView];
             const tinygltf::Buffer& indexBuffer = model.buffers[indexBufferView.buffer];
             const int indexByteStride = indexAccesor.ByteStride(indexBufferView);
             const uint8_t* indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
-            // Fill indices array.
-            for (const size_t i : std::views::iota(0u, indexAccesor.count))
             {
-                if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-                {
-                    indices.push_back(
-                        static_cast<uint32_t>((reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
-                }
-                else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-                {
-                    indices.push_back(
-                        static_cast<uint32_t>((reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
-                }
+                const std::jthread vertexAttributesThread([&]() {
+                    {
+                        // Fill in the vertices array.
+                        for (size_t i : std::views::iota(0u, positionAccesor.count))
+                        {
+                            const math::XMFLOAT3 position = {
+                                (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[0],
+                                (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[1],
+                                (reinterpret_cast<float const*>(positions + (i * positionByteStride)))[2],
+                            };
+
+                            const math::XMFLOAT2 textureCoord = {
+                                (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[0],
+                                (reinterpret_cast<float const*>(texcoords + (i * textureCoordBufferStride)))[1],
+                            };
+
+                            const math::XMFLOAT3 normal = {
+                                (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[0],
+                                (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[1],
+                                (reinterpret_cast<float const*>(normals + (i * normalByteStride)))[2],
+                            };
+
+                            modelPositions.emplace_back(position);
+                            modelTextureCoords.emplace_back(textureCoord);
+                            modelNormals.emplace_back(normal);
+                        }
+                    }
+                });
+
+                const std::jthread indexBufferDataThread([&]() {
+                    // Fill indices array.
+                    for (const size_t i : std::views::iota(0u, indexAccesor.count))
+                    {
+                        if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+                        {
+                            indices.push_back(static_cast<uint32_t>(
+                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
+                        }
+                        else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+                        {
+                            indices.push_back(static_cast<uint32_t>(
+                                (reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
+                        }
+                    }
+                });
             }
 
             mesh.positionBuffer = device->createBuffer<math::XMFLOAT3>(
@@ -415,83 +446,97 @@ namespace helios::scene
         {
             PBRMaterial pbrMaterial{};
 
-            if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
             {
-                const tinygltf::Texture& albedoTexture =
-                    model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                const tinygltf::Image& albedoImage = model.images[albedoTexture.source];
+                const std::jthread albedoTextureThread([&]() {
+                    if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
+                    {
+                        const tinygltf::Texture& albedoTexture =
+                            model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                        const tinygltf::Image& albedoImage = model.images[albedoTexture.source];
 
-                pbrMaterial.albedoTexture = createTexture(albedoImage, gfx::TextureCreationDesc{
-                                                                           .usage = gfx::TextureUsage::TextureFromData,
-                                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-                                                                           .mipLevels = 6u,
-                                                                           .name = m_modelName + L" albedo texture",
-                                                                       });
-                pbrMaterial.albedoTextureSampler = m_samplers[albedoTexture.sampler];
-            }
-
-            if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
-            {
-
-                const tinygltf::Texture& metalRoughnessTexture =
-                    model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
-                const tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
-
-                pbrMaterial.metalRoughnessTexture =
-                    createTexture(metalRoughnessImage, gfx::TextureCreationDesc{
+                        pbrMaterial.albedoTexture =
+                            createTexture(albedoImage, gfx::TextureCreationDesc{
                                                            .usage = gfx::TextureUsage::TextureFromData,
-                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM,
-                                                           .mipLevels = 4u,
-                                                           .name = m_modelName + L" metal roughness texture",
+                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+                                                           .mipLevels = 6u,
+                                                           .name = m_modelName + L" albedo texture",
                                                        });
-                pbrMaterial.metalRoughnessTextureSampler = m_samplers[metalRoughnessTexture.sampler];
-            }
+                        pbrMaterial.albedoTextureSampler = m_samplers[albedoTexture.sampler];
+                    }
+                });
 
-            if (material.normalTexture.index >= 0)
-            {
+                const std::jthread metalRoughnessThread([&]() {
+                    if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
+                    {
 
-                const tinygltf::Texture& normalTexture = model.textures[material.normalTexture.index];
-                const tinygltf::Image& normalImage = model.images[normalTexture.source];
+                        const tinygltf::Texture& metalRoughnessTexture =
+                            model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+                        const tinygltf::Image& metalRoughnessImage = model.images[metalRoughnessTexture.source];
 
-                pbrMaterial.normalTexture = createTexture(normalImage, gfx::TextureCreationDesc{
-                                                                           .usage = gfx::TextureUsage::TextureFromData,
-                                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM,
-                                                                           .mipLevels = 2u,
-                                                                           .name = m_modelName + L" normal texture",
-                                                                       });
-
-                pbrMaterial.normalTextureSampler = m_samplers[normalTexture.sampler];
-            }
-
-            if (material.occlusionTexture.index >= 0)
-            {
-
-                const tinygltf::Texture& aoTexture = model.textures[material.occlusionTexture.index];
-                const tinygltf::Image& aoImage = model.images[aoTexture.source];
-
-                pbrMaterial.aoTexture = createTexture(aoImage, gfx::TextureCreationDesc{
+                        pbrMaterial.metalRoughnessTexture =
+                            createTexture(metalRoughnessImage, gfx::TextureCreationDesc{
                                                                    .usage = gfx::TextureUsage::TextureFromData,
                                                                    .format = DXGI_FORMAT_R8G8B8A8_UNORM,
                                                                    .mipLevels = 4u,
-                                                                   .name = m_modelName + L" occlusion texture",
+                                                                   .name = m_modelName + L" metal roughness texture",
                                                                });
-                pbrMaterial.aoTextureSampler = m_samplers[aoTexture.sampler];
-            }
+                        pbrMaterial.metalRoughnessTextureSampler = m_samplers[metalRoughnessTexture.sampler];
+                    }
+                });
 
-            if (material.emissiveTexture.index >= 0)
-            {
+                const std::jthread normalTextureThread([&]() {
+                    if (material.normalTexture.index >= 0)
+                    {
 
-                const tinygltf::Texture& emissiveTexture = model.textures[material.emissiveTexture.index];
-                const tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
+                        const tinygltf::Texture& normalTexture = model.textures[material.normalTexture.index];
+                        const tinygltf::Image& normalImage = model.images[normalTexture.source];
 
-                pbrMaterial.emissiveTexture =
-                    createTexture(emissiveImage, gfx::TextureCreationDesc{
-                                                     .usage = gfx::TextureUsage::TextureFromData,
-                                                     .format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-                                                     .mipLevels = 4u,
-                                                     .name = m_modelName + L" emissive texture",
-                                                 });
-                pbrMaterial.emissiveTextureSampler = m_samplers[emissiveTexture.sampler];
+                        pbrMaterial.normalTexture =
+                            createTexture(normalImage, gfx::TextureCreationDesc{
+                                                           .usage = gfx::TextureUsage::TextureFromData,
+                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM,
+                                                           .mipLevels = 2u,
+                                                           .name = m_modelName + L" normal texture",
+                                                       });
+
+                        pbrMaterial.normalTextureSampler = m_samplers[normalTexture.sampler];
+                    }
+                });
+
+                const std::jthread occlusionTextureThead([&]() {
+                    if (material.occlusionTexture.index >= 0)
+                    {
+
+                        const tinygltf::Texture& aoTexture = model.textures[material.occlusionTexture.index];
+                        const tinygltf::Image& aoImage = model.images[aoTexture.source];
+
+                        pbrMaterial.aoTexture = createTexture(aoImage, gfx::TextureCreationDesc{
+                                                                           .usage = gfx::TextureUsage::TextureFromData,
+                                                                           .format = DXGI_FORMAT_R8G8B8A8_UNORM,
+                                                                           .mipLevels = 4u,
+                                                                           .name = m_modelName + L" occlusion texture",
+                                                                       });
+                        pbrMaterial.aoTextureSampler = m_samplers[aoTexture.sampler];
+                    }
+                });
+
+                const std::jthread emissiveTextureThead([&]() {
+                    if (material.emissiveTexture.index >= 0)
+                    {
+
+                        const tinygltf::Texture& emissiveTexture = model.textures[material.emissiveTexture.index];
+                        const tinygltf::Image& emissiveImage = model.images[emissiveTexture.source];
+
+                        pbrMaterial.emissiveTexture =
+                            createTexture(emissiveImage, gfx::TextureCreationDesc{
+                                                             .usage = gfx::TextureUsage::TextureFromData,
+                                                             .format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+                                                             .mipLevels = 4u,
+                                                             .name = m_modelName + L" emissive texture",
+                                                         });
+                        pbrMaterial.emissiveTextureSampler = m_samplers[emissiveTexture.sampler];
+                    }
+                });
             }
 
             m_materials[index++] = std::move(pbrMaterial);

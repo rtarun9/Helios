@@ -12,7 +12,8 @@ namespace helios::gfx::ShaderCompiler
 
     std::wstring shaderDirectory{};
 
-    Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath, const std::wstring_view entryPoint, const bool extractRootSignature)
+    Shader compile(const ShaderTypes& shaderType, const std::wstring_view shaderPath,
+                   const std::wstring_view entryPoint, const bool extractRootSignature)
     {
         Shader shader{};
 

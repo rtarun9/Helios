@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Core/Input.hpp"
-#include "Core/ResourceManager.hpp"
-
 #include "Graphics/GraphicsDevice.hpp"
+
+#include "Scene/Scene.hpp"
 
 struct SDL_Window;
 
@@ -27,6 +27,7 @@ namespace helios::core
 
       private:
         void initPlatformBackend();
+        void initScene();
 
       protected:
         virtual void init();
@@ -47,5 +48,6 @@ namespace helios::core
         std::unique_ptr<gfx::GraphicsDevice> m_graphicsDevice{};
 
         Input m_input{};
+        std::unique_ptr<scene::Scene> m_scene{};
     };
 } // namespace helios::core

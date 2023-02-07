@@ -1,5 +1,7 @@
 #include "Graphics/PipelineState.hpp"
 
+#include "Graphics/ShaderCompiler.hpp"
+
 #include "Core/ResourceManager.hpp"
 
 namespace helios::gfx
@@ -42,15 +44,19 @@ namespace helios::gfx
             .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
         };
 
-        const auto& vertexShaderBlob = core::ResourceManager::compileShader(
-            ShaderTypes::Vertex,
+        const auto& vertexShaderBlob =
+            ShaderCompiler::compile(
+                ShaderTypes::Vertex,
                 core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
-            pipelineStateCreationDesc.shaderModule.vertexEntryPoint).shaderBlob;
+                pipelineStateCreationDesc.shaderModule.vertexEntryPoint)
+                .shaderBlob;
 
-        const auto& pixelShaderBlob = core::ResourceManager::compileShader(
-            ShaderTypes::Pixel,
+        const auto& pixelShaderBlob =
+            ShaderCompiler::compile(
+                ShaderTypes::Pixel,
                 core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
-            pipelineStateCreationDesc.shaderModule.pixelEntryPoint).shaderBlob;
+                pipelineStateCreationDesc.shaderModule.pixelEntryPoint)
+                .shaderBlob;
 
         // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
         // Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA
@@ -120,7 +126,7 @@ namespace helios::gfx
     void PipelineState::createBindlessRootSignature(ID3D12Device* const device, const std::wstring_view shaderPath)
     {
         const auto path = core::ResourceManager::getFullPath(shaderPath);
-        const auto shader = core::ResourceManager::compileShader(ShaderTypes::Vertex, path, L"VsMain", true);
+        const auto shader = ShaderCompiler::compile(ShaderTypes::Vertex, path, L"VsMain", true);
 
         if (!shader.rootSignatureBlob.Get())
         {

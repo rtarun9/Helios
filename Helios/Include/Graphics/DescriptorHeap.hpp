@@ -2,7 +2,7 @@
 
 namespace helios::gfx
 {
-
+    // Holds a CPU and GPU descriptor handle.
     struct DescriptorHandle
     {
         D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle{};
@@ -20,12 +20,13 @@ namespace helios::gfx
     // DescriptorHeap abstraction that has a 'current descriptor' that comes in handy while initializing resource
     // (Texture's, buffer's etc). Has methods to return index of current descriptor : most resource abstractions
     // (texture's, buffer's) etc store this index and use for bindless rendering.
-    // DescriptorHeap is a contiguous linear allocation which stores descriptor's, which are tiny blocks of memory describing a resource.
+    // DescriptorHeap is a contiguous linear allocation which stores descriptor's, which are tiny blocks of memory
+    // describing a resource.
     class DescriptorHeap
     {
       public:
         explicit DescriptorHeap(ID3D12Device* const device, const D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType,
-                       const uint32_t descriptorCount, const std::wstring_view descriptorHeapName);
+                                const uint32_t descriptorCount, const std::wstring_view descriptorHeapName);
         ~DescriptorHeap() = default;
 
         DescriptorHeap(const DescriptorHeap& other) = delete;

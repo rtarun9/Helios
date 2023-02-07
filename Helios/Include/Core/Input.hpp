@@ -25,7 +25,7 @@ namespace helios::core
     {
         bool getKeyState(const Keys key) const
         {
-            return m_keyStates[enumClassValue(key)];
+            return m_keyStates.at(enumClassValue(key));
         }
 
         // Helper function to update the key states array conveniently.

@@ -79,4 +79,4 @@ namespace helios::core
         }
     }
 
-}
+} // namespace helios::core

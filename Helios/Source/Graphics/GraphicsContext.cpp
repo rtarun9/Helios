@@ -1,4 +1,5 @@
 #include "Graphics/GraphicsContext.hpp"
+
 #include "Graphics/DescriptorHeap.hpp"
 #include "Graphics/GraphicsDevice.hpp"
 
@@ -48,13 +49,15 @@ namespace helios::gfx
         m_commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
     }
 
-    void GraphicsContext::clearRenderTargetView(BackBuffer& backBuffer, std::span<const float, 4> color)
+    void GraphicsContext::clearRenderTargetView(const Texture& backBuffer, std::span<const float, 4> color)
     {
-        m_commandList->ClearRenderTargetView(backBuffer.backBufferDescriptorHandle.cpuDescriptorHandle, color.data(),
-                                             0u, nullptr);
+        const auto rtvDescriptorHandle =
+            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(backBuffer.rtvIndex);
+
+        m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
     }
 
-    void GraphicsContext::clearDepthStencilView(Texture& texture)
+    void GraphicsContext::clearDepthStencilView(const Texture& texture)
     {
         const auto dsvDescriptorHandle =
             graphicsDevice.getDsvDescriptorHeap()->getDescriptorHandleFromIndex(texture.dsvIndex);
@@ -110,18 +113,23 @@ namespace helios::gfx
         m_commandList->IASetPrimitiveTopology(primitiveTopology);
     }
 
-    void GraphicsContext::setRenderTarget(const BackBuffer& renderTarget) const
+    void GraphicsContext::setRenderTarget(const Texture& renderTarget) const
     {
-        m_commandList->OMSetRenderTargets(1u, &renderTarget.backBufferDescriptorHandle.cpuDescriptorHandle, FALSE,
-                                          nullptr);
+        const auto rtvDescriptorHandle =
+            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.rtvIndex);
+
+        m_commandList->OMSetRenderTargets(1u, &rtvDescriptorHandle.cpuDescriptorHandle, FALSE, nullptr);
     }
 
-    void GraphicsContext::setRenderTarget(const BackBuffer& renderTarget, const Texture& depthStencilTexture) const
+    void GraphicsContext::setRenderTarget(const Texture& renderTarget, const Texture& depthStencilTexture) const
     {
+        const auto rtvDescriptorHandle =
+            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.rtvIndex);
+
         const auto dsvDescriptorHandle =
             graphicsDevice.getDsvDescriptorHeap()->getDescriptorHandleFromIndex(depthStencilTexture.dsvIndex);
 
-        m_commandList->OMSetRenderTargets(1u, &renderTarget.backBufferDescriptorHandle.cpuDescriptorHandle, FALSE,
+        m_commandList->OMSetRenderTargets(1u, &rtvDescriptorHandle.cpuDescriptorHandle, FALSE,
                                           &dsvDescriptorHandle.cpuDescriptorHandle);
     }
     void GraphicsContext::drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
