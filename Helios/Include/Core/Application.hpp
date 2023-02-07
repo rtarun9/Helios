@@ -5,6 +5,8 @@
 
 #include "Scene/Scene.hpp"
 
+#include "Editor/Editor.hpp"
+
 struct SDL_Window;
 
 namespace helios::core
@@ -28,6 +30,7 @@ namespace helios::core
       private:
         void initPlatformBackend();
         void initScene();
+        void initEditor();
 
       protected:
         virtual void init();
@@ -49,5 +52,6 @@ namespace helios::core
 
         Input m_input{};
         std::unique_ptr<scene::Scene> m_scene{};
+        std::unique_ptr<editor::Editor> m_editor{};
     };
 } // namespace helios::core

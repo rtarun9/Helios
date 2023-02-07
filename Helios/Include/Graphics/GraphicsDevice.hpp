@@ -61,6 +61,11 @@ namespace helios::gfx
             return m_rtvDescriptorHeap.get();
         }
 
+        DXGI_FORMAT getSwapchainBackBufferFormat() const
+        {
+            return m_swapchainBackBufferFormat;
+        }
+
         [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];

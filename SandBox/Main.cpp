@@ -64,7 +64,7 @@ class SandBox final : public helios::core::Application
 
         // const std::array<float, 4> clearColor = {std::abs(std::cosf(m_frameCount / 120.0f)), 0.0f,
         //                                          std::abs(std::sinf(m_frameCount / 120.0f)), 1.0f};
-        static constexpr std::array<float, 4> clearColor = {0.2f, 0.2f, 0.2f, 1.0f};
+        std::array<float, 4> clearColor = {0.2f, 0.2f, 0.2f, 1.0f};
 
         gctx->clearRenderTargetView(currentBackBuffer, clearColor);
         gctx->clearDepthStencilView(m_depthTexture);
@@ -85,6 +85,8 @@ class SandBox final : public helios::core::Application
         gctx->setRenderTarget(currentBackBuffer, m_depthTexture);
 
         m_scene->renderModels(gctx.get());
+
+        m_editor->render(m_graphicsDevice.get(), m_scene.get(), clearColor, &currentBackBuffer, gctx.get());
 
         // Prepare back buffer for presentation.
         gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,

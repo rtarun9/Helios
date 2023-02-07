@@ -52,6 +52,9 @@ set(SRC_FILES
     "Include/Scene/Materials.hpp"
     "Include/Scene/Mesh.hpp"
     
+    "Source/Editor/Editor.cpp"
+    "Include/Editor/Editor.hpp"
+
     "Include/Helios.hpp"
 )
 

@@ -5,6 +5,7 @@
 
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <imgui_impl_sdl.h>
 
 namespace helios::core
 {
@@ -48,9 +49,9 @@ namespace helios::core
         const uint32_t monitorWidth = displayMode.w;
         const uint32_t monitorHeight = displayMode.h;
 
-        // Window must cover 60% of the screen.
-        m_windowWidth = static_cast<uint32_t>(monitorWidth * 0.60f);
-        m_windowHeight = static_cast<uint32_t>(monitorHeight * 0.60f);
+        // Window must cover 80% of the screen.
+        m_windowWidth = static_cast<uint32_t>(monitorWidth * 0.80f);
+        m_windowHeight = static_cast<uint32_t>(monitorHeight * 0.80f);
 
         m_window = SDL_CreateWindow(m_windowTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                     m_windowWidth, m_windowHeight, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
@@ -73,6 +74,11 @@ namespace helios::core
         m_scene = std::make_unique<scene::Scene>(m_graphicsDevice.get());
     }
 
+    void Application::initEditor()
+    {
+        m_editor = std::make_unique<editor::Editor>(m_graphicsDevice.get(), m_window, m_windowWidth, m_windowHeight);
+    }
+
     void Application::init()
     {
         ResourceManager::locateRootDirectory();
@@ -84,6 +90,7 @@ namespace helios::core
                                                                  DXGI_FORMAT_R10G10B10A2_UNORM, m_windowHandle);
 
         initScene();
+        initEditor();
     }
 
     void Application::cleanup()
@@ -111,6 +118,8 @@ namespace helios::core
                 SDL_Event event{};
                 while (SDL_PollEvent(&event))
                 {
+                    ImGui_ImplSDL2_ProcessEvent(&event);
+
                     if (event.type == SDL_QUIT)
                     {
                         quit = true;
