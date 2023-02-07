@@ -39,7 +39,7 @@ namespace helios::scene
 
         m_transformComponent.scale = modelCreationDesc.scale;
         m_transformComponent.rotation = modelCreationDesc.rotation;
-        m_transformComponent.translate = modelCreationDesc.translation;
+        m_transformComponent.translate = modelCreationDesc.translate;
 
         m_transformComponent.update();
 
