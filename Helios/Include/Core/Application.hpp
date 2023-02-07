@@ -13,6 +13,7 @@ namespace helios::core
 {
     // All Helios 'Applications', are required to inherit from this class.
     // The main game loop is located within the application class.
+    // The application handles creation of the GraphicsDevice, Editor and Scene abstractions.
     class Application
     {
       public:

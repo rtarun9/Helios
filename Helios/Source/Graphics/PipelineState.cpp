@@ -99,22 +99,19 @@ namespace helios::gfx
     PipelineState::PipelineState(ID3D12Device5* const device,
                                  const ComputePipelineStateCreationDesc& pipelineStateCreationDesc)
     {
-        const auto csPath = core::ResourceManager::getFullPath(pipelineStateCreationDesc.csShaderPath);
-
-        wrl::ComPtr<ID3DBlob> computeBlob{nullptr};
-        ::D3DReadFileToBlob(csPath.c_str(), &computeBlob);
-
-        if (!computeBlob.Get())
-        {
-            fatalError(std::format("Shader : {} not found.", wStringToString(csPath)));
-        }
+        const auto& computeShaderBlob =
+            ShaderCompiler::compile(ShaderTypes::Compute,
+                                    core::ResourceManager::getFullPath(pipelineStateCreationDesc.csShaderPath),
+                                    L"CsMain")
+                .shaderBlob;
 
         // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
         // Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA
         // Topology type.
         const D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {
             .pRootSignature = PipelineState::s_rootSignature.Get(),
-            .CS = CD3DX12_SHADER_BYTECODE(computeBlob.Get()),
+            .CS = {.pShaderBytecode = computeShaderBlob->GetBufferPointer(),
+                   .BytecodeLength = computeShaderBlob->GetBufferSize()},
             .NodeMask = 0u,
         };
 

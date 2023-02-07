@@ -7,6 +7,7 @@
 #include "MemoryAllocator.hpp"
 #include "PipelineState.hpp"
 #include "Resources.hpp"
+#include "MipMapGenerator.hpp"
 
 namespace helios::gfx
 {
@@ -34,6 +35,11 @@ namespace helios::gfx
         CommandQueue* const getDirectCommandQueue() const
         {
             return m_directCommandQueue.get();
+        }
+
+         CommandQueue* const getComputeCommandQueue() const
+        {
+            return m_computeCommandQueue.get();
         }
 
         ID3D12Device5* const getDevice() const
@@ -69,6 +75,16 @@ namespace helios::gfx
         [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];
+        }
+
+        [[nodiscard]] std::unique_ptr<CopyContext>& getCopyContext()
+        {
+            return m_copyContext;
+        }
+
+        [[nodiscard]] std::unique_ptr<ComputeContext>& getComputeContext()
+        {
+            return m_computeContext;
         }
 
         [[nodiscard]] Texture& getCurrentBackBuffer()
@@ -122,6 +138,7 @@ namespace helios::gfx
         void initMemoryAllocator();
         void initContexts();
         void initBindlessRootSignature();
+        void initMipMapGenerator();
 
         void createBackBufferRTVs();
 
@@ -145,9 +162,11 @@ namespace helios::gfx
 
         std::unique_ptr<CommandQueue> m_directCommandQueue{};
         std::unique_ptr<CommandQueue> m_copyCommandQueue{};
+        std::unique_ptr<CommandQueue> m_computeCommandQueue{};
 
         std::array<std::unique_ptr<GraphicsContext>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
         std::unique_ptr<CopyContext> m_copyContext{};
+        std::unique_ptr<ComputeContext> m_computeContext{};
 
         std::array<FenceValues, FRAMES_IN_FLIGHT> m_fenceValues{};
         std::array<Texture, FRAMES_IN_FLIGHT> m_backBuffers{};
@@ -164,9 +183,12 @@ namespace helios::gfx
         std::unique_ptr<DescriptorHeap> m_samplerDescriptorHeap{};
 
         std::unique_ptr<MemoryAllocator> m_memoryAllocator{};
+        std::unique_ptr<MipMapGenerator> m_mipMapGenerator{};
 
         mutable std::recursive_mutex m_resourceMutex{};
         bool m_isInitialized{false};
+
+        friend class MipMapGenerator;
     };
 
     template <typename T>

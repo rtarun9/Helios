@@ -17,14 +17,14 @@ class SandBox final : public helios::core::Application
                               .modelName = L"Damaged Helmet",
                           });
 
-        m_scene->addModel(m_graphicsDevice.get(),
-                          scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-                                                   .modelName = L"Sponza",
-                                                   .scale = {
-                                                       0.1f,
-                                                       0.1f,
-                                                       0.1f,
-                                                   }});
+        //m_scene->addModel(m_graphicsDevice.get(),
+        //                  scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+        //                                           .modelName = L"Sponza",
+        //                                           .scale = {
+        //                                               0.1f,
+        //                                               0.1f,
+        //                                               0.1f,
+        //                                           }});
 
         m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =

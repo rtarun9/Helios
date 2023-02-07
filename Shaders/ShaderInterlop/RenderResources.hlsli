@@ -26,4 +26,16 @@ namespace interlop
         uint albedoTextureIndex;    
         uint albedoTextureSamplerIndex;
     };
+
+    struct MipMapGenerationRenderResources
+    {
+        uint sourceMipIndex;
+
+        uint outputMip1Index;
+        uint outputMip2Index;
+        uint outputMip3Index;
+        uint outputMip4Index;
+
+        uint mipMapGenerationBufferIndex;
+    };
 }

@@ -29,6 +29,7 @@ namespace helios::gfx
         initMemoryAllocator();
         initContexts();
         initBindlessRootSignature();
+        initMipMapGenerator();
     }
 
     void GraphicsDevice::initSwapchainResources(const uint32_t windowWidth, const uint32_t windowHeight)
@@ -140,6 +141,9 @@ namespace helios::gfx
 
         m_copyCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
+
+         m_computeCommandQueue =
+            std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
     }
 
     void GraphicsDevice::initDescriptorHeaps()
@@ -172,12 +176,18 @@ namespace helios::gfx
         }
 
         m_copyContext = std::make_unique<CopyContext>(this);
+        m_computeContext = std::make_unique<ComputeContext>(this);
     }
 
     void GraphicsDevice::initBindlessRootSignature()
     {
         // Setup bindless root signature.
         gfx::PipelineState::createBindlessRootSignature(m_device.Get(), L"Shaders/Triangle.hlsl");
+    }
+
+    void GraphicsDevice::initMipMapGenerator()
+    {
+        m_mipMapGenerator = std::make_unique<MipMapGenerator>(this);
     }
 
     void GraphicsDevice::createBackBufferRTVs()
@@ -458,6 +468,9 @@ namespace helios::gfx
         {
             stbi_image_free(hdrTextureData);
         }
+
+        // Generate mip maps.
+        m_mipMapGenerator->generateMips(texture);
 
         return texture;
     }

@@ -12,9 +12,9 @@ namespace helios::gfx
 
 namespace helios::scene
 {
-    // The reason for this abstraction is to seperate the code for managing scene objects (camera / model / light) from
+    // The reason for this abstraction is to separate the code for managing scene objects (camera / model / light) from
     // the SandBox, which is mostly related to rendering techniques and other stuff. However, the scene will not hold a
-    // reference to the gfx::Device as this class is mostly handled from engien. Note that all member variables are
+    // reference to the gfx::Device as this class is mostly handled from engine. Note that all member variables are
     // public, can be freely accessed from anywhere.
     class Scene
     {

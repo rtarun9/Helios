@@ -25,6 +25,9 @@ set(SRC_FILES
     "Source/Graphics/CopyContext.cpp"
     "Include/Graphics/CopyContext.hpp"
 
+    "Source/Graphics/ComputeContext.cpp"
+    "Include/Graphics/ComputeContext.hpp"
+
     "Source/Graphics/DescriptorHeap.cpp"
     "Include/Graphics/DescriptorHeap.hpp"
     
@@ -40,6 +43,9 @@ set(SRC_FILES
     "Source/Graphics/MemoryAllocator.cpp"
     "Include/Graphics/MemoryAllocator.hpp"
 
+    "Source/Graphics/MipMapGenerator.cpp"
+    "Include/Graphics/MipMapGenerator.hpp"
+    
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
 

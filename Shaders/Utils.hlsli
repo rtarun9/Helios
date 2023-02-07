@@ -19,5 +19,5 @@ float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, cons
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
 
     SamplerState samplerState = SamplerDescriptorHeap[albedoTextureSamplerIndex];
-    return albedoTexture.SampleLevel(samplerState, textureCoords, 0u);
+    return albedoTexture.Sample(samplerState, textureCoords);
 }

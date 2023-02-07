@@ -35,4 +35,26 @@ namespace interlop
         float4x4 modelMatrix;
         float4x4 inverseModelMatrix;
     };
+
+    enum class TextureDimensionType
+    {
+        HeightWidthEven,
+        HeightEvenWidthOdd,
+        HeightOddWidthEven,
+        HeightWidthOdd
+    };
+
+    ConstantBufferStruct MipMapGenerationBuffer
+    {
+        int isSRGB;
+
+        uint sourceMipLevel;
+
+        // 1.0f  / outputDimension.size
+        float2 texelSize;
+
+        uint numberMipLevels;
+
+        TextureDimensionType dimensionType;
+    };
 } // namespace interlop

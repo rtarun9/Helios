@@ -19,6 +19,7 @@ namespace helios::core
         ALeft = SDL_SCANCODE_LEFT,
         ADown = SDL_SCANCODE_DOWN,
         ARight = SDL_SCANCODE_RIGHT,
+        Space = SDL_SCANCODE_SPACE
     };
 
     struct Input

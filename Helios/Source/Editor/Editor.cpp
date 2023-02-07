@@ -107,6 +107,7 @@ namespace helios::editor
 
             // Render scene viewport (After all post processing).
             // All add model to model list if a path is dragged into scene viewport.
+            // note(rtarun9) : renderSceneViewport is yet to be completed with implementation.
             //renderSceneViewport(graphicsDevice, renderTarget, scene);
 
             // Render content browser panel.
@@ -137,6 +138,7 @@ namespace helios::editor
             if (ImGui::TreeNode(wStringToString(model->getName()).c_str()))
             {
                 // Scale uniformally along all axises.
+                ImGui::Checkbox("Uniform Scale", &uniformScale);
                 ImGui::SliderFloat3("Scale", &model->getTransformComponent().scale.x, 0.1f, 15.0f);
 
                 if (uniformScale)

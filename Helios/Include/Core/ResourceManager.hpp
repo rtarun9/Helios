@@ -7,7 +7,7 @@
 
 namespace helios::core
 {
-    // NOTE : This class serves very little purpose (only for getting full path). Might be removed in future versions of helios.
+    // NOTE : This class serves very little purpose (getting full path). Might be removed in future versions of helios.
 
     class ResourceManager
     {
