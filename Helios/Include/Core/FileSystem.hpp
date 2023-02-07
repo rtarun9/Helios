@@ -7,9 +7,7 @@
 
 namespace helios::core
 {
-    // NOTE : This class serves very little purpose (getting full path). Might be removed in future versions of helios.
-
-    class ResourceManager
+    class FileSystem
     {
       public:
         static inline std::string getFullPath(const std::string_view assetPath)

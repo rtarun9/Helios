@@ -1,8 +1,8 @@
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 namespace helios::core
 {
-    void ResourceManager::locateRootDirectory()
+    void FileSystem::locateRootDirectory()
     {
         auto currentDirectory = std::filesystem::current_path();
 

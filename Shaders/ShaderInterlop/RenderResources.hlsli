@@ -1,3 +1,4 @@
+// clang-format off
 #pragma once
 
 #ifdef __cplusplus
@@ -38,4 +39,14 @@ namespace interlop
 
         uint mipMapGenerationBufferIndex;
     };
+
+    struct LightRenderResources
+{
+    uint positionBufferIndex;
+
+    uint lightBufferIndex;
+    uint transformBufferIndex;
+
+    uint sceneBufferIndex;
+};
 }

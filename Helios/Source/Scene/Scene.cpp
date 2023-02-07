@@ -3,7 +3,7 @@
 #include "Graphics/GraphicsContext.hpp"
 #include "Graphics/GraphicsDevice.hpp"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 #include "ShaderInterlop/ConstantBuffers.hlsli"
 
@@ -17,6 +17,8 @@ namespace helios::scene
             .usage = gfx::BufferUsage::ConstantBuffer,
             .name = L"Scene Buffer",
         });
+        
+        m_lights = std::make_unique<Lights>(graphicsDevice);
     }
 
     Scene::~Scene()
@@ -33,6 +35,28 @@ namespace helios::scene
                 return std::make_unique<scene::Model>(graphicsDevice, modelCreationDesc);
             },
             graphicsDevice, modelCreationDesc);
+    }
+
+    void Scene::addLight(const gfx::GraphicsDevice* device, const LightCreationDesc& lightCreationDesc)
+    {
+        const uint32_t lightCount = m_lights->m_currentLightCount;
+
+        m_lights->m_lightsBufferData.lightColor[lightCount] = {1.0f, 1.0f, 1.0f, 1.0f};
+        m_lights->m_lightsBufferData.radiusIntensity[lightCount].x = 0.1f;
+        m_lights->m_lightsBufferData.radiusIntensity[lightCount].y = 1.0f;
+
+        if (lightCreationDesc.lightType == LightTypes::DirectionalLightData)
+        {
+            m_lights->m_lightsBufferData.lightPosition[lightCount] =
+                math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(Lights::DIRECTIONAL_LIGHT_ANGLE)),
+                               cos(math::XMConvertToRadians(Lights::DIRECTIONAL_LIGHT_ANGLE)), 0.0f);
+        }
+        else
+        {
+            m_lights->m_lightsBufferData.lightPosition[lightCount] = math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+
+        m_lights->m_currentLightCount++;
     }
 
     void Scene::completeResourceLoading()
@@ -61,6 +85,8 @@ namespace helios::scene
         {
             model->getTransformComponent().update();
         }
+
+        m_lights->update();
     }
 
     void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext)
@@ -73,5 +99,14 @@ namespace helios::scene
         {
             model->render(graphicsContext, modelViewerRenderResources);
         }
+    }
+
+    void Scene::renderLights(const gfx::GraphicsContext* const graphicsContext)
+    {
+        interlop::LightRenderResources lightRenderResources = {
+            .sceneBufferIndex = m_sceneBuffer.cbvIndex,
+        };
+
+        m_lights->render(graphicsContext, lightRenderResources);
     }
 } // namespace helios::scene

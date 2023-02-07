@@ -2,7 +2,7 @@
 
 #include "stb_image.h"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 #include "Graphics/GraphicsDevice.hpp"
 
 namespace helios::scene
@@ -28,7 +28,7 @@ namespace helios::scene
     Model::Model(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc)
         : m_modelName(modelCreationDesc.modelName)
     {
-        m_modelPath = core::ResourceManager::getFullPath(modelCreationDesc.modelPath);
+        m_modelPath = core::FileSystem::getFullPath(modelCreationDesc.modelPath);
 
         // Create the transform buffer.
         m_transformComponent.transformBuffer =
@@ -127,6 +127,21 @@ namespace helios::scene
             graphicsContext->drawInstanceIndexed(mesh.indicesCount);
         }
     }
+
+    void Model::render(const gfx::GraphicsContext* const graphicsContext,
+                interlop::LightRenderResources& renderResources) const
+    {
+        for (const Mesh& mesh : m_meshes)
+        {
+            graphicsContext->setIndexBuffer(mesh.indexBuffer);
+
+            renderResources.positionBufferIndex = mesh.positionBuffer.srvIndex;
+
+            graphicsContext->set32BitGraphicsConstants(&renderResources);
+            graphicsContext->drawInstanceIndexed(mesh.indicesCount, interlop::TOTAL_POINT_LIGHTS);
+        }
+    }
+
     // For slight speed up in model loading, one thread will be used to load / create materials (i.e the material
     // textures), and one thread will read the mesh and fill the various accessors (position, indices, texture
     // coord's, etc) into vector so they can be loaded into buffers.

@@ -1,5 +1,5 @@
 #include "Graphics/ShaderCompiler.hpp"
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 namespace helios::gfx::ShaderCompiler
 {
@@ -23,7 +23,7 @@ namespace helios::gfx::ShaderCompiler
             throwIfFailed(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
             throwIfFailed(utils->CreateDefaultIncludeHandler(&includeHandler));
 
-            shaderDirectory = core::ResourceManager::getFullPath(L"Shaders");
+            shaderDirectory = core::FileSystem::getFullPath(L"Shaders");
             log(std::format(L"Shader base directory : {}.", shaderDirectory));
         }
 

@@ -63,6 +63,9 @@ namespace helios::scene
         void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::ModelViewerRenderResources& renderResources) const;
 
+        void render(const gfx::GraphicsContext* const graphicsContext,
+                    interlop::LightRenderResources& renderResources) const;
+
       private:
         void loadNode(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc,
                       const uint32_t nodeIndex, const tinygltf::Model& model);

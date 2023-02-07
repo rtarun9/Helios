@@ -2,8 +2,8 @@ set(SRC_FILES
     "Source/Core/Application.cpp"
     "Include/Core/Application.hpp"
 
-    "Source/Core/ResourceManager.cpp"
-    "Include/Core/ResourceManager.hpp"
+    "Source/Core/FileSystem.cpp"
+    "Include/Core/FileSystem.hpp"
     
     "Source/Core/Input.cpp"
     "Include/Core/Input.hpp"
@@ -51,6 +51,9 @@ set(SRC_FILES
 
     "Source/Scene/Model.cpp"
     "Include/Scene/Model.hpp"
+    
+    "Source/Scene/Lights.cpp"
+    "Include/Scene/Lights.hpp"
     
     "Source/Scene/Scene.cpp"
     "Include/Scene/Scene.hpp"

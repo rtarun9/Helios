@@ -26,6 +26,9 @@ class SandBox final : public helios::core::Application
         //                                               0.1f,
         //                                           }});
 
+        m_scene->addLight(m_graphicsDevice.get(),
+                          scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
+
         m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
                 {
@@ -85,6 +88,8 @@ class SandBox final : public helios::core::Application
         gctx->setRenderTarget(currentBackBuffer, m_depthTexture);
 
         m_scene->renderModels(gctx.get());
+
+        m_scene->renderLights(gctx.get());
 
         m_editor->render(m_graphicsDevice.get(), m_scene.get(), clearColor, &currentBackBuffer, gctx.get());
 

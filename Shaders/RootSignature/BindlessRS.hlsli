@@ -1,3 +1,4 @@
+// clang-format off
 #pragma once
 
 // Set the matrix packing to row major by default. Prevents needing to transpose matrices on the C++ side.

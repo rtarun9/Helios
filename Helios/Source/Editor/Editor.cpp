@@ -1,6 +1,6 @@
 #include "Editor/Editor.hpp"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 #include "Scene/Scene.hpp"
 
@@ -24,7 +24,7 @@ namespace helios::editor
         ImGui::CreateContext();
 
         ImGuiIO& io = ImGui::GetIO();
-        const auto iniFilePath = core::ResourceManager::getFullPath(L"imgui.ini");
+        const auto iniFilePath = core::FileSystem::getFullPath(L"imgui.ini");
         const auto relativeIniFilePath = std::filesystem::relative(iniFilePath);
         m_iniFilePath = relativeIniFilePath.string();
         io.IniFilename = m_iniFilePath.c_str();
@@ -33,8 +33,8 @@ namespace helios::editor
 
         io.DisplaySize = ImVec2((float)width, (float)height);
 
-        //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
         // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular
         // ones.
@@ -59,7 +59,7 @@ namespace helios::editor
                             srvDescriptorHandle.cpuDescriptorHandle, srvDescriptorHandle.gpuDescriptorHandle);
         graphicsDevice->getCbvSrvUavDescriptorHeap()->offsetCurrentHandle();
 
-        m_contentBrowserCurrentPath = core::ResourceManager::getFullPath(L"Assets");
+        m_contentBrowserCurrentPath = core::FileSystem::getFullPath(L"Assets");
     }
 
     Editor::~Editor()
@@ -105,10 +105,13 @@ namespace helios::editor
             // Render scene hierarchy UI.
             renderSceneHierarchy(scene);
 
+            // Render light properties.
+            renderLightProperties(scene);
+
             // Render scene viewport (After all post processing).
             // All add model to model list if a path is dragged into scene viewport.
             // note(rtarun9) : renderSceneViewport is yet to be completed with implementation.
-            //renderSceneViewport(graphicsDevice, renderTarget, scene);
+            // renderSceneViewport(graphicsDevice, renderTarget, scene);
 
             // Render content browser panel.
             renderContentBrowser();
@@ -161,6 +164,71 @@ namespace helios::editor
         ImGui::End();
     }
 
+    void Editor::renderLightProperties(scene::Scene* const scene) const
+    {
+        interlop::LightBuffer& lightBuffer = scene->m_lights->m_lightsBufferData;
+
+        ImGui::Begin("Light Properties");
+
+        if (ImGui::TreeNode("Point Lights"))
+        {
+            // Taking advantage of the fact that point lights come before directional lights (see
+            // Common/ConstantBuffers.hlsli for more info).
+            for (uint32_t pointLightIndex : std::views::iota(0u, interlop::TOTAL_POINT_LIGHTS))
+            {
+                std::string name = "Point Light " + std::to_string(pointLightIndex);
+                if (ImGui::TreeNode(name.c_str()))
+                {
+                    ImGui::ColorPicker3("Light Color", &lightBuffer.lightColor[pointLightIndex].x,
+                                        ImGuiColorEditFlags_PickerHueWheel);
+
+                    ImGui::SliderFloat3("Translate", &lightBuffer.lightPosition[pointLightIndex].x, -40.0f, 40.0f);
+
+                    ImGui::SliderFloat("Radius", &lightBuffer.radiusIntensity[pointLightIndex].x, 0.01f, 10.0f);
+
+                    ImGui::TreePop();
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Directional Lights"))
+        {
+
+            for (uint32_t directionalLightIndex :
+                 std::views::iota(interlop::DIRECTIONAL_LIGHT_OFFSET,
+                                  interlop::DIRECTIONAL_LIGHT_OFFSET + interlop::TOTAL_DIRECTIONAL_LIGHTS))
+            {
+                std::string name = "Directional Light " + std::to_string(directionalLightIndex);
+
+                DirectX::XMFLOAT4 color = lightBuffer.lightColor[directionalLightIndex];
+
+                if (ImGui::TreeNode(name.c_str()))
+                {
+                    ImGui::ColorPicker3("Light Color", &color.x,
+                                        ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB |
+                                            ImGuiColorEditFlags_HDR);
+                    ImGui::SliderFloat("Intensity", &lightBuffer.radiusIntensity[directionalLightIndex].y, 0.0f, 50.0f);
+                    float intensity = lightBuffer.radiusIntensity[directionalLightIndex].y;
+
+                    lightBuffer.lightColor[directionalLightIndex] = {color.x, color.y, color.z, color.w};
+
+                    static float sunAngle{scene::Lights::DIRECTIONAL_LIGHT_ANGLE};
+                    ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
+                    scene->m_lights->m_lightsBufferData.lightPosition[directionalLightIndex] = math::XMFLOAT4(
+                        0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
+
+                    ImGui::TreePop();
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::End();
+    }
+
     void Editor::renderSceneProperties(scene::Scene* scene) const
     {
         ImGui::Begin("Scene Properties");
@@ -199,8 +267,8 @@ namespace helios::editor
     void Editor::renderSceneViewport(const gfx::GraphicsDevice* const graphicsDevice, gfx::Texture* const renderTarget,
                                      scene::Scene* const scene) const
     {
-        const gfx::DescriptorHandle& rtvSrvHandle = graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-            renderTarget->srvIndex);
+        const gfx::DescriptorHandle& rtvSrvHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget->srvIndex);
 
         ImGui::Begin("View Port");
         ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
@@ -244,7 +312,7 @@ namespace helios::editor
 
     void Editor::renderContentBrowser()
     {
-        const auto assetsPath = core::ResourceManager::getFullPath(L"Assets/Models");
+        const auto assetsPath = core::FileSystem::getFullPath(L"Assets/Models");
         ImGui::Begin("Content Browser");
 
         // We dont want to allow renderer to see paths other than those of the Assets directory.

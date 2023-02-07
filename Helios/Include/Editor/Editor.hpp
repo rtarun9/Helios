@@ -34,6 +34,7 @@ namespace helios::editor
 
       private:
         void renderSceneHierarchy(scene::Scene* const scene) const;
+        void renderLightProperties(scene::Scene* const scene) const;
 
         // Handles camera and other scene related properties.
         void renderSceneProperties(scene::Scene* const scene) const;

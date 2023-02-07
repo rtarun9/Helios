@@ -1,6 +1,6 @@
 #include "Core/Application.hpp"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 #include "Graphics/PipelineState.hpp"
 
 #include <SDL.h>
@@ -81,7 +81,7 @@ namespace helios::core
 
     void Application::init()
     {
-        ResourceManager::locateRootDirectory();
+        FileSystem::locateRootDirectory();
 
         initPlatformBackend();
 

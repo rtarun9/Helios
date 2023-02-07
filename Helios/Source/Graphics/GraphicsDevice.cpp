@@ -1,6 +1,6 @@
 #include "Graphics/GraphicsDevice.hpp"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 #include <stb_image.h>
 
@@ -266,7 +266,7 @@ namespace helios::gfx
         // input parameter non const, this approach of making a local copy is taken.
         TextureCreationDesc textureCreationDesc = paramTextureCreationDesc;
 
-        textureCreationDesc.path = core::ResourceManager::getFullPath(textureCreationDesc.path);
+        textureCreationDesc.path = core::FileSystem::getFullPath(textureCreationDesc.path);
 
         int32_t componentCount = 4;
         int32_t width{};

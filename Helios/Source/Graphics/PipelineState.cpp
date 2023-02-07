@@ -2,7 +2,7 @@
 
 #include "Graphics/ShaderCompiler.hpp"
 
-#include "Core/ResourceManager.hpp"
+#include "Core/FileSystem.hpp"
 
 namespace helios::gfx
 {
@@ -47,14 +47,14 @@ namespace helios::gfx
         const auto& vertexShaderBlob =
             ShaderCompiler::compile(
                 ShaderTypes::Vertex,
-                core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
+                core::FileSystem::getFullPath(pipelineStateCreationDesc.shaderModule.vertexShaderPath),
                 pipelineStateCreationDesc.shaderModule.vertexEntryPoint)
                 .shaderBlob;
 
         const auto& pixelShaderBlob =
             ShaderCompiler::compile(
                 ShaderTypes::Pixel,
-                core::ResourceManager::getFullPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
+                core::FileSystem::getFullPath(pipelineStateCreationDesc.shaderModule.pixelShaderPath),
                 pipelineStateCreationDesc.shaderModule.pixelEntryPoint)
                 .shaderBlob;
 
@@ -101,7 +101,7 @@ namespace helios::gfx
     {
         const auto& computeShaderBlob =
             ShaderCompiler::compile(ShaderTypes::Compute,
-                                    core::ResourceManager::getFullPath(pipelineStateCreationDesc.csShaderPath),
+                                    core::FileSystem::getFullPath(pipelineStateCreationDesc.csShaderPath),
                                     L"CsMain")
                 .shaderBlob;
 
@@ -122,7 +122,7 @@ namespace helios::gfx
 
     void PipelineState::createBindlessRootSignature(ID3D12Device* const device, const std::wstring_view shaderPath)
     {
-        const auto path = core::ResourceManager::getFullPath(shaderPath);
+        const auto path = core::FileSystem::getFullPath(shaderPath);
         const auto shader = ShaderCompiler::compile(ShaderTypes::Vertex, path, L"VsMain", true);
 
         if (!shader.rootSignatureBlob.Get())
