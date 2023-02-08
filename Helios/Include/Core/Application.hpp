@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Core/Input.hpp"
+
 #include "Graphics/GraphicsDevice.hpp"
-
 #include "Scene/Scene.hpp"
-
 #include "Editor/Editor.hpp"
+
 
 struct SDL_Window;
 

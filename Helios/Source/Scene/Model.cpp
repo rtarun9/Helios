@@ -7,7 +7,7 @@
 
 namespace helios::scene
 {
-    void TransformComponent::update()
+    void TransformComponent::update(const math::XMMATRIX viewMatrix)
     {
         const math::XMVECTOR scalingVector = math::XMLoadFloat3(&scale);
         const math::XMVECTOR rotationVector = math::XMLoadFloat3(&rotation);
@@ -17,9 +17,12 @@ namespace helios::scene
                                            math::XMMatrixRotationRollPitchYawFromVector(rotationVector) *
                                            math::XMMatrixTranslationFromVector(translationVector);
 
+        const math::XMMATRIX modelViewMatrix = modelMatrix * viewMatrix;
+
         const interlop::TransformBuffer transformBufferData = {
             .modelMatrix = modelMatrix,
             .inverseModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix),
+            .inverseModelViewMatrix = DirectX::XMMatrixInverse(nullptr, modelViewMatrix),
         };
 
         transformBuffer.update(&transformBufferData);
@@ -41,7 +44,7 @@ namespace helios::scene
         m_transformComponent.rotation = modelCreationDesc.rotation;
         m_transformComponent.translate = modelCreationDesc.translate;
 
-        m_transformComponent.update();
+        m_transformComponent.update(math::XMMATRIX{});
 
         const std::string modelPathStr = wStringToString(m_modelPath);
         std::string modelDirectoryPathStr{};
@@ -129,7 +132,28 @@ namespace helios::scene
     }
 
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
-                interlop::LightRenderResources& renderResources) const
+                       interlop::BlinnPhongRenderResources& renderResources) const
+    {
+        for (const Mesh& mesh : m_meshes)
+        {
+            graphicsContext->setIndexBuffer(mesh.indexBuffer);
+
+            renderResources.albedoTextureIndex = m_materials[mesh.materialIndex].albedoTexture.srvIndex;
+            renderResources.albedoTextureSamplerIndex =
+                m_materials[mesh.materialIndex].albedoTextureSampler.samplerIndex;
+
+            renderResources.normalBufferIndex = mesh.normalBuffer.srvIndex;
+            renderResources.positionBufferIndex = mesh.positionBuffer.srvIndex;
+            renderResources.textureCoordBufferIndex = mesh.textureCoordsBuffer.srvIndex;
+            renderResources.transformBufferIndex = m_transformComponent.transformBuffer.cbvIndex;
+
+            graphicsContext->set32BitGraphicsConstants(&renderResources);
+            graphicsContext->drawInstanceIndexed(mesh.indicesCount);
+        }
+    }
+
+    void Model::render(const gfx::GraphicsContext* const graphicsContext,
+                       interlop::LightRenderResources& renderResources) const
     {
         for (const Mesh& mesh : m_meshes)
         {

@@ -5,9 +5,9 @@
 #include "DescriptorHeap.hpp"
 #include "GraphicsContext.hpp"
 #include "MemoryAllocator.hpp"
+#include "MipMapGenerator.hpp"
 #include "PipelineState.hpp"
 #include "Resources.hpp"
-#include "MipMapGenerator.hpp"
 
 namespace helios::gfx
 {
@@ -37,7 +37,7 @@ namespace helios::gfx
             return m_directCommandQueue.get();
         }
 
-         CommandQueue* const getComputeCommandQueue() const
+        CommandQueue* const getComputeCommandQueue() const
         {
             return m_computeCommandQueue.get();
         }
@@ -119,7 +119,7 @@ namespace helios::gfx
         // Do note that unlike createCbv/Srv/Uav this is placed in public access and not with the other create
         // function's which return indices into respective descriptor heaps. This is because we are not creating a
         // 'View' into the sampler. Samplers have no views, and the ID3D12Device function call itself is named
-        // 'CreateSampler', and not 'Create Ssampler View'.
+        // 'CreateSampler', and not 'Create Sampler View'.
         [[nodiscard]] Sampler createSampler(const SamplerCreationDesc& samplerCreationDesc) const;
 
         [[nodiscard]] PipelineState createPipelineState(
@@ -207,7 +207,7 @@ namespace helios::gfx
 
         buffer.allocation = m_memoryAllocator->createBufferResourceAllocation(bufferCreationDesc, resourceCreationDesc);
 
-        std::lock_guard<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
+        std::scoped_lock<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
 
         // Currently, not using a backing storage for upload context's and such. Simply using D3D12MA to create a upload
         // buffer, copy the data onto the upload buffer, and then copy data from upload buffer -> GPU only buffer.

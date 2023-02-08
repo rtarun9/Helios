@@ -20,23 +20,24 @@ namespace helios::scene
     {
       public:
         explicit Scene(const gfx::GraphicsDevice* const graphicsDevice);
-        ~Scene();
+        ~Scene() = default;
 
       public:
         void addModel(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc);
-        void addLight(const gfx::GraphicsDevice* graphicsDevice, const LightCreationDesc& lightCreationDesc);
+        void addLight(const gfx::GraphicsDevice* const graphicsDevice, const LightCreationDesc& lightCreationDesc);
 		
-
         // NOTE : Not to be used by user, the application will automatically call then function when required.
         // Make sure all background threads that were used to load resources are completed.
         // If not, block the main thread and wait for resources to finish loading.
         void completeResourceLoading();
 
+        // Update scene resources (models, lights, etc).
         void update(const float deltaTime, const core::Input& input, const float aspectRatio);
 
-        // Render models using the Model View render resources.
+        // Render models using various render resources.
         void renderModels(const gfx::GraphicsContext* const graphicsContext);
         void renderLights(const gfx::GraphicsContext* const graphicsContext);
+        void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::BlinnPhongRenderResources& renderResources);
 
       public:
         gfx::Buffer m_sceneBuffer{};

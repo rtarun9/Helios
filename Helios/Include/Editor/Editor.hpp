@@ -1,12 +1,17 @@
 #pragma once
 
-#include "Scene/Scene.hpp"
+#include "../Graphics/Resources.hpp"
 
 namespace helios::gfx
 {
     class GraphicsDevice;
     class GraphicsContext;
 } // namespace helios::gfx
+
+namespace helios::scene
+{
+    class Scene;
+}
 
 struct SDL_Window;
 
@@ -18,8 +23,7 @@ namespace helios::editor
     class Editor
     {
       public:
-        explicit Editor(const gfx::GraphicsDevice* graphicsDevice, SDL_Window* const window, const  uint32_t width,
-                        const uint32_t height);
+        explicit Editor(const gfx::GraphicsDevice* const graphicsDevice, SDL_Window* const window, const uint32_t width, const uint32_t height);
         ~Editor();
 
         // Goal is to call this single function from the engine which does all the UI internally, helps make the engine
@@ -45,7 +49,7 @@ namespace helios::editor
         void renderSceneViewport(const gfx::GraphicsDevice* device, gfx::Texture* const renderTarget,
                                  scene::Scene* const scene) const;
 
-        // Handle drag and drop of models into viewport at run time.
+        // Handle drag and drop of models into view port at run time.
         void renderContentBrowser();
 
       private:

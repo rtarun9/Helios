@@ -1,5 +1,7 @@
 #pragma once
 
+// Collection of free utility functions.
+
 inline void fatalError(const std::string_view message,
                        const std::source_location sourceLocation = std::source_location::current())
 {

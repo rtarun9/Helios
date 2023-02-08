@@ -36,7 +36,7 @@ namespace helios::scene
         explicit Lights(const gfx::GraphicsDevice* const graphicsDevice);
         
         // Update light buffer and update the model matrices (to be used in the Instanced rendering buffer).
-        void update();
+        void update(const math::XMMATRIX viewMatrix);
 
         // Render all visualizable lights in a instanced rendering fashion.
         void render(const gfx::GraphicsContext* graphicsContext, interlop::LightRenderResources& lightRenderResources);
@@ -60,6 +60,7 @@ namespace helios::scene
 
         uint32_t m_currentLightCount{};
 
+        // Pipeline state to be used for rendering lights.
         gfx::PipelineState m_lightPipelineState{};
     };
 } // namespace helios::scene

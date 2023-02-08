@@ -1,5 +1,6 @@
 #pragma once
 
+// STL includes.
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -14,6 +15,7 @@
 #include <future>
 #include <vector>
 
+// Win32 / DirectX12 / DXGI includes.
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
@@ -25,13 +27,15 @@
 #include <dxcapi.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
-
 #include "Graphics/d3dx12.hpp"
 
+// Custom includes.
+#include "Utils.hpp"
+
+// Namespace aliases.
 namespace wrl = Microsoft::WRL;
 namespace math = DirectX;
 
-#include "Utils.hpp"
 
 // Setup constexpr indicating which build configuration was used.
 #ifdef _DEBUG
@@ -40,4 +44,5 @@ constexpr bool HELIOS_DEBUG_MODE = true;
 constexpr bool HELIOS_DEBUG_MODE = false;
 #endif
 
+// Global variables.
 constexpr uint32_t INVALID_INDEX_U32 = 0xFFFFFFFF;

@@ -17,12 +17,8 @@ namespace helios::scene
             .usage = gfx::BufferUsage::ConstantBuffer,
             .name = L"Scene Buffer",
         });
-        
-        m_lights = std::make_unique<Lights>(graphicsDevice);
-    }
 
-    Scene::~Scene()
-    {
+        m_lights = std::make_unique<Lights>(graphicsDevice);
     }
 
     void Scene::addModel(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc)
@@ -74,6 +70,7 @@ namespace helios::scene
         m_camera.update(deltaTime, input);
 
         const interlop::SceneBuffer sceneBufferData = {
+            .viewMatrix = m_camera.computeAndGetViewMatrix(),
             .viewProjectionMatrix =
                 m_camera.computeAndGetViewMatrix() *
                 math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
@@ -83,10 +80,10 @@ namespace helios::scene
 
         for (auto& [name, model] : m_models)
         {
-            model->getTransformComponent().update();
+            model->getTransformComponent().update(sceneBufferData.viewMatrix);
         }
 
-        m_lights->update();
+        m_lights->update(sceneBufferData.viewMatrix);
     }
 
     void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext)
@@ -95,9 +92,23 @@ namespace helios::scene
             .sceneBufferIndex = m_sceneBuffer.cbvIndex,
         };
 
-        for (const auto& [name, model]: m_models)
+        for (const auto& [name, model] : m_models)
         {
             model->render(graphicsContext, modelViewerRenderResources);
+        }
+    }
+
+    void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext,
+                             const interlop::BlinnPhongRenderResources& renderResources)
+    {
+        interlop::BlinnPhongRenderResources blinnPhongRenderResources = {
+            .sceneBufferIndex = m_sceneBuffer.cbvIndex,
+            .lightBufferIndex = m_lights->m_lightsBuffer.cbvIndex,
+        };
+
+        for (const auto& [name, model] : m_models)
+        {
+            model->render(graphicsContext, blinnPhongRenderResources);
         }
     }
 

@@ -17,14 +17,14 @@ class SandBox final : public helios::core::Application
                               .modelName = L"Damaged Helmet",
                           });
 
-        //m_scene->addModel(m_graphicsDevice.get(),
-        //                  scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-        //                                           .modelName = L"Sponza",
-        //                                           .scale = {
-        //                                               0.1f,
-        //                                               0.1f,
-        //                                               0.1f,
-        //                                           }});
+        m_scene->addModel(m_graphicsDevice.get(),
+                          scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+                                                   .modelName = L"Sponza",
+                                                   .scale = {
+                                                       0.1f,
+                                                       0.1f,
+                                                       0.1f,
+                                                   }});
 
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
@@ -32,11 +32,11 @@ class SandBox final : public helios::core::Application
         m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
                 {
-                    .vertexShaderPath = L"Shaders/ModelViewer.hlsl",
-                    .pixelShaderPath = L"Shaders/ModelViewer.hlsl",
+                    .vertexShaderPath = L"Shaders/Shading/BlinnPhong.hlsl",
+                    .pixelShaderPath = L"Shaders/Shading/BlinnPhong.hlsl",
                 },
             .depthFormat = DXGI_FORMAT_D32_FLOAT,
-            .pipelineName = L"ModelViewer Pipeline",
+            .pipelineName = L"Blinn Phong Pipeline",
         });
 
         m_depthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
@@ -87,7 +87,9 @@ class SandBox final : public helios::core::Application
         gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         gctx->setRenderTarget(currentBackBuffer, m_depthTexture);
 
-        m_scene->renderModels(gctx.get());
+        interlop::BlinnPhongRenderResources renderResources{};
+
+        m_scene->renderModels(gctx.get(), renderResources);
 
         m_scene->renderLights(gctx.get());
 

@@ -17,6 +17,18 @@ namespace interlop
         uint textureIndex;
     };
 
+    struct BlinnPhongRenderResources
+    {
+        uint sceneBufferIndex;
+        uint lightBufferIndex;
+        uint transformBufferIndex;
+        uint positionBufferIndex;
+        uint normalBufferIndex;
+        uint textureCoordBufferIndex;
+        uint albedoTextureIndex;    
+        uint albedoTextureSamplerIndex;
+    };
+
     struct ModelViewerRenderResources
     {
         uint sceneBufferIndex;
@@ -41,12 +53,12 @@ namespace interlop
     };
 
     struct LightRenderResources
-{
-    uint positionBufferIndex;
+    {
+        uint positionBufferIndex;
 
-    uint lightBufferIndex;
-    uint transformBufferIndex;
+        uint lightBufferIndex;
+        uint transformBufferIndex;
 
-    uint sceneBufferIndex;
-};
+        uint sceneBufferIndex;
+    };
 }

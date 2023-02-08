@@ -7,3 +7,5 @@ External/DirectXAgilitySDK
 External/DirectXShaderCompiler
 *.zip
 Bin/
+VsBuild/
+Build/

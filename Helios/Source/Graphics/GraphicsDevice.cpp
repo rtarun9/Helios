@@ -150,7 +150,7 @@ namespace helios::gfx
     {
         // Create descriptor heaps.
         m_cbvSrvUavDescriptorHeap = std::make_unique<DescriptorHeap>(
-            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024u, L"CBV SRV UAV Descriptor Heap");
+            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048u, L"CBV SRV UAV Descriptor Heap");
 
         m_rtvDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 50u,
                                                                L"RTV Descriptor Heap");
@@ -159,7 +159,7 @@ namespace helios::gfx
                                                                L"DSV Descriptor Heap");
 
         m_samplerDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-                                                                   250u, L"Sampler Descriptor Heap");
+                                                                   1024u, L"Sampler Descriptor Heap");
     }
 
     void GraphicsDevice::initMemoryAllocator()
@@ -328,7 +328,7 @@ namespace helios::gfx
         break;
         }
 
-        std::lock_guard<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
+        std::scoped_lock<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
 
         // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub
         // resource data from a upload buffer into the GPU only texture.

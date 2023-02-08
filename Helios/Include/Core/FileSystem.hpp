@@ -1,10 +1,5 @@
 #pragma once
 
-#include "../Graphics/GraphicsDevice.hpp"
-#include "../Graphics/ShaderCompiler.hpp"
-
-#include "../Scene/Model.hpp"
-
 namespace helios::core
 {
     class FileSystem

@@ -105,7 +105,7 @@ namespace helios::core
         {
             init();
             loadContent();
-            
+
             // Ensure that all resources all loaded for the scene before game loop begins.
             m_scene->completeResourceLoading();
 
@@ -140,6 +140,15 @@ namespace helios::core
                     }
 
                     m_input.processInput(keyboardState);
+
+                    if (m_input.getKeyState(Keys::Space))
+                    {
+                        m_editor->showUI(false);
+                    }
+                    else
+                    {
+                        m_editor->showUI(true);
+                    }
                 }
 
                 const std::chrono::high_resolution_clock::time_point currentFrameTimePoint = clock.now();

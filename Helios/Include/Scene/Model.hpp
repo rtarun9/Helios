@@ -26,7 +26,9 @@ namespace helios::scene
 
         gfx::Buffer transformBuffer{};
 
-        void update();
+        // The Transform buffer stores a inverse model view projection matrix.
+        // That is the reason the view matrix is passed into the update function.
+        void update(const math::XMMATRIX viewMatrix);
     };
 
     struct ModelCreationDesc
@@ -62,6 +64,9 @@ namespace helios::scene
 
         void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::ModelViewerRenderResources& renderResources) const;
+
+        void render(const gfx::GraphicsContext* const graphicsContext,
+                    interlop::BlinnPhongRenderResources& renderResources) const;
 
         void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::LightRenderResources& renderResources) const;

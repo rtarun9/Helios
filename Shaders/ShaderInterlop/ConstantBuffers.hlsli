@@ -28,6 +28,7 @@ namespace interlop
 {
     ConstantBufferStruct SceneBuffer
     {
+        float4x4 viewMatrix;
         float4x4 viewProjectionMatrix;
     };
 
@@ -35,6 +36,7 @@ namespace interlop
     {
         float4x4 modelMatrix;
         float4x4 inverseModelMatrix;
+        float4x4 inverseModelViewMatrix;
     };
 
     enum class TextureDimensionType
@@ -85,6 +87,8 @@ namespace interlop
         // if it is zero, then it is a light direction.
         // Light intensity is not automatically multiplied to the light color on the C++ side, shading shader need to manually multiply them.
         float4 lightPosition[TOTAL_LIGHTS];
+        float4 viewSpaceLightPosition[TOTAL_LIGHTS];
+
         float4 lightColor[TOTAL_LIGHTS];
         // float4 because of struct packing (16byte alignment).
         // radiusIntensity[0] stores the radius, while index 1 stores the intensity.

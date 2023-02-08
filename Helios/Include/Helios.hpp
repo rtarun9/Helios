@@ -20,6 +20,7 @@
 #include "Scene/Materials.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/Model.hpp"
+#include "Scene/Lights.hpp"
 #include "Scene/Scene.hpp"
 
 #include "ShaderInterlop/ConstantBuffers.hlsli"
