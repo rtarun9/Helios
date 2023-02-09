@@ -31,7 +31,14 @@ namespace helios::scene
     Model::Model(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc)
         : m_modelName(modelCreationDesc.modelName)
     {
-        m_modelPath = core::FileSystem::getFullPath(modelCreationDesc.modelPath);
+        if (modelCreationDesc.modelPath.find(core::FileSystem::getFullPath(L"")) == std::wstring::npos)
+        {
+            m_modelPath = core::FileSystem::getFullPath(modelCreationDesc.modelPath);
+        }
+        else
+        {
+            m_modelPath = modelCreationDesc.modelPath;
+        }
 
         // Create the transform buffer.
         m_transformComponent.transformBuffer =
@@ -138,6 +145,18 @@ namespace helios::scene
         {
             graphicsContext->setIndexBuffer(mesh.indexBuffer);
 
+            graphicsContext->set32BitGraphicsConstants(&renderResources);
+            graphicsContext->drawInstanceIndexed(mesh.indicesCount);
+        }
+    }
+
+    void Model::render(const gfx::GraphicsContext* const graphicsContext,
+                interlop::DeferredGPassRenderResources& renderResources) const
+    {
+        for (const Mesh& mesh : m_meshes)
+        {
+            graphicsContext->setIndexBuffer(mesh.indexBuffer);
+
             renderResources.albedoTextureIndex = m_materials[mesh.materialIndex].albedoTexture.srvIndex;
             renderResources.albedoTextureSamplerIndex =
                 m_materials[mesh.materialIndex].albedoTextureSampler.samplerIndex;
@@ -146,7 +165,8 @@ namespace helios::scene
             renderResources.positionBufferIndex = mesh.positionBuffer.srvIndex;
             renderResources.textureCoordBufferIndex = mesh.textureCoordsBuffer.srvIndex;
             renderResources.transformBufferIndex = m_transformComponent.transformBuffer.cbvIndex;
-
+            renderResources.normalTextureIndex = m_materials[mesh.materialIndex].normalTexture.srvIndex;
+            renderResources.normalTextureSamplerIndex = m_materials[mesh.materialIndex].normalTextureSampler.samplerIndex;
             graphicsContext->set32BitGraphicsConstants(&renderResources);
             graphicsContext->drawInstanceIndexed(mesh.indicesCount);
         }

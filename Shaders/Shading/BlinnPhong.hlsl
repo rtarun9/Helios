@@ -8,29 +8,20 @@
 struct VSOutput
 {
     float4 position : SV_Position;
-    float4 viewSpacePosition : VIEW_SPACE_POSITION;
-    float3 viewSpaceNormal : VIEW_SPACE_NORMAL;
-    float2 textureCoord : TEXTURE_COORD;
+    float2 textureCoord : Texture_Coord;
 };
 
 ConstantBuffer<interlop::BlinnPhongRenderResources> renderResources : register(b0);
 
-[RootSignature(BindlessRootSignature)] VSOutput VsMain(uint vertexID: SV_VertexID) 
+[RootSignature(BindlessRootSignature)]
+VSOutput VsMain(uint vertexID : SV_VertexID)
 {
-    StructuredBuffer<float3> positionBuffer = ResourceDescriptorHeap[renderResources.positionBufferIndex];
-    StructuredBuffer<float2> textureCoordBuffer = ResourceDescriptorHeap[renderResources.textureCoordBufferIndex];
-    StructuredBuffer<float3> normalBuffer = ResourceDescriptorHeap[renderResources.normalBufferIndex];
+    static const float3 VERTEX_POSITIONS[3] = {float3(-1.0f, 1.0f, 0.0f), float3(3.0f, 1.0f, 0.0f),
+                                               float3(-1.0f, -3.0f, 0.0f)};
 
-    ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
-    ConstantBuffer<interlop::TransformBuffer> transformBuffer = ResourceDescriptorHeap[renderResources.transformBufferIndex];
-    
     VSOutput output;
-
-    output.position = mul(mul(float4(positionBuffer[vertexID].xyz, 1.0f), transformBuffer.modelMatrix), sceneBuffer.viewProjectionMatrix);
-    output.textureCoord = textureCoordBuffer[vertexID];
-    output.viewSpacePosition = mul(mul(float4(positionBuffer[vertexID].xyz, 1.0f), transformBuffer.modelMatrix), sceneBuffer.viewMatrix);
-    output.viewSpaceNormal = mul(normalBuffer[vertexID].xyz, (float3x3)transpose(transformBuffer.inverseModelViewMatrix));
-
+    output.position = float4(VERTEX_POSITIONS[clamp(0, 3, vertexID)], 1.0f);
+    output.textureCoord = output.position.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
     return output;
 }
 
@@ -38,8 +29,16 @@ ConstantBuffer<interlop::BlinnPhongRenderResources> renderResources : register(b
 float4 PsMain(VSOutput input) : SV_Target
 {
     ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
+    ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
 
-    const float4 albedoColor = getAlbedo(input.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex);
+    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
+    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResources.normalEmissiveGBufferIndex];
+    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResources.positionEmissiveGBufferIndex];
+
+    const float4 albedoColor = albedoTexture.Sample(pointClampSampler, input.textureCoord);
+
+    float3 normal = normalEmissiveTexture.Sample(pointClampSampler, input.textureCoord).xyz;
+    const float3 position = positionEmissiveTexture.Sample(pointClampSampler, input.textureCoord).xyz;
 
     // Ambient lighting.
     const float ambientStrength = 0.01;
@@ -52,12 +51,13 @@ float4 PsMain(VSOutput input) : SV_Target
     }
 
     // Diffuse lighting.
-    const float3 normal = normalize(input.viewSpaceNormal);
+    normal = normalize(normal);
+
     float3 diffuseLight = float3(0.0f, 0.0f, 0.0f);
     
     for (uint j = 0; j <interlop::TOTAL_POINT_LIGHTS; ++j)
     {
-        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[j].xyz - input.viewSpacePosition.xyz);
+        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[j].xyz - position.xyz);
         diffuseLight += max(dot(pixelToLightDirection, normal), 0.0f) * albedoColor.xyz * lightBuffer.lightColor[j].xyz;
     }
 
@@ -65,14 +65,16 @@ float4 PsMain(VSOutput input) : SV_Target
     float3 specularLight = float3(0.0f, 0.0f, 0.0f);
     for (uint k = 0; k < interlop::TOTAL_POINT_LIGHTS; ++k)
     {
-        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[k].xyz - input.viewSpacePosition.xyz);
+        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[k].xyz - position.xyz);
 
         const float3 perfectReflectionDirection = reflect(-pixelToLightDirection, normal);
-        const float3 pixeToEyeDirection = normalize(-input.viewSpacePosition.xyz);
+        const float3 pixelToEyeDirection = normalize(-position.xyz);
 
-        const float specularPower = 32.0f;
-        const float specularIntensity = pow(max(dot(perfectReflectionDirection, pixeToEyeDirection), 0.0f), specularPower);
-        const float specularStrength = 0.5f;
+        const float specularPower = 128.0f;
+        const float3 halfWayVector = normalize(pixelToEyeDirection + pixelToLightDirection);
+        
+        const float specularIntensity = pow(max(dot(halfWayVector , normal), 0.0f), specularPower);
+        const float specularStrength = 0.2f;
 
         specularLight += specularIntensity * specularStrength * lightBuffer.lightColor[k].xyz;
     }

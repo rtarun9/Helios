@@ -21,12 +21,10 @@ namespace interlop
     {
         uint sceneBufferIndex;
         uint lightBufferIndex;
-        uint transformBufferIndex;
-        uint positionBufferIndex;
-        uint normalBufferIndex;
-        uint textureCoordBufferIndex;
-        uint albedoTextureIndex;    
-        uint albedoTextureSamplerIndex;
+        uint albedoGBufferIndex;
+        uint positionEmissiveGBufferIndex;
+        uint normalEmissiveGBufferIndex;
+        uint aoMetalRoughnessEmissiveGBufferIndex;
     };
 
     struct ModelViewerRenderResources
@@ -60,5 +58,41 @@ namespace interlop
         uint transformBufferIndex;
 
         uint sceneBufferIndex;
+    };
+
+    struct PostProcessingRenderResources
+    {
+        uint renderTextureIndex;
+    };
+
+    struct FullScreenTrianglePassRenderResources
+    {
+        uint renderTextureIndex;
+    };
+
+    struct DeferredGPassRenderResources
+    {
+        uint positionBufferIndex;
+        uint textureCoordBufferIndex;
+        uint normalBufferIndex;
+
+        uint transformBufferIndex;
+
+        uint sceneBufferIndex;
+
+        uint albedoTextureIndex;
+        uint albedoTextureSamplerIndex;
+
+        uint metalRoughnessTextureIndex;
+        uint metalRoughnessTextureSamplerIndex;
+
+        uint normalTextureIndex;
+        uint normalTextureSamplerIndex;
+
+        uint aoTextureIndex;
+        uint aoTextureSamplerIndex;
+
+        uint emissiveTextureIndex;
+        uint emissiveTextureSamplerIndex;
     };
 }

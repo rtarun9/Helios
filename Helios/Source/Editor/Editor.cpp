@@ -33,18 +33,12 @@ namespace helios::editor
 
         io.DisplaySize = ImVec2((float)width, (float)height);
 
-        // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
 
         // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular
         // ones.
         ImGuiStyle& style = ImGui::GetStyle();
-
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            style.WindowRounding = 0.0f;
-            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-        }
 
         // Setup platform / renderer backends.
 
@@ -111,7 +105,7 @@ namespace helios::editor
             // Render scene viewport (After all post processing).
             // All add model to model list if a path is dragged into scene viewport.
             // note(rtarun9) : renderSceneViewport is yet to be completed with implementation.
-            // renderSceneViewport(graphicsDevice, renderTarget, scene);
+            renderSceneViewport(graphicsDevice, renderTarget, scene);
 
             // Render content browser panel.
             renderContentBrowser();
@@ -119,14 +113,6 @@ namespace helios::editor
             // Render and update handles.
             ImGui::Render();
             ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), graphicsContext->getCommandList());
-
-            ImGuiIO& io = ImGui::GetIO();
-            (void)io;
-            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                ImGui::UpdatePlatformWindows();
-                ImGui::RenderPlatformWindowsDefault(m_window, graphicsContext->getCommandList());
-            }
         }
     }
 
@@ -273,6 +259,7 @@ namespace helios::editor
         ImGui::Begin("View Port");
         ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
 
+        // Handling the drag-drop facility for GLTF models.
         if (ImGui::BeginDragDropTarget())
         {
             if (const ImGuiPayload* payLoad =
@@ -293,9 +280,9 @@ namespace helios::editor
 
                     // note(rtarun9) : the +1 and -1 are present to get the exact name (example : \\test.gltf should
                     // return test.
-                    scene::ModelCreationDesc modelCreationDesc{
+                    const scene::ModelCreationDesc modelCreationDesc = {
                         .modelPath = modelPathWStr,
-                        .modelName = modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash - 1) +
+                        .modelName = modelPathWStr +
                                      std::to_wstring(modelNumber++),
                     };
 

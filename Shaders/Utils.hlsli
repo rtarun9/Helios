@@ -41,7 +41,7 @@ float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextur
         return normal;
     }
 
-    return normalize(inputNormal);
+    return normalize(mul(inputNormal, tbnMatrix));
 }
 
 float3 getEmissive(float2 textureCoord, uint emissiveTextureIndex, uint emissiveTextureSamplerIndex)

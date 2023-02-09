@@ -101,14 +101,24 @@ namespace helios::scene
     void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext,
                              const interlop::BlinnPhongRenderResources& renderResources)
     {
-        interlop::BlinnPhongRenderResources blinnPhongRenderResources = {
+        interlop::BlinnPhongRenderResources blinnPhongRenderResources = renderResources;
+        blinnPhongRenderResources.sceneBufferIndex = m_sceneBuffer.cbvIndex;
+        blinnPhongRenderResources.lightBufferIndex = m_lights->m_lightsBuffer.cbvIndex;
+
+        graphicsContext->set32BitGraphicsConstants(&blinnPhongRenderResources);
+        graphicsContext->drawInstanceIndexed(3u);
+    }
+
+    void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext,
+                             const interlop::DeferredGPassRenderResources& renderResources)
+    {
+        interlop::DeferredGPassRenderResources deferredGPassenderResources = {
             .sceneBufferIndex = m_sceneBuffer.cbvIndex,
-            .lightBufferIndex = m_lights->m_lightsBuffer.cbvIndex,
         };
 
         for (const auto& [name, model] : m_models)
         {
-            model->render(graphicsContext, blinnPhongRenderResources);
+            model->render(graphicsContext, deferredGPassenderResources);
         }
     }
 

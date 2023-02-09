@@ -69,6 +69,9 @@ namespace helios::scene
                     interlop::BlinnPhongRenderResources& renderResources) const;
 
         void render(const gfx::GraphicsContext* const graphicsContext,
+                    interlop::DeferredGPassRenderResources& renderResources) const;
+
+        void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::LightRenderResources& renderResources) const;
 
       private:

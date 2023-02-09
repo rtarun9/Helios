@@ -164,6 +164,8 @@ namespace helios::core
         catch (const std::exception& exception)
         {
             std::cerr << "[EXCEPTION] :: " << exception.what() << '\n';
+            std::exit(0);
+
             return;
         }
     }

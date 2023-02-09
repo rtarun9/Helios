@@ -38,13 +38,14 @@ namespace helios::scene
         void renderModels(const gfx::GraphicsContext* const graphicsContext);
         void renderLights(const gfx::GraphicsContext* const graphicsContext);
         void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::BlinnPhongRenderResources& renderResources);
+        void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::DeferredGPassRenderResources& renderResources);
 
       public:
         gfx::Buffer m_sceneBuffer{};
         Camera m_camera{};
 
         float m_nearPlane{0.1f};
-        float m_farPlane{150.0f};
+        float m_farPlane{300.0f};
         float m_fov{45.0f};
         
         std::unique_ptr<Lights> m_lights{};

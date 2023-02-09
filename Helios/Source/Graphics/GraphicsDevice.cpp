@@ -126,6 +126,29 @@ namespace helios::gfx
 
             infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_INFO, false);
 
+            // Configure queue filter to ignore info message severity.
+            std::array<D3D12_MESSAGE_SEVERITY, 1> ignoreMessageSeverities = {
+                D3D12_MESSAGE_SEVERITY_INFO,
+            };
+
+            // Configure queue filter to ignore individual messages using their ID.
+            std::array<D3D12_MESSAGE_ID, 2> ignoreMessageIDs = {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+            };
+
+            D3D12_INFO_QUEUE_FILTER infoQueueFilter = {
+                .DenyList =
+                    {
+                        .NumSeverities = static_cast<UINT>(ignoreMessageSeverities.size()),
+                        .pSeverityList = ignoreMessageSeverities.data(),
+                        .NumIDs = static_cast<UINT>(ignoreMessageIDs.size()),
+                        .pIDList = ignoreMessageIDs.data(),
+                    },
+            };
+
+            throwIfFailed(infoQueue->PushStorageFilter(&infoQueueFilter));
+
             // Get the debug device. It represents a graphics device for debugging, while the debug interface controls
             // debug settings and validates pipeline state. Debug device can be used to check for reporting live objects
             // and leaks.
@@ -142,7 +165,7 @@ namespace helios::gfx
         m_copyCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, L"Copy Command Queue");
 
-         m_computeCommandQueue =
+        m_computeCommandQueue =
             std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, L"Compute Command Queue");
     }
 
@@ -205,7 +228,7 @@ namespace helios::gfx
             m_backBuffers[i].allocation.resource = backBuffer;
             m_backBuffers[i].allocation.resource->SetName(L"SwapChain BackBuffer");
             m_backBuffers[i].rtvIndex = m_rtvDescriptorHeap->getDescriptorIndex(rtvHandle);
-            
+
             m_rtvDescriptorHeap->offsetDescriptor(rtvHandle);
         }
 
@@ -542,7 +565,14 @@ namespace helios::gfx
 
     uint32_t GraphicsDevice::createRtv(const RtvCreationDesc& rtvCreationDesc, ID3D12Resource* const resource) const
     {
-        return INVALID_INDEX_U32;
+        const uint32_t rtvIndex = m_rtvDescriptorHeap->getCurrentDescriptorIndex();
+
+        m_device->CreateRenderTargetView(resource, &rtvCreationDesc.rtvDesc,
+                                         m_rtvDescriptorHeap->getCurrentDescriptorHandle().cpuDescriptorHandle);
+
+        m_rtvDescriptorHeap->offsetCurrentHandle();
+
+        return rtvIndex;
     }
 
     uint32_t GraphicsDevice::createDsv(const DsvCreationDesc& dsvCreationDesc, ID3D12Resource* const resource) const

@@ -46,6 +46,9 @@ set(SRC_FILES
     "Source/Graphics/MipMapGenerator.cpp"
     "Include/Graphics/MipMapGenerator.hpp"
     
+    "Source/RenderPass/DeferredGeometryPass.cpp"
+    "Include/RenderPass/DeferredGeometryPass.hpp"
+
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
 

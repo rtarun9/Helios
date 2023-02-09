@@ -12,14 +12,7 @@ namespace helios::gfx
         throwIfFailed(device->getDevice()->CreateCommandList(
             0u, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
-        // As all graphics context's require to set the descriptor heap before hand, the user has option to set them
-        // manually (for explicitness) or just let the constructor take care of this.
-        const std::array<const DescriptorHeap* const, 2u> descriptorHeaps = {
-            device->getCbvSrvUavDescriptorHeap(),
-            device->getSamplerDescriptorHeap(),
-        };
-
-        setDescriptorHeaps(descriptorHeaps);
+        setDescriptorHeaps();
 
         throwIfFailed(m_commandList->Close());
     }
@@ -28,17 +21,18 @@ namespace helios::gfx
     {
         Context::reset();
 
-        const std::array<const DescriptorHeap* const, 2u> descriptorHeaps = {
+        setDescriptorHeaps();
+    }
+
+    void GraphicsContext::setDescriptorHeaps() const
+    {
+        // As all graphics context's require to set the descriptor heap before hand, the user has option to set them
+        // manually (for explicitness) or just let the constructor take care of this.
+        const std::array<const DescriptorHeap* const, 2u> shaderVisibleDescriptorHeaps = {
             graphicsDevice.getCbvSrvUavDescriptorHeap(),
             graphicsDevice.getSamplerDescriptorHeap(),
         };
 
-        setDescriptorHeaps(descriptorHeaps);
-    }
-
-    void GraphicsContext::setDescriptorHeaps(
-        const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const
-    {
         std::vector<ID3D12DescriptorHeap*> descriptorHeaps{};
         descriptorHeaps.reserve(shaderVisibleDescriptorHeaps.size());
         for (const auto& heap : shaderVisibleDescriptorHeaps)
@@ -49,12 +43,23 @@ namespace helios::gfx
         m_commandList->SetDescriptorHeaps(static_cast<UINT>(descriptorHeaps.size()), descriptorHeaps.data());
     }
 
-    void GraphicsContext::clearRenderTargetView(const Texture& backBuffer, std::span<const float, 4> color)
+    void GraphicsContext::clearRenderTargetView(const Texture& renderTarget, std::span<const float, 4> color)
     {
         const auto rtvDescriptorHandle =
-            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(backBuffer.rtvIndex);
+            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.rtvIndex);
 
         m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
+    }
+
+    void GraphicsContext::clearRenderTargetView(const std::span<const Texture> renderTargets,
+                                                const std::span<const float, 4> color)
+    {
+        for (const uint32_t i : std::views::iota(0u, renderTargets.size()))
+        {
+            const auto rtvDescriptorHandle =
+                graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTargets[i].rtvIndex);
+            m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
+        }
     }
 
     void GraphicsContext::clearDepthStencilView(const Texture& texture)
@@ -132,6 +137,30 @@ namespace helios::gfx
         m_commandList->OMSetRenderTargets(1u, &rtvDescriptorHandle.cpuDescriptorHandle, FALSE,
                                           &dsvDescriptorHandle.cpuDescriptorHandle);
     }
+
+    void GraphicsContext::setRenderTarget(const std::span<const Texture> renderTargets,
+                                          const Texture& depthStencilTexture) const
+    {
+        std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvDescriptorHandles(renderTargets.size());
+        for (const uint32_t i : std::views::iota(0u, renderTargets.size()))
+        {
+            rtvDescriptorHandles[i] = graphicsDevice.getRtvDescriptorHeap()
+                                          ->getDescriptorHandleFromIndex(renderTargets[i].rtvIndex)
+                                          .cpuDescriptorHandle;
+        }
+
+        const auto dsvDescriptorHandle =
+            graphicsDevice.getDsvDescriptorHeap()->getDescriptorHandleFromIndex(depthStencilTexture.dsvIndex);
+
+        m_commandList->OMSetRenderTargets(static_cast<uint32_t>(renderTargets.size()), rtvDescriptorHandles.data(),
+                                          TRUE, &dsvDescriptorHandle.cpuDescriptorHandle);
+    }
+
+    void GraphicsContext::copyResource(ID3D12Resource* const source, ID3D12Resource* const destination) const
+    {
+        m_commandList->CopyResource(destination, source);
+    }
+
     void GraphicsContext::drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
     {
         m_commandList->DrawIndexedInstanced(indicesCount, instanceCount, 0u, 0u, 0u);

@@ -77,6 +77,15 @@ namespace helios::core
         {
             m_keyStates[enumClassValue(Keys::ARight)] = false;
         }
+
+        if (keyboardState[SDL_SCANCODE_SPACE])
+        {
+            m_keyStates[enumClassValue(Keys::Space)] = true;
+        }
+        else
+        {
+            m_keyStates[enumClassValue(Keys::Space)] = false;
+        }
     }
 
 } // namespace helios::core

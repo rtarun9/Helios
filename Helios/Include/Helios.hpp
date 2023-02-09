@@ -16,6 +16,8 @@
 #include "Graphics/ShaderCompiler.hpp"
 #include "Graphics/d3dx12.hpp"
 
+#include "RenderPass/DeferredGeometryPass.hpp"
+
 #include "Scene/Camera.hpp"
 #include "Scene/Materials.hpp"
 #include "Scene/Mesh.hpp"

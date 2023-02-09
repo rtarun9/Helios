@@ -30,10 +30,10 @@ namespace helios::scene
         // Euler angle for y axis.
         float m_yaw{};
 
-        float m_movementSpeed{0.01f};
+        float m_movementSpeed{0.1f};
         float m_rotationSpeed{0.0015f};
 
         // Used to control how fast or slow to lerp to rest position.
-        float m_frictionFactor{0.32f};
+        float m_frictionFactor{0.12f};
     };
 } // namespace helios::scene    

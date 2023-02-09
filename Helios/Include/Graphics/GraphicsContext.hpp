@@ -21,9 +21,10 @@ namespace helios::gfx
 
         void reset() override;
 
-        void clearRenderTargetView(const Texture& backBuffer, const std::span<const float, 4> color);
+        void clearRenderTargetView(const Texture& renderTarget, const std::span<const float, 4> color);
+        void clearRenderTargetView(const std::span<const Texture> renderTargets, const std::span<const float, 4> color);
         void clearDepthStencilView(const Texture& texture);
-        void setDescriptorHeaps(const std::span<const DescriptorHeap* const> shaderVisibleDescriptorHeaps) const;
+        void setDescriptorHeaps() const;
 
         // Configure pipeline / root signature related functions.
         void setGraphicsPipelineState(const PipelineState& pipelineState) const;
@@ -39,6 +40,9 @@ namespace helios::gfx
 
         void setRenderTarget(const Texture& renderTarget) const;
         void setRenderTarget(const Texture& renderTarget, const Texture& depthStencilTexture) const;
+        void setRenderTarget(const std::span<const Texture> renderTargets, const Texture& depthStencilTexture) const;
+
+        void copyResource(ID3D12Resource* const source, ID3D12Resource* const destination) const;
 
         // Draw functions.
         void drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount = 1u) const;
