@@ -11,20 +11,32 @@ class SandBox final : public helios::core::Application
 
     void loadContent() override
     {
-        m_scene->addModel(m_graphicsDevice.get(),
-                          scene::ModelCreationDesc{
-                              .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-                              .modelName = L"Damaged Helmet",
-                          });
+        //  m_scene->addModel(m_graphicsDevice.get(),
+        //                    scene::ModelCreationDesc{
+        //                        .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+        //                        .modelName = L"Damaged Helmet",
+        //                    });
+        //
+        //  m_scene->addModel(m_graphicsDevice.get(),
+        //                    scene::ModelCreationDesc{
+        //                        .modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+        //                        .modelName = L"MetalRough spheres",
+        //                    });
 
-        m_scene->addModel(m_graphicsDevice.get(),
-                          scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-                                                   .modelName = L"Sponza",
-                                                   .scale = {
-                                                       0.1f,
-                                                       0.1f,
-                                                       0.1f,
-                                                   }});
+        //  m_scene->addModel(m_graphicsDevice.get(),
+        //                    scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+        //                                             .modelName = L"Sponza",
+        //                                             .scale = {
+        //                                                 0.1f,
+        //                                                 0.1f,
+        //                                                 0.1f,
+        //                                             }});
+        //
+
+        m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
+                                                      .modelPath = L"Assets/Models/Sphere/scene.gltf",
+                                                      .modelName = L"Sphere",
+                                                  });
 
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
@@ -42,14 +54,19 @@ class SandBox final : public helios::core::Application
             },
             indices);
 
+        m_postProcessingBuffer = m_graphicsDevice->createBuffer<interlop::PostProcessingBuffer>(gfx::BufferCreationDesc{
+            .usage = gfx::BufferUsage::ConstantBuffer,
+            .name = L"Post Processing Buffer",
+        });
+
         m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
                 {
-                    .vertexShaderPath = L"Shaders/Shading/BlinnPhong.hlsl",
-                    .pixelShaderPath = L"Shaders/Shading/BlinnPhong.hlsl",
+                    .vertexShaderPath = L"Shaders/Shading/PBR.hlsl",
+                    .pixelShaderPath = L"Shaders/Shading/PBR.hlsl",
                 },
             .depthFormat = DXGI_FORMAT_UNKNOWN,
-            .pipelineName = L"Blinn Phong Pipeline",
+            .pipelineName = L"PBR Pipeline",
         });
 
         m_depthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
@@ -60,19 +77,19 @@ class SandBox final : public helios::core::Application
             .name = L"Depth Texture",
         });
 
-        m_postProcessingDepthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
+        m_fullScreenPassDepthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::DepthStencil,
             .width = m_windowWidth,
             .height = m_windowHeight,
             .format = DXGI_FORMAT_D32_FLOAT,
-            .name = L"Depth Texture",
+            .name = L"Full Screen Pass Depth Texture",
         });
 
         m_offscreenRenderTarget = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::RenderTarget,
             .width = m_windowWidth,
             .height = m_windowHeight,
-            .format = DXGI_FORMAT_R10G10B10A2_UNORM,
+            .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
             .name = L"OffScreen Render Target",
         });
 
@@ -84,20 +101,14 @@ class SandBox final : public helios::core::Application
             .name = L"Post Processing Render Target",
         });
 
-        m_finalRenderTarget = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
-            .usage = gfx::TextureUsage::RenderTarget,
-            .width = m_windowWidth,
-            .height = m_windowHeight,
-            .format = DXGI_FORMAT_R10G10B10A2_UNORM,
-            .name = L"Final Target",
-        });
-
         m_postProcessingPipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
             .shaderModule =
                 {
                     .vertexShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
                     .pixelShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
                 },
+            .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
+            .rtvCount = 1u,
             .depthFormat = DXGI_FORMAT_D32_FLOAT,
             .pipelineName = L"Post Processing Pipeline",
         });
@@ -109,6 +120,8 @@ class SandBox final : public helios::core::Application
                         .vertexShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
                         .pixelShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
                     },
+                .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
+                .rtvCount = 1u,
                 .depthFormat = DXGI_FORMAT_UNKNOWN,
                 .pipelineName = L"Full Screen Triangle Pass Pipeline",
             });
@@ -131,14 +144,13 @@ class SandBox final : public helios::core::Application
 
         // const std::array<float, 4> clearColor = {std::abs(std::cosf(m_frameCount / 120.0f)), 0.0f,
         //                                          std::abs(std::sinf(m_frameCount / 120.0f)), 1.0f};
-        static std::array<float, 4> clearColor = {0.2f, 0.2f, 0.2f, 1.0f};
+        static std::array<float, 4> clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
         gctx->clearRenderTargetView(m_offscreenRenderTarget, clearColor);
         gctx->clearRenderTargetView(m_postProcessingRenderTarget, clearColor);
-        gctx->clearRenderTargetView(m_finalRenderTarget, clearColor);
 
         gctx->clearDepthStencilView(m_depthTexture);
-        gctx->clearDepthStencilView(m_postProcessingDepthTexture);
+        gctx->clearDepthStencilView(m_fullScreenPassDepthTexture);
 
         // RenderPass 0 : Deferred GPass.
         {
@@ -148,6 +160,7 @@ class SandBox final : public helios::core::Application
         // RenderPass 1 : Lighting Pass
         {
             gctx->setGraphicsRootSignatureAndPipeline(m_pipelineState);
+            gctx->setRenderTarget(m_offscreenRenderTarget, m_fullScreenPassDepthTexture);
             gctx->setViewport(D3D12_VIEWPORT{
                 .TopLeftX = 0.0f,
                 .TopLeftY = 0.0f,
@@ -158,9 +171,8 @@ class SandBox final : public helios::core::Application
             });
 
             gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            gctx->setRenderTarget(m_offscreenRenderTarget);
 
-            interlop::BlinnPhongRenderResources renderResources = {
+            interlop::PBRRenderResources renderResources = {
                 .albedoGBufferIndex = m_deferredGPass->m_gBuffer.albedoRT.srvIndex,
                 .positionEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.positionEmissiveRT.srvIndex,
                 .normalEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
@@ -204,7 +216,7 @@ class SandBox final : public helios::core::Application
             });
 
             gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            gctx->setRenderTarget(m_postProcessingRenderTarget, m_postProcessingDepthTexture);
+            gctx->setRenderTarget(m_postProcessingRenderTarget, m_fullScreenPassDepthTexture);
 
             interlop::PostProcessingRenderResources renderResources = {
                 .renderTextureIndex = m_offscreenRenderTarget.srvIndex,
@@ -215,7 +227,7 @@ class SandBox final : public helios::core::Application
             gctx->drawInstanceIndexed(3u);
         }
 
-        // Render pass 2 : Prepare the final render target. The contents of this RT is copied into the back buffer.
+        // Render pass 2 : Render post processing render target to swapchain backbuffer via a full screen triangle pass.
         {
             gctx->addResourceBarrier(m_offscreenRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -223,7 +235,12 @@ class SandBox final : public helios::core::Application
             gctx->addResourceBarrier(m_postProcessingRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
+            gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_PRESENT,
+                                     D3D12_RESOURCE_STATE_RENDER_TARGET);
+
             gctx->executeResourceBarriers();
+
+            gctx->clearRenderTargetView(currentBackBuffer, clearColor);
 
             gctx->setGraphicsRootSignatureAndPipeline(m_fullScreenTrianglePassPipelineState);
             gctx->setViewport(D3D12_VIEWPORT{
@@ -236,7 +253,7 @@ class SandBox final : public helios::core::Application
             });
 
             gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            gctx->setRenderTarget(m_finalRenderTarget);
+            gctx->setRenderTarget(currentBackBuffer);
 
             interlop::FullScreenTrianglePassRenderResources renderResources = {
                 .renderTextureIndex = m_postProcessingRenderTarget.srvIndex,
@@ -246,31 +263,14 @@ class SandBox final : public helios::core::Application
             gctx->setIndexBuffer(m_renderTargetIndexBuffer);
             gctx->drawInstanceIndexed(3u);
 
-            m_editor->render(m_graphicsDevice.get(), m_scene.get(), clearColor, &m_postProcessingRenderTarget,
-                             gctx.get());
-        }
+            m_editor->render(m_graphicsDevice.get(), m_scene.get(), m_deferredGPass->m_gBuffer,
+                             m_postProcessingBufferData, m_postProcessingRenderTarget, gctx.get());
 
-        // RenderPass 4 : Copy the final render target into the back buffer and present.
-        {
             gctx->addResourceBarrier(m_postProcessingRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-            gctx->addResourceBarrier(m_finalRenderTarget.allocation.resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                     D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-            gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_PRESENT,
-                                     D3D12_RESOURCE_STATE_COPY_DEST);
-            gctx->executeResourceBarriers();
-
-            gctx->copyResource(m_finalRenderTarget.allocation.resource.Get(),
-                               currentBackBuffer.allocation.resource.Get());
-
-            // Prepare back buffer for presentation.
-            gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+            gctx->addResourceBarrier(currentBackBuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
                                      D3D12_RESOURCE_STATE_PRESENT);
-
-            gctx->addResourceBarrier(m_finalRenderTarget.allocation.resource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                     D3D12_RESOURCE_STATE_RENDER_TARGET);
 
             gctx->executeResourceBarriers();
         }
@@ -291,17 +291,17 @@ class SandBox final : public helios::core::Application
     gfx::Texture m_offscreenRenderTarget{};
     gfx::Texture m_postProcessingRenderTarget{};
 
-    // The contents of the final render pass is copied into the swapchain back buffer.
-    gfx::Texture m_finalRenderTarget{};
-
     gfx::PipelineState m_pipelineState{};
     gfx::PipelineState m_postProcessingPipelineState{};
     gfx::PipelineState m_fullScreenTrianglePassPipelineState{};
 
     gfx::Texture m_depthTexture{};
-    gfx::Texture m_postProcessingDepthTexture{};
+    gfx::Texture m_fullScreenPassDepthTexture{};
 
     gfx::Buffer m_renderTargetIndexBuffer{};
+
+    gfx::Buffer m_postProcessingBuffer{};
+    interlop::PostProcessingBuffer m_postProcessingBufferData{};
 
     std::unique_ptr<renderpass::DeferredGeometryPass> m_deferredGPass{};
 

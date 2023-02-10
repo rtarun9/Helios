@@ -117,6 +117,14 @@ namespace helios::scene
         });
     }
 
+    void Model::updateMaterialBuffer()
+    {
+        for (auto& material : m_materials)
+        {
+            material.materialBuffer.update(&material.materialBufferData);
+        }
+    }
+
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
                        interlop::ModelViewerRenderResources& renderResources) const
     {
@@ -151,7 +159,7 @@ namespace helios::scene
     }
 
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
-                interlop::DeferredGPassRenderResources& renderResources) const
+                       interlop::DeferredGPassRenderResources& renderResources) const
     {
         for (const Mesh& mesh : m_meshes)
         {
@@ -161,12 +169,28 @@ namespace helios::scene
             renderResources.albedoTextureSamplerIndex =
                 m_materials[mesh.materialIndex].albedoTextureSampler.samplerIndex;
 
+            renderResources.aoTextureIndex = m_materials[mesh.materialIndex].aoTexture.srvIndex;
+            renderResources.aoTextureSamplerIndex = m_materials[mesh.materialIndex].aoTextureSampler.samplerIndex;
+
+            renderResources.emissiveTextureIndex = m_materials[mesh.materialIndex].emissiveTexture.srvIndex;
+            renderResources.emissiveTextureSamplerIndex =
+                m_materials[mesh.materialIndex].emissiveTextureSampler.samplerIndex;
+
+            renderResources.metalRoughnessTextureIndex = m_materials[mesh.materialIndex].metalRoughnessTexture.srvIndex;
+            renderResources.metalRoughnessTextureSamplerIndex =
+                m_materials[mesh.materialIndex].metalRoughnessTextureSampler.samplerIndex;
+
+            renderResources.normalTextureIndex = m_materials[mesh.materialIndex].normalTexture.srvIndex;
+            renderResources.normalTextureSamplerIndex =
+                m_materials[mesh.materialIndex].normalTextureSampler.samplerIndex;
+
+            renderResources.materialBufferIndex = m_materials[mesh.materialIndex].materialBuffer.cbvIndex;
+
             renderResources.normalBufferIndex = mesh.normalBuffer.srvIndex;
             renderResources.positionBufferIndex = mesh.positionBuffer.srvIndex;
             renderResources.textureCoordBufferIndex = mesh.textureCoordsBuffer.srvIndex;
             renderResources.transformBufferIndex = m_transformComponent.transformBuffer.cbvIndex;
-            renderResources.normalTextureIndex = m_materials[mesh.materialIndex].normalTexture.srvIndex;
-            renderResources.normalTextureSamplerIndex = m_materials[mesh.materialIndex].normalTextureSampler.samplerIndex;
+
             graphicsContext->set32BitGraphicsConstants(&renderResources);
             graphicsContext->drawInstanceIndexed(mesh.indicesCount);
         }
@@ -598,6 +622,18 @@ namespace helios::scene
                 });
             }
 
+            pbrMaterial.materialBuffer = graphicsDevice->createBuffer<interlop::MaterialBuffer>(gfx::BufferCreationDesc{
+                .usage = gfx::BufferUsage::ConstantBuffer,
+                .name = m_modelName + L"_MaterialBuffer" + std::to_wstring(index),
+            });
+
+            pbrMaterial.materialBufferData = {
+                .roughnessFactor = 1.0f,
+                .metallicFactor = 1.0f,
+                .emissiveFactor = 0.0f,
+            };
+
+            pbrMaterial.materialIndex = index;
             m_materials[index++] = std::move(pbrMaterial);
         }
     }

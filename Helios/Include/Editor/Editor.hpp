@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Graphics/Resources.hpp"
+#include "../RenderPass/DeferredGeometryPass.hpp"
 
 namespace helios::gfx
 {
@@ -23,13 +24,15 @@ namespace helios::editor
     class Editor
     {
       public:
-        explicit Editor(const gfx::GraphicsDevice* const graphicsDevice, SDL_Window* const window, const uint32_t width, const uint32_t height);
+        explicit Editor(const gfx::GraphicsDevice* const graphicsDevice, SDL_Window* const window, const uint32_t width,
+                        const uint32_t height);
         ~Editor();
 
         // Goal is to call this single function from the engine which does all the UI internally, helps make the engine
         // clean as well. This function is heavy WIP and not given as much importance as other abstractions.
         void render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
-                    const std::span<float, 4> clearColor, gfx::Texture* const renderTarget,
+                    renderpass::DeferredGeometryBuffer& deferredGBuffer,
+                    interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                     gfx::GraphicsContext* const graphicsContext);
 
         void showUI(const bool value);
@@ -38,15 +41,23 @@ namespace helios::editor
 
       private:
         void renderSceneHierarchy(scene::Scene* const scene) const;
+
+        void renderMaterialProperties(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene) const;
+
         void renderLightProperties(scene::Scene* const scene) const;
 
         // Handles camera and other scene related properties.
         void renderSceneProperties(scene::Scene* const scene) const;
-        void rendererProperties(const std::span<float, 4> clearColor) const;
+        
+
+        void renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
+                                   const renderpass::DeferredGeometryBuffer& deferredGBuffer) const;
+
+        void renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const;
 
         // Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads
         // the model (if path belongs to a .gltf file).
-        void renderSceneViewport(const gfx::GraphicsDevice* device, gfx::Texture* const renderTarget,
+        void renderSceneViewport(const gfx::GraphicsDevice* device, gfx::Texture& renderTarget,
                                  scene::Scene* const scene) const;
 
         // Handle drag and drop of models into view port at run time.

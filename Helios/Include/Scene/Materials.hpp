@@ -2,6 +2,8 @@
 
 #include "../Graphics/Resources.hpp"
 
+#include "ShaderInterlop/ConstantBuffers.hlsli"
+
 namespace helios::scene
 {
     // This struct stores the texture's required for a PBR material. If a texture does not exist, the shader resource
@@ -25,5 +27,13 @@ namespace helios::scene
 
         gfx::Texture emissiveTexture{};
         gfx::Sampler emissiveTextureSampler{};
+
+        // Note : By using the values in this buffer, the PBR renderer will most likely 'break' and become physically
+        // inaccurate.
+        // These are used for debugging and testing purposes only.
+        gfx::Buffer materialBuffer{};
+        interlop::MaterialBuffer materialBufferData{};
+        
+        uint32_t materialIndex{};
     };
 } // namespace helios::scene

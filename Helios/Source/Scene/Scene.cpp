@@ -81,6 +81,7 @@ namespace helios::scene
         for (auto& [name, model] : m_models)
         {
             model->getTransformComponent().update(sceneBufferData.viewMatrix);
+            model->updateMaterialBuffer();
         }
 
         m_lights->update(sceneBufferData.viewMatrix);
@@ -106,6 +107,17 @@ namespace helios::scene
         blinnPhongRenderResources.lightBufferIndex = m_lights->m_lightsBuffer.cbvIndex;
 
         graphicsContext->set32BitGraphicsConstants(&blinnPhongRenderResources);
+        graphicsContext->drawInstanceIndexed(3u);
+    }
+
+    void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext,
+                             const interlop::PBRRenderResources& renderResources)
+    {
+        interlop::PBRRenderResources pbrRenderResources = renderResources;
+        pbrRenderResources.sceneBufferIndex = m_sceneBuffer.cbvIndex;
+        pbrRenderResources.lightBufferIndex = m_lights->m_lightsBuffer.cbvIndex;
+
+        graphicsContext->set32BitGraphicsConstants(&pbrRenderResources);
         graphicsContext->drawInstanceIndexed(3u);
     }
 

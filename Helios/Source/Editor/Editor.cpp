@@ -35,9 +35,6 @@ namespace helios::editor
 
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-
-        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular
-        // ones.
         ImGuiStyle& style = ImGui::GetStyle();
 
         // Setup platform / renderer backends.
@@ -66,7 +63,8 @@ namespace helios::editor
     // This massive class will do all rendering of UI and its settings / configs within in.
     // May seem like lot of code squashed into a single function, but this makes the engine code clean
     void Editor::render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
-                        const std::span<float, 4> clearColor, gfx::Texture* const renderTarget,
+                        renderpass::DeferredGeometryBuffer& deferredGBuffer,
+                        interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                         gfx::GraphicsContext* const graphicsContext)
     {
         if (m_showUI)
@@ -90,21 +88,26 @@ namespace helios::editor
 
             ImGui::ShowMetricsWindow();
 
-            // Set clear color & other scene properties.
-            rendererProperties(clearColor);
-
             // Render scene properties.
             renderSceneProperties(scene);
 
             // Render scene hierarchy UI.
             renderSceneHierarchy(scene);
 
+            // Render material buffer properties.
+            renderMaterialProperties(graphicsDevice, scene);
+
             // Render light properties.
             renderLightProperties(scene);
 
+            // Render Deferred GBuffer data.
+            renderDeferredGBuffer(graphicsDevice, deferredGBuffer);
+
+            // Render post processing data.
+            renderPostProcessingProperties(postProcessBuffer);
+
             // Render scene viewport (After all post processing).
             // All add model to model list if a path is dragged into scene viewport.
-            // note(rtarun9) : renderSceneViewport is yet to be completed with implementation.
             renderSceneViewport(graphicsDevice, renderTarget, scene);
 
             // Render content browser panel.
@@ -143,6 +146,49 @@ namespace helios::editor
                 ImGui::SliderFloat3("Rotate", &model->getTransformComponent().rotation.x,
                                     DirectX::XMConvertToRadians(-180.0f), DirectX::XMConvertToRadians(180.0f));
 
+                ImGui::TreePop();
+            }
+        }
+
+        ImGui::End();
+    }
+
+    void Editor::renderMaterialProperties(const gfx::GraphicsDevice* const graphicsDevice,
+                                          scene::Scene* const scene) const
+    {
+        ImGui::Begin("Material Properties");
+
+        for (auto& [name, model] : scene->m_models)
+        {
+            std::vector<scene::PBRMaterial>& material = model->getPBRMaterials();
+
+            if (ImGui::TreeNode(wStringToString(model->getName()).c_str()))
+            {
+                for (const uint32_t i : std::views::iota(0u, material.size()))
+                {
+                    const std::string materialName = std::string("Material") + std::to_string(i);
+                    if (ImGui::TreeNode(materialName.c_str()))
+                    {
+                        // note(rtarun9) : Display albedo texture, maybe this can be used to find which material we are
+                        // referring to?
+                        if (material[i].albedoTexture.srvIndex != INVALID_INDEX_U32)
+                        {
+                            const gfx::DescriptorHandle& albedoSrvHandle =
+                                graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                                    material[i].albedoTexture.srvIndex);
+
+                            ImGui::Image((ImTextureID)(albedoSrvHandle.cpuDescriptorHandle.ptr), ImVec2(60, 60));
+                        }
+
+                        ImGui::SliderFloat("Roughness Factor", &material[i].materialBufferData.roughnessFactor, 0.0f,
+                                           1.0f);
+                        ImGui::SliderFloat("Metallic Factor", &material[i].materialBufferData.metallicFactor, 0.0f,
+                                           1.0f);
+                        ImGui::SliderFloat("Emissive Factor", &material[i].materialBufferData.emissiveFactor, 0.0f,
+                                           2.0f);
+                        ImGui::TreePop();
+                    }
+                }
                 ImGui::TreePop();
             }
         }
@@ -230,7 +276,7 @@ namespace helios::editor
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Projection"))
+        if (ImGui::TreeNode("Projection Params"))
         {
             ImGui::SliderFloat("FOV", &scene->m_fov, 0.5f, 90.0f);
             ImGui::SliderFloat("Near Plane", &scene->m_nearPlane, 0.1f, 100.0f);
@@ -242,19 +288,58 @@ namespace helios::editor
         ImGui::End();
     }
 
-    void Editor::rendererProperties(const std::span<float, 4> clearColor) const
+    void Editor::renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
+                                       const renderpass::DeferredGeometryBuffer& deferredGBuffer) const
     {
-        ImGui::Begin("Scene Properties");
-        ImGui::ColorPicker3("Clear Color", clearColor.data(),
-                            ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+        // Only the albedo portion of the gbuffer is being rendered.
+        // This is because the other render targets have either negative values, or the last component is rarely 1,
+        // leading to the ImGui::Image to simply be transparent. Uncommenting these lines will make the entire GBuffer
+        // viewable from the editor.
+        const gfx::DescriptorHandle& albedoEmissiveDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                deferredGBuffer.albedoRT.srvIndex);
+        // const gfx::DescriptorHandle& positionEmissiveDescriptorHandle =
+        //     graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+        //         deferredGBuffer.positionEmissiveRT.srvIndex);
+        // const gfx::DescriptorHandle& normalEmissiveDescriptorHandle =
+        //     graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+        //         deferredGBuffer.normalEmissiveRT.srvIndex);
+        // const gfx::DescriptorHandle& aoMetalRoughnessDescriptorHandle =
+        //     graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+        //         deferredGBuffer.aoMetalRoughnessEmissiveRT.srvIndex);
+
+        ImGui::Begin("Albedo RT");
+        ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+                     ImGui::GetWindowViewport()->WorkSize);
+        ImGui::End();
+
+        // ImGui::Begin("Normal RT");
+        // ImGui::Image((ImTextureID)(normalEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+        //              ImGui::GetWindowViewport()->WorkSize);
+        // ImGui::End();
+        //
+        // ImGui::Begin("AO Metal Roughness RT");
+        // ImGui::Image((ImTextureID)(aoMetalRoughnessDescriptorHandle.cpuDescriptorHandle.ptr),
+        //              ImGui::GetWindowViewport()->WorkSize);
+        // ImGui::End();
+        //
+        // ImGui::Begin("Position RT");
+        // ImGui::Image((ImTextureID)(positionEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+        //              ImGui::GetWindowViewport()->WorkSize);
+        // ImGui::End();
+    }
+
+    void Editor::renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const
+    {
+        ImGui::Begin("Post Processing Properties");
         ImGui::End();
     }
 
-    void Editor::renderSceneViewport(const gfx::GraphicsDevice* const graphicsDevice, gfx::Texture* const renderTarget,
+    void Editor::renderSceneViewport(const gfx::GraphicsDevice* const graphicsDevice, gfx::Texture& renderTarget,
                                      scene::Scene* const scene) const
     {
         const gfx::DescriptorHandle& rtvSrvHandle =
-            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget->srvIndex);
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.srvIndex);
 
         ImGui::Begin("View Port");
         ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
@@ -275,15 +360,16 @@ namespace helios::editor
                     // Needed if two models have same name they end up having same transform.
                     static int modelNumber{};
 
-                    size_t lastSlash = modelPathWStr.find_last_of(L"\\");
-                    size_t lastDot = modelPathWStr.find_last_of(L".");
+                    const size_t lastSlash = modelPathWStr.find_last_of(L"\\");
+                    const size_t lastDot = modelPathWStr.find_last_of(L".");
+                    const std::wstring modelName =
+                        modelPathWStr.substr(lastSlash + 1, lastDot - lastSlash) + std::to_wstring(modelNumber++);
 
                     // note(rtarun9) : the +1 and -1 are present to get the exact name (example : \\test.gltf should
                     // return test.
                     const scene::ModelCreationDesc modelCreationDesc = {
                         .modelPath = modelPathWStr,
-                        .modelName = modelPathWStr +
-                                     std::to_wstring(modelNumber++),
+                        .modelName = modelName,
                     };
 
                     scene->addModel(graphicsDevice, modelCreationDesc);

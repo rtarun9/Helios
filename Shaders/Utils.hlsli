@@ -14,7 +14,7 @@ float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, cons
 {
     if (albedoTextureIndex == INVALID_INDEX)
     {
-        return float4(1.0f, 1.0f, 1.0f, 1.0f);
+        return float4(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
@@ -24,7 +24,7 @@ float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, cons
 }
 
 
-float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal,
+float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3 viewSpaceNormal,
                  float3x3 tbnMatrix)
 {
     float3 inputNormal = normal;
@@ -41,10 +41,10 @@ float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextur
         return normal;
     }
 
-    return normalize(mul(inputNormal, tbnMatrix));
+    return normalize(viewSpaceNormal);
 }
 
-float3 getEmissive(float2 textureCoord, uint emissiveTextureIndex, uint emissiveTextureSamplerIndex)
+float3 getEmissive(float2 textureCoord, float3 albedoColor, float emissiveFactor, uint emissiveTextureIndex, uint emissiveTextureSamplerIndex)
 {
     if (emissiveTextureIndex != INVALID_INDEX)
     {
@@ -52,10 +52,10 @@ float3 getEmissive(float2 textureCoord, uint emissiveTextureIndex, uint emissive
 
         SamplerState samplerState = SamplerDescriptorHeap[NonUniformResourceIndex(emissiveTextureSamplerIndex)];
 
-        return emissiveTexture.Sample(samplerState, textureCoord).xyz;
+        return emissiveTexture.Sample(samplerState, textureCoord).xyz * emissiveFactor;
     }
 
-    return float3(0.0f, 0.0f, 0.0f);
+    return albedoColor * emissiveFactor;
 }
 
 float getAO(float2 textureCoord, uint aoTextureIndex, uint aoTextureSamplerIndex)
@@ -84,7 +84,7 @@ float2 getMetalRoughness(float2 textureCoord, uint metalRoughnessTextureIndex, u
         return metalRoughnessTexture.Sample(samplerState, textureCoord).bg;
     }
 
-    return float2(0.5f, 0.1f);
+    return float2(1.0f, 1.0f);
 }
 
 float3 getSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)

@@ -94,4 +94,24 @@ namespace interlop
         // radiusIntensity[0] stores the radius, while index 1 stores the intensity.
         float4 radiusIntensity[TOTAL_LIGHTS];
     };
+
+    enum class ToneMappers
+    {
+        AcesNarkowicz,
+    };
+
+    ConstantBufferStruct PostProcessingBuffer
+    {
+        ToneMappers toneMappers;
+    };
+
+    // Note : By using the values in this buffer, the PBR renderer will most likely 'break' and become physically inaccurate.
+    // These are used for debugging and testing purposes only.
+    ConstantBufferStruct MaterialBuffer
+    {
+        float roughnessFactor;
+        float metallicFactor;
+        float emissiveFactor;
+    };
+
 } // namespace interlop

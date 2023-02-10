@@ -18,7 +18,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
                                                float3(-1.0f, -3.0f, 0.0f)};
 
     VSOutput output;
-    output.position = float4(VERTEX_POSITIONS[clamp(0, 3, vertexID)], 1.0f);
+    output.position = float4(VERTEX_POSITIONS[vertexID], 1.0f);
     output.textureCoord = output.position.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
     return output;
 }
@@ -26,7 +26,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 float4 PsMain(VSOutput input) : SV_Target
 {
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[renderResources.renderTextureIndex];
-    float3 color = renderTexture.Sample(linearWrapSampler, input.textureCoord).xyz;
+    float4 color = renderTexture.Sample(linearWrapSampler, input.textureCoord);
 
-    return float4(color, 1.0f);
+    return color;
 }

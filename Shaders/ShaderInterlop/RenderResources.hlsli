@@ -94,5 +94,17 @@ namespace interlop
 
         uint emissiveTextureIndex;
         uint emissiveTextureSamplerIndex;
+
+        uint materialBufferIndex;
+    };
+
+    struct PBRRenderResources
+    {
+        uint sceneBufferIndex;
+        uint lightBufferIndex;
+        uint albedoGBufferIndex;
+        uint positionEmissiveGBufferIndex;
+        uint normalEmissiveGBufferIndex;
+        uint aoMetalRoughnessEmissiveGBufferIndex;
     };
 }

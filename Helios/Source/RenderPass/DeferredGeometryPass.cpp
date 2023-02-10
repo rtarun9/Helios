@@ -104,7 +104,7 @@ namespace helios::renderpass
 
         graphicsContext->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        graphicsContext->clearRenderTargetView(renderTargets, std::array<float, 4u>{0.0f, 0.0f, 0.0f, 1.0f});
+        graphicsContext->clearRenderTargetView(renderTargets, std::array<float, 4u>{0.0f, 0.0f, 0.0f, 0.0f});
         graphicsContext->clearDepthStencilView(depthBuffer);
 
         interlop::DeferredGPassRenderResources deferredGPassRenderResources{};

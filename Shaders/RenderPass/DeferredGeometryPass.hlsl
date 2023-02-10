@@ -10,6 +10,7 @@ struct VSOutput
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
     float3 normal : NORMAL;
+    float3 viewSpaceNormal : VIEW_SPACE_NORMAL;
     float3 viewSpacePosition : WORLD_SPACE_POSITION;
     float3x3 tbnMatrix : TBN_MATRIX;
 };
@@ -35,6 +36,7 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     output.textureCoord = textureCoordBuffer[vertexID];
     output.normal = normalBuffer[vertexID];
     output.viewSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), mvMatrix).xyz;
+    output.viewSpaceNormal = normalize(mul(output.normal, normalMatrix));
 
     const float3 tangent = generateTangent(output.normal).xyz;
     const float3 biTangent = normalize(cross(output.normal, tangent));
@@ -63,6 +65,8 @@ struct PsOutput
 [RootSignature(BindlessRootSignature)] 
 PsOutput PsMain(VSOutput psInput) 
 {
+    ConstantBuffer<interlop::MaterialBuffer> materialBuffer = ResourceDescriptorHeap[renderResources.materialBufferIndex];
+
     PsOutput output;
 
     output.albedo = getAlbedo(psInput.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex);
@@ -72,14 +76,14 @@ PsOutput PsMain(VSOutput psInput)
         discard;
     }
 
-    float3 emissive = getEmissive(psInput.textureCoord, renderResources.emissiveTextureIndex, renderResources.emissiveTextureSamplerIndex);
+    float3 emissive = getEmissive(psInput.textureCoord, output.albedo.xyz, materialBuffer.emissiveFactor, renderResources.emissiveTextureIndex, renderResources.emissiveTextureSamplerIndex);
 
     output.positionEmissive = float4(psInput.viewSpacePosition, emissive.r);
 
-    output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.tbnMatrix), emissive.g);
+    output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.viewSpaceNormal, psInput.tbnMatrix), emissive.g);
 
     float ao = getAO(psInput.textureCoord, renderResources.aoTextureIndex, renderResources.aoTextureSamplerIndex);
-    float2 metalRoughness = getMetalRoughness(psInput.textureCoord, renderResources.metalRoughnessTextureIndex, renderResources.metalRoughnessTextureSamplerIndex);
+    float2 metalRoughness = getMetalRoughness(psInput.textureCoord, renderResources.metalRoughnessTextureIndex, renderResources.metalRoughnessTextureSamplerIndex) * float2(materialBuffer.metallicFactor, materialBuffer.roughnessFactor);
 
     output.aoMetalRoughnessEmissive = float4(ao, metalRoughness, emissive.b);
 

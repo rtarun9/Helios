@@ -38,6 +38,7 @@ namespace helios::scene
         void renderModels(const gfx::GraphicsContext* const graphicsContext);
         void renderLights(const gfx::GraphicsContext* const graphicsContext);
         void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::BlinnPhongRenderResources& renderResources);
+        void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::PBRRenderResources& renderResources);
         void renderModels(const gfx::GraphicsContext* const graphicsContext, const interlop::DeferredGPassRenderResources& renderResources);
 
       public:

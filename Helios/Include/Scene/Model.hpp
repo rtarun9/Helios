@@ -57,10 +57,17 @@ namespace helios::scene
             return m_transformComponent;
         };
 
+        std::vector<PBRMaterial>& getPBRMaterials()
+        {
+            return m_materials;
+        }
+
         const std::wstring_view getName() const
         {
             return m_modelName;
         }
+
+        void updateMaterialBuffer();
 
         void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::ModelViewerRenderResources& renderResources) const;

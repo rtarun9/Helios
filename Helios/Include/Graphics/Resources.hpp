@@ -34,7 +34,7 @@ namespace helios::gfx
     struct GraphicsPipelineStateCreationDesc
     {
         ShaderModule shaderModule{};
-        std::vector<DXGI_FORMAT> rtvFormats{DXGI_FORMAT_R10G10B10A2_UNORM};
+        std::vector<DXGI_FORMAT> rtvFormats{DXGI_FORMAT_R16G16B16A16_FLOAT};
         uint32_t rtvCount{1u};
         DXGI_FORMAT depthFormat{DXGI_FORMAT_D32_FLOAT};
         D3D12_COMPARISON_FUNC depthComparisonFunc{D3D12_COMPARISON_FUNC_LESS};
