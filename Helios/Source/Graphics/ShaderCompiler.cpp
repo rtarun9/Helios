@@ -54,6 +54,8 @@ namespace helios::gfx::ShaderCompiler
         }();
 
         std::vector<LPCWSTR> compilationArguments = {
+            L"-HV",
+            L"2021",
             L"-E",
             entryPoint.data(),
             L"-T",

@@ -320,6 +320,20 @@ namespace helios::gfx
             textureCreationDesc.width = width;
             textureCreationDesc.height = height;
         }
+        else if (textureCreationDesc.usage == TextureUsage::HDRTextureFromPath)
+        {
+            hdrTextureData =
+                stbi_loadf(wStringToString(textureCreationDesc.path).c_str(), &width, &height, nullptr, componentCount);
+
+            if (!hdrTextureData)
+            {
+                fatalError(
+                    std::format("Failed to load texture from path : {}.", wStringToString(textureCreationDesc.path)));
+            }
+
+            textureCreationDesc.width = width;
+            textureCreationDesc.height = height;
+        }
 
         // Create a Allocation for the texture (GPU only memory).
         texture.allocation = m_memoryAllocator->createTextureResourceAllocation(textureCreationDesc);
@@ -481,6 +495,53 @@ namespace helios::gfx
             texture.rtvIndex = createRtv(rtvCreationDesc, texture.allocation.resource.Get());
         }
 
+        // Create UAV's is applicable.
+        if (textureCreationDesc.usage == TextureUsage::CubeMap)
+        {
+            // Since cube map requires 6 Uav's, create them.
+            // The Texture will hold the index to only the first uav, but they will be contiguous in nature since only
+            // single large descriptor heap is used for each descriptor type.
+
+            // Create the first UAV index.
+            texture.uavIndex = createUav(
+                UavCreationDesc{
+                    .uavDesc =
+                        {
+                            .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
+                            .Texture2DArray =
+                                {
+                                    .MipSlice = 0u,
+                                    .FirstArraySlice = 0u,
+                                    .ArraySize = 6u,
+                                },
+                        },
+                },
+                texture.allocation.resource.Get());
+
+            if (textureCreationDesc.mipLevels == 6u)
+            {
+                // Create the remaining 5 uav's.
+                for (const uint32_t i : std::views::iota(1u, 6u))
+                {
+                    // uavIndex will not be directly accesible to user, user must add the index to texture.uav index to
+                    // retrive it.
+                    const uint32_t uavIndex = createUav(
+                        UavCreationDesc{
+                            .uavDesc =
+                                {
+                                    .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
+                                    .Texture2DArray =
+                                        {
+                                            .MipSlice = i,
+                                            .FirstArraySlice = 0u,
+                                            .ArraySize = 6u,
+                                        },
+                                },
+                        },
+                        texture.allocation.resource.Get());
+                }
+            }
+        }
         // Now that data is copied / set into GPU memory, freeing it.
         if (textureData)
         {

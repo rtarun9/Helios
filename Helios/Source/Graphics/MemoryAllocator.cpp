@@ -149,9 +149,12 @@ namespace helios::gfx
         }
         break;
 
-        // Note : All textures that are not DS or RTV will have unordered access. Primarily because of mip map
-        // generation, and creation of equirectangular textures etc in the compute shader.
-        default: {
+        // Note : All resource loaded from path must be able to be used by UAVs.
+        case TextureUsage::TextureFromPath:
+        case TextureUsage::TextureFromData:
+        case TextureUsage::HDRTextureFromPath:
+        case TextureUsage::CubeMap:
+        case TextureUsage::UAVTexture: {
             resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
         break;

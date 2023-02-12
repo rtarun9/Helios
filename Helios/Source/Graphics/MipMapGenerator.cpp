@@ -24,6 +24,8 @@ namespace helios::gfx
 
     void MipMapGenerator::generateMips(gfx::Texture& texture)
     {
+        std::scoped_lock<std::mutex> lock(m_generatorMutex);
+
         D3D12_RESOURCE_DESC sourceResourceDesc = texture.allocation.resource->GetDesc();
         if (sourceResourceDesc.MipLevels <= 1)
         {

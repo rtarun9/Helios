@@ -106,5 +106,26 @@ namespace interlop
         uint positionEmissiveGBufferIndex;
         uint normalEmissiveGBufferIndex;
         uint aoMetalRoughnessEmissiveGBufferIndex;
+
+        uint irradianceTextureIndex;
+    };
+
+    struct CubeFromEquirectRenderResources
+    {
+        uint textureIndex;
+        uint outputTextureIndex;
+    };
+
+    struct CubeMapRenderResources
+    {
+        uint positionBufferIndex;
+        uint sceneBufferIndex;
+        uint textureIndex;
+    };
+
+    struct IrradianceRenderResources
+    {
+        uint skyBoxTextureIndex;
+        uint ouputIrradianceMapIndex;
     };
 }

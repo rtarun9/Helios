@@ -1,4 +1,4 @@
-#include "RenderPass/DeferredGeometryPass.hpp"
+#include "Rendering/DeferredGeometryPass.hpp"
 
 #include "Graphics/GraphicsDevice.hpp"
 
@@ -8,7 +8,7 @@
 // float4 normalEmissive : SV_Target2;
 // float4 aoMetalRoughnessEmissive : SV_Target3;
 
-namespace helios::renderpass
+namespace helios::rendering
 {
     DeferredGeometryPass::DeferredGeometryPass(const gfx::GraphicsDevice* const graphicsDevice, const uint32_t width,
                                                const uint32_t height)

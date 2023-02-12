@@ -20,6 +20,8 @@ namespace helios::gfx
         Buffer m_mipMapBuffer{};
 
         GraphicsDevice& graphicsDevice;
+
+        std::mutex m_generatorMutex{};
     };
 
 } // namespace helios::gfx

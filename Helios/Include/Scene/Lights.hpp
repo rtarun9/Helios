@@ -29,7 +29,8 @@ namespace helios::scene
     // Lights is the Light Manager abstraction for all lights in the engine.
     // This common light abstraction is used for all types of Light (Point, directional, area, punctual etc in the Engine.
     // This is also why there is a common buffer for all light types. Instanced rendering is used to visualize the lights.
-    // The number of lights is currently fixed, and set in ShaderInterlop/ConstantBuffers.hlsli.
+    // The max number of lights is currently fixed, and set in ShaderInterlop/ConstantBuffers.hlsli.
+    // The engine will always have a directional light, but whose intensity is set to 0 at start of engine.
     class Lights
     {
       public:
@@ -42,7 +43,7 @@ namespace helios::scene
         void render(const gfx::GraphicsContext* graphicsContext, interlop::LightRenderResources& lightRenderResources);
 
       public:
-        static constexpr float DIRECTIONAL_LIGHT_ANGLE{-99.0f};
+        static constexpr float DIRECTIONAL_LIGHT_ANGLE{123.0f};
 
       public:
         // Store light positions, color, intensities, etc.
@@ -58,7 +59,8 @@ namespace helios::scene
         // visualization.
         std::unique_ptr<Model> m_lightModel;
 
-        uint32_t m_currentLightCount{};
+        // Directional light always exist, so current light count starts from 1.
+        uint32_t m_currentLightCount{1u};
 
         // Pipeline state to be used for rendering lights.
         gfx::PipelineState m_lightPipelineState{};

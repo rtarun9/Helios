@@ -25,7 +25,9 @@ ConstantBuffer<interlop::LightRenderResources> renderResource : register(b0);
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
-    output.color = lightBuffer.lightColor[instanceID] * lightBuffer.radiusIntensity[instanceID][1];
+
+    // Adding one since the directional light (which does not run this shader) is at index 0, and instancenID starts from 0.
+    output.color = lightBuffer.lightColor[instanceID + 1u] * lightBuffer.radiusIntensity[instanceID + 1u][1];
     return output;
 }
 

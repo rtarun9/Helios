@@ -62,21 +62,16 @@ namespace interlop
     };
 
     
-    // Number of lights is currently fixed in the engine.
-    // NOTE : Directional lights are placed after point lights
-    static const uint POINT_LIGHT_OFFSET = 0; 
-    static const uint TOTAL_POINT_LIGHTS = 1;
-    
-    static const uint DIRECTIONAL_LIGHT_OFFSET = TOTAL_POINT_LIGHTS;
-    static const uint TOTAL_DIRECTIONAL_LIGHTS = 1;
-    
-    // The light data (for all types) will be stored in a single constant buffer for simplicity. Subject to change.
-    static const uint TOTAL_LIGHTS = TOTAL_DIRECTIONAL_LIGHTS + TOTAL_POINT_LIGHTS;
+    // There is a max limit to the number of lights in the engine.
+    // Index 0 of both the light buffer will be
+    // reserved for directional light.
+
+    static const uint MAX_LIGHTS = 10;
 
     // Light resources that are used while instanced rendering.
     ConstantBufferStruct LightInstancedRenderingBuffer
     {
-        float4x4 modelMatrix[TOTAL_POINT_LIGHTS];
+        float4x4 modelMatrix[MAX_LIGHTS];
     };
 
     // Lights resources / properties for all lights in the scene.
@@ -86,23 +81,20 @@ namespace interlop
         // The shader can differentiate between directional and point lights based on the 'w' value. If 1 (i.e it is a position), light is a point light, while
         // if it is zero, then it is a light direction.
         // Light intensity is not automatically multiplied to the light color on the C++ side, shading shader need to manually multiply them.
-        float4 lightPosition[TOTAL_LIGHTS];
-        float4 viewSpaceLightPosition[TOTAL_LIGHTS];
+        float4 lightPosition[MAX_LIGHTS];
+        float4 viewSpaceLightPosition[MAX_LIGHTS];
 
-        float4 lightColor[TOTAL_LIGHTS];
+        float4 lightColor[MAX_LIGHTS];
         // float4 because of struct packing (16byte alignment).
         // radiusIntensity[0] stores the radius, while index 1 stores the intensity.
-        float4 radiusIntensity[TOTAL_LIGHTS];
-    };
+        float4 radiusIntensity[MAX_LIGHTS];
 
-    enum class ToneMappers
-    {
-        AcesNarkowicz,
+        uint numberOfLights;
     };
 
     ConstantBufferStruct PostProcessingBuffer
     {
-        ToneMappers toneMappers;
+        float4 padding;
     };
 
     // Note : By using the values in this buffer, the PBR renderer will most likely 'break' and become physically inaccurate.

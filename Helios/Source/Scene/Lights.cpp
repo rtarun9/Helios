@@ -42,29 +42,47 @@ namespace helios::scene
                 },
             .pipelineName = L"Lights Pipeline",
         });
+
+        // Setup directional light with intensity as 0 initially.
+        m_lightsBufferData.radiusIntensity[0].y = 0.0f;
+        m_lightsBufferData.lightColor[0] = {
+            1.0f,
+            1.0f,
+            1.0f,
+            1.0f,
+        };
+
+        m_lightsBufferData.numberOfLights = 1u;
     }
 
     void Lights::update(const math::XMMATRIX viewMatrix)
     {
-        for (const uint32_t i : std::views::iota(0u, interlop::TOTAL_POINT_LIGHTS))
+        // Loop starts from 1, since the directional light will be at index 0.
+        for (const uint32_t i : std::views::iota(1u, m_currentLightCount))
         {
             // Make the model matrix.
 
             const math::XMVECTOR translationVector = math::XMLoadFloat4(&m_lightsBufferData.lightPosition[i]);
 
-            m_lightsInstancedBufferData.modelMatrix[i] =
+            m_lightsInstancedBufferData.modelMatrix[i - 1] =
                 math::XMMatrixScaling(m_lightsBufferData.radiusIntensity[i].x, m_lightsBufferData.radiusIntensity[i].x,
                                       m_lightsBufferData.radiusIntensity[i].x) *
                 math::XMMatrixTranslationFromVector(translationVector);
         }
 
-        for (const uint32_t i : std::views::iota(0u, interlop::TOTAL_LIGHTS))
+        for (const uint32_t i : std::views::iota(0u, m_currentLightCount))
         {
             const math::XMVECTOR positionVector = math::XMLoadFloat4(&m_lightsBufferData.lightPosition[i]);
-            const math::XMVECTOR viewSpaceLightPosition = math::XMVector3TransformCoord(positionVector, viewMatrix);
+            math::XMVECTOR viewSpaceLightPosition = math::XMVector3TransformCoord(positionVector, viewMatrix);
+            if (i == 0u)
+            {
+                viewSpaceLightPosition = math::XMVector4Transform(positionVector, viewMatrix);
+            }
 
             math::XMStoreFloat4(&m_lightsBufferData.viewSpaceLightPosition[i], viewSpaceLightPosition);
         }
+
+        m_lightsBufferData.numberOfLights = m_currentLightCount;
 
         m_lightsInstanceBuffer.update(&m_lightsInstancedBufferData);
         m_lightsBuffer.update(&m_lightsBufferData);
@@ -78,6 +96,7 @@ namespace helios::scene
         lightRenderResources.lightBufferIndex = m_lightsBuffer.cbvIndex;
         lightRenderResources.transformBufferIndex = m_lightsInstanceBuffer.cbvIndex;
 
-        m_lightModel->render(graphicsContext, lightRenderResources);
+        // Subtracting one since the directional light has no visualizer and is at index 0.
+        m_lightModel->render(graphicsContext, lightRenderResources, m_currentLightCount - 1u);
     }
 } // namespace helios::scene

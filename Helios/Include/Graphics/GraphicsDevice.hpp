@@ -67,6 +67,11 @@ namespace helios::gfx
             return m_rtvDescriptorHeap.get();
         }
 
+        MipMapGenerator* const getMipMapGenerator() const
+        {
+            return m_mipMapGenerator.get();
+        }
+
         DXGI_FORMAT getSwapchainBackBufferFormat() const
         {
             return m_swapchainBackBufferFormat;

@@ -11,36 +11,40 @@ class SandBox final : public helios::core::Application
 
     void loadContent() override
     {
-        //  m_scene->addModel(m_graphicsDevice.get(),
-        //                    scene::ModelCreationDesc{
-        //                        .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-        //                        .modelName = L"Damaged Helmet",
-        //                    });
-        //
-        //  m_scene->addModel(m_graphicsDevice.get(),
-        //                    scene::ModelCreationDesc{
-        //                        .modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-        //                        .modelName = L"MetalRough spheres",
-        //                    });
+        m_scene->addModel(m_graphicsDevice.get(),
+                          scene::ModelCreationDesc{
+                              .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+                              .modelName = L"Damaged Helmet",
+                          });
 
-        //  m_scene->addModel(m_graphicsDevice.get(),
-        //                    scene::ModelCreationDesc{.modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-        //                                             .modelName = L"Sponza",
-        //                                             .scale = {
-        //                                                 0.1f,
-        //                                                 0.1f,
-        //                                                 0.1f,
-        //                                             }});
-        //
+        m_scene->addModel(m_graphicsDevice.get(),
+                          scene::ModelCreationDesc{
+                              .modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+                              .modelName = L"MetalRough spheres",
+                          });
 
-        m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
-                                                      .modelPath = L"Assets/Models/Sphere/scene.gltf",
-                                                      .modelName = L"Sphere",
-                                                  });
+        //      m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
+        //                                                    .modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+        //                                                    .modelName = L"Sponza",
+        //                                                    .scale =
+        //                                                        {
+        //                                                            0.1f,
+        //                                                            0.1f,
+        //                                                            0.1f,
+        //                                                        },
+        //                                                });
+
+        m_scene->addLight(m_graphicsDevice.get(),
+                          scene::LightCreationDesc{.lightType = scene::LightTypes::DirectionalLightData});
 
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
 
+        m_scene->addCubeMap(m_graphicsDevice.get(),
+                            scene::CubeMapCreationDesc{
+                                .equirectangularTexturePath = L"Assets/Textures/Environment.hdr",
+                                .name = L"Environment Cube Map",
+                            });
         static constexpr std::array<uint32_t, 3u> indices = {
             0u,
             1u,
@@ -127,7 +131,12 @@ class SandBox final : public helios::core::Application
             });
 
         m_deferredGPass =
-            std::make_unique<renderpass::DeferredGeometryPass>(m_graphicsDevice.get(), m_windowWidth, m_windowHeight);
+            std::make_unique<rendering::DeferredGeometryPass>(m_graphicsDevice.get(), m_windowWidth, m_windowHeight);
+
+        m_ibl = std::make_unique<rendering::IBL>(m_graphicsDevice.get());
+
+        m_irradianceTexture =
+            m_ibl->generateIrradianceTexture(m_graphicsDevice.get(), m_scene->m_cubeMap->m_cubeMapTexture);
     }
 
     void update(const float deltaTime) override
@@ -177,12 +186,13 @@ class SandBox final : public helios::core::Application
                 .positionEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.positionEmissiveRT.srvIndex,
                 .normalEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
                 .aoMetalRoughnessEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.aoMetalRoughnessEmissiveRT.srvIndex,
+                .irradianceTextureIndex = m_irradianceTexture.srvIndex,
             };
 
             m_scene->renderModels(gctx.get(), renderResources);
         }
 
-        // RenderPass 2 : Render lights using forward rendering.
+        // RenderPass 2 : Render lights and cube map using forward rendering.
         {
             gctx->setViewport(D3D12_VIEWPORT{
                 .TopLeftX = 0.0f,
@@ -197,6 +207,8 @@ class SandBox final : public helios::core::Application
             gctx->setRenderTarget(m_offscreenRenderTarget, m_depthTexture);
 
             m_scene->renderLights(gctx.get());
+
+            m_scene->renderCubeMap(gctx.get(), m_irradianceTexture.srvIndex);
         }
 
         // RenderPass 3 : Post Processing Stage:
@@ -303,7 +315,10 @@ class SandBox final : public helios::core::Application
     gfx::Buffer m_postProcessingBuffer{};
     interlop::PostProcessingBuffer m_postProcessingBufferData{};
 
-    std::unique_ptr<renderpass::DeferredGeometryPass> m_deferredGPass{};
+    std::unique_ptr<rendering::DeferredGeometryPass> m_deferredGPass{};
+    std::unique_ptr<rendering::IBL> m_ibl{};
+
+    gfx::Texture m_irradianceTexture{};
 
     uint64_t m_frameCount{};
 };

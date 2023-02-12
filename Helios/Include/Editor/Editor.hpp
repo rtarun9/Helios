@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Graphics/Resources.hpp"
-#include "../RenderPass/DeferredGeometryPass.hpp"
+#include "../Rendering/DeferredGeometryPass.hpp"
 
 namespace helios::gfx
 {
@@ -31,7 +31,7 @@ namespace helios::editor
         // Goal is to call this single function from the engine which does all the UI internally, helps make the engine
         // clean as well. This function is heavy WIP and not given as much importance as other abstractions.
         void render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
-                    renderpass::DeferredGeometryBuffer& deferredGBuffer,
+                    rendering::DeferredGeometryBuffer& deferredGBuffer,
                     interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                     gfx::GraphicsContext* const graphicsContext);
 
@@ -51,7 +51,7 @@ namespace helios::editor
         
 
         void renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
-                                   const renderpass::DeferredGeometryBuffer& deferredGBuffer) const;
+                                   const rendering::DeferredGeometryBuffer& deferredGBuffer) const;
 
         void renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const;
 

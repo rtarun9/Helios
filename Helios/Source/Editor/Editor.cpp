@@ -63,7 +63,7 @@ namespace helios::editor
     // This massive class will do all rendering of UI and its settings / configs within in.
     // May seem like lot of code squashed into a single function, but this makes the engine code clean
     void Editor::render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
-                        renderpass::DeferredGeometryBuffer& deferredGBuffer,
+                        rendering::DeferredGeometryBuffer& deferredGBuffer,
                         interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                         gfx::GraphicsContext* const graphicsContext)
     {
@@ -204,9 +204,8 @@ namespace helios::editor
 
         if (ImGui::TreeNode("Point Lights"))
         {
-            // Taking advantage of the fact that point lights come before directional lights (see
-            // Common/ConstantBuffers.hlsli for more info).
-            for (uint32_t pointLightIndex : std::views::iota(0u, interlop::TOTAL_POINT_LIGHTS))
+            // Directional lights, if exist, starts from index 0.
+            for (uint32_t pointLightIndex : std::views::iota(1u, lightBuffer.numberOfLights))
             {
                 std::string name = "Point Light " + std::to_string(pointLightIndex);
                 if (ImGui::TreeNode(name.c_str()))
@@ -218,6 +217,8 @@ namespace helios::editor
 
                     ImGui::SliderFloat("Radius", &lightBuffer.radiusIntensity[pointLightIndex].x, 0.01f, 10.0f);
 
+                    ImGui::SliderFloat("Intensity", &lightBuffer.radiusIntensity[pointLightIndex].y, 0.1f, 30.0f);
+
                     ImGui::TreePop();
                 }
             }
@@ -227,32 +228,27 @@ namespace helios::editor
 
         if (ImGui::TreeNode("Directional Lights"))
         {
+            const std::string name = "Directional Light";
+            constexpr uint32_t directionalLightIndex = 0u;
 
-            for (uint32_t directionalLightIndex :
-                 std::views::iota(interlop::DIRECTIONAL_LIGHT_OFFSET,
-                                  interlop::DIRECTIONAL_LIGHT_OFFSET + interlop::TOTAL_DIRECTIONAL_LIGHTS))
+            DirectX::XMFLOAT4& color = lightBuffer.lightColor[0u];
+
+            if (ImGui::TreeNode(name.c_str()))
             {
-                std::string name = "Directional Light " + std::to_string(directionalLightIndex);
+                ImGui::ColorPicker3("Light Color", &color.x,
+                                    ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB |
+                                        ImGuiColorEditFlags_HDR);
+                ImGui::SliderFloat("Intensity", &lightBuffer.radiusIntensity[directionalLightIndex].y, 0.0f, 50.0f);
+                float intensity = lightBuffer.radiusIntensity[directionalLightIndex].y;
 
-                DirectX::XMFLOAT4 color = lightBuffer.lightColor[directionalLightIndex];
+                lightBuffer.lightColor[directionalLightIndex] = {color.x, color.y, color.z, color.w};
 
-                if (ImGui::TreeNode(name.c_str()))
-                {
-                    ImGui::ColorPicker3("Light Color", &color.x,
-                                        ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB |
-                                            ImGuiColorEditFlags_HDR);
-                    ImGui::SliderFloat("Intensity", &lightBuffer.radiusIntensity[directionalLightIndex].y, 0.0f, 50.0f);
-                    float intensity = lightBuffer.radiusIntensity[directionalLightIndex].y;
+                static float sunAngle{scene::Lights::DIRECTIONAL_LIGHT_ANGLE};
+                ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
+                lightBuffer.lightPosition[directionalLightIndex] = math::XMFLOAT4(
+                    0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
 
-                    lightBuffer.lightColor[directionalLightIndex] = {color.x, color.y, color.z, color.w};
-
-                    static float sunAngle{scene::Lights::DIRECTIONAL_LIGHT_ANGLE};
-                    ImGui::SliderFloat("Sun Angle", &sunAngle, -180.0f, 180.0f);
-                    scene->m_lights->m_lightsBufferData.lightPosition[directionalLightIndex] = math::XMFLOAT4(
-                        0.0f, sin(math::XMConvertToRadians(sunAngle)), cos(math::XMConvertToRadians(sunAngle)), 0.0f);
-
-                    ImGui::TreePop();
-                }
+                ImGui::TreePop();
             }
 
             ImGui::TreePop();
@@ -289,7 +285,7 @@ namespace helios::editor
     }
 
     void Editor::renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
-                                       const renderpass::DeferredGeometryBuffer& deferredGBuffer) const
+                                       const rendering::DeferredGeometryBuffer& deferredGBuffer) const
     {
         // Only the albedo portion of the gbuffer is being rendered.
         // This is because the other render targets have either negative values, or the last component is rarely 1,

@@ -11,7 +11,7 @@ namespace helios::gfx
     class GraphicsContext;
 }
 
-namespace helios::renderpass
+namespace helios::rendering
 {
     // Holds the different render targets that constitute the geometry buffer (GBuffer).
     

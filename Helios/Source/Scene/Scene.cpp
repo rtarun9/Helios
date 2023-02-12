@@ -35,24 +35,37 @@ namespace helios::scene
 
     void Scene::addLight(const gfx::GraphicsDevice* device, const LightCreationDesc& lightCreationDesc)
     {
-        const uint32_t lightCount = m_lights->m_currentLightCount;
+        if (m_lights->m_currentLightCount > interlop::MAX_LIGHTS)
+        {
+            return;
+        }
 
-        m_lights->m_lightsBufferData.lightColor[lightCount] = {1.0f, 1.0f, 1.0f, 1.0f};
-        m_lights->m_lightsBufferData.radiusIntensity[lightCount].x = 0.1f;
-        m_lights->m_lightsBufferData.radiusIntensity[lightCount].y = 1.0f;
-
+        // Directional light is at index 0 always.
         if (lightCreationDesc.lightType == LightTypes::DirectionalLightData)
         {
-            m_lights->m_lightsBufferData.lightPosition[lightCount] =
+            m_lights->m_lightsBufferData.lightColor[0] = {1.0f, 1.0f, 1.0f, 1.0f};
+            m_lights->m_lightsBufferData.radiusIntensity[0].x = 0.1f;
+            m_lights->m_lightsBufferData.radiusIntensity[0].y = 1.0f;
+
+            m_lights->m_lightsBufferData.lightPosition[0] =
                 math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(Lights::DIRECTIONAL_LIGHT_ANGLE)),
                                cos(math::XMConvertToRadians(Lights::DIRECTIONAL_LIGHT_ANGLE)), 0.0f);
         }
         else
         {
-            m_lights->m_lightsBufferData.lightPosition[lightCount] = math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-        }
+            m_lights->m_lightsBufferData.lightColor[m_lights->m_currentLightCount] =
+                math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        m_lights->m_currentLightCount++;
+            m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].x = 0.1f;
+            m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].y = 1.0f;
+
+            m_lights->m_currentLightCount++;
+        }
+    }
+
+    void Scene::addCubeMap(gfx::GraphicsDevice* const graphicsDevice, const CubeMapCreationDesc& cubeMapCreationDesc)
+    {
+        m_cubeMap = std::make_unique<CubeMap>(graphicsDevice, cubeMapCreationDesc);
     }
 
     void Scene::completeResourceLoading()
@@ -141,5 +154,16 @@ namespace helios::scene
         };
 
         m_lights->render(graphicsContext, lightRenderResources);
+    }
+
+    void Scene::renderCubeMap(const gfx::GraphicsContext* const graphicsContext,
+                              const uint32_t cubeMapTextureIndex)
+    {
+        interlop::CubeMapRenderResources cubeMapRenderResources = {
+            .sceneBufferIndex = m_sceneBuffer.cbvIndex,
+            .textureIndex = cubeMapTextureIndex,
+        };
+
+        m_cubeMap->render(graphicsContext, cubeMapRenderResources);
     }
 } // namespace helios::scene

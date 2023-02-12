@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utils.hlsli"
-static const float3 BASE_DIELECTRIC_REFLECTIVITY = float3(0.04f, 0.04f, 0.04f);
 
 // Compute the ratio of reflected light vs how much it refracts.
 // As the viewing angle increases, this ratio increases as well (quickly approaching one when angle becomes more and
@@ -71,11 +70,11 @@ float3 cookTorrenceBRDF(const float3 normal, const float3 viewDirection, const f
 {
     const float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
 
-    const float3 f0 = lerp(BASE_DIELECTRIC_REFLECTIVITY, albedo.xyz, metallicFactor);
+    const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
 
     // Using cook torrance BRDF for specular lighting.
     const float3 fresnel = fresnelSchlickFunction(max(dot(viewDirection, halfWayVector), 0.0f), f0);
-
+    
     const float normalDistribution = normalDistributionFunction(normal, halfWayVector, roughnessFactor);
     const float geometryFunction = smithGeometryFunction(normal, viewDirection, pixelToLightDirection, roughnessFactor);
 

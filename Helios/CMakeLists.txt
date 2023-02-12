@@ -46,8 +46,11 @@ set(SRC_FILES
     "Source/Graphics/MipMapGenerator.cpp"
     "Include/Graphics/MipMapGenerator.hpp"
     
-    "Source/RenderPass/DeferredGeometryPass.cpp"
-    "Include/RenderPass/DeferredGeometryPass.hpp"
+    "Source/Rendering/DeferredGeometryPass.cpp"
+    "Include/Rendering/DeferredGeometryPass.hpp"
+
+    "Source/Rendering/IBL.cpp"
+    "Include/Rendering/IBL.hpp"
 
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
@@ -58,6 +61,9 @@ set(SRC_FILES
     "Source/Scene/Lights.cpp"
     "Include/Scene/Lights.hpp"
     
+    "Source/Scene/CubeMap.cpp"
+    "Include/Scene/CubeMap.hpp"
+
     "Source/Scene/Scene.cpp"
     "Include/Scene/Scene.hpp"
 
@@ -73,6 +79,14 @@ set(SRC_FILES
 add_library(Helios STATIC ${SRC_FILES})
 target_include_directories(Helios PUBLIC "Include" "../Shaders")
 target_link_libraries(Helios PUBLIC External d3d12.lib d3dcompiler.lib dxcompiler.lib)
+
+# Enable hot reload in Visual studio 2022.
+if (MSVC AND WIN32 AND NOT MSVC_VERSION VERSION_LESS 142)
+
+    target_link_options(Helios PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL>)
+    target_compile_options(Helios PRIVATE $<$<CONFIG:Debug>:/Zi>)
+
+endif()
 
 # Setup precompiled headers.
 target_precompile_headers(

@@ -1,4 +1,4 @@
-// clang-format off 
+// clang-format off
 #include "RootSignature/BindlessRS.hlsli"
 #include "ShaderInterlop/ConstantBuffers.hlsli"
 #include "ShaderInterlop/renderResources.hlsli"
@@ -14,10 +14,8 @@ struct VSOutput
 
 ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
-
-[RootSignature(BindlessRootSignature)] 
-VSOutput VsMain(uint vertexID : SV_VertexID) 
-{
+[RootSignature(BindlessRootSignature)] VSOutput VsMain(uint vertexID
+                                                       : SV_VertexID) {
     static const float3 VERTEX_POSITIONS[3] = {float3(-1.0f, 1.0f, 0.0f), float3(3.0f, 1.0f, 0.0f),
                                                float3(-1.0f, -3.0f, 0.0f)};
 
@@ -27,8 +25,8 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     return output;
 }
 
-[RootSignature(BindlessRootSignature)] 
-float4 PsMain(VSOutput psInput) : SV_Target
+    [RootSignature(BindlessRootSignature)] float4 PsMain(VSOutput psInput)
+    : SV_Target
 {
     ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
     ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
@@ -40,12 +38,15 @@ float4 PsMain(VSOutput psInput) : SV_Target
     Texture2D<float4> aoMetalRoughnessEmissiveTexture =
         ResourceDescriptorHeap[renderResources.aoMetalRoughnessEmissiveGBufferIndex];
 
-    // const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
-    float4 albedo = float4(1.0f, 0.0f, 0.0f, 1.0f);
+
+    TextureCube<float4> irradianceTexture = ResourceDescriptorHeap[renderResources.irradianceTextureIndex];
+
+    const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
     const float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
     const float4 normalEmissive = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
-    const float4 aoMetalRoughnessEmissive = aoMetalRoughnessEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
+    const float4 aoMetalRoughnessEmissive =
+        aoMetalRoughnessEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
 
     const float3 viewSpacePosition = positionEmissive.xyz;
     const float3 normal = normalize(normalEmissive.xyz);
@@ -68,36 +69,39 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
     float3 lo = float3(0.0f, 0.0f, 0.0f);
 
-    for (uint i = 0; i < interlop::TOTAL_POINT_LIGHTS; ++i)
+    for (uint i = 0; i < lightBuffer.numberOfLights; ++i)
     {
-        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
-
-        const float3 brdf =
-            cookTorrenceBRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
+        float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
 
         const float distance = length(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
-        const float attenuation = 1.0f / (distance * distance);
+        float attenuation = 1.0f / (distance * distance);
 
-        const float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
-
-        lo += brdf * radiance * saturate(dot(pixelToLightDirection, normal)); // *attenuation;
-    }
-
-    for (uint j = interlop::DIRECTIONAL_LIGHT_OFFSET;
-         j < interlop::DIRECTIONAL_LIGHT_OFFSET + interlop::TOTAL_DIRECTIONAL_LIGHTS; ++j)
-    {
-        const float3 pixelToLightDirection = normalize(-lightBuffer.viewSpaceLightPosition[j].xyz);
+        // Check if we are dealing with directional light. Directional light is always at index 0.
+        if (i == 0u)
+        {
+            pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz);
+            attenuation = 1.0f;
+        }
 
         const float3 brdf =
             cookTorrenceBRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
+        const float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
 
-        const float3 radiance = lightBuffer.lightColor[j].xyz * lightBuffer.radiusIntensity[j].y;
-
-        float nDotL = saturate(dot(pixelToLightDirection, normal));
-        lo += brdf * radiance * nDotL;
+        lo += brdf * radiance * saturate(dot(pixelToLightDirection, normal)) * attenuation;
     }
 
-    lo += emissive;
+    // Calculate ambient lighting from irradiance map.
+    const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
+    
+    const float3 kS = fresnelSchlickFunction(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
+    const float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+    
+    const float3 irradiance = irradianceTexture.Sample(linearWrapSampler, normal).rgb;
+    const float3 diffuseIBL = kD * irradiance * albedo.xyz;
+   
+    const float3 ambient = diffuseIBL * ao;
+
+    lo += emissive + ambient;
 
     return float4(lo, 1.0f);
 }
