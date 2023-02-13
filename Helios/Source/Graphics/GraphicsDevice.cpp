@@ -496,7 +496,7 @@ namespace helios::gfx
         }
 
         // Create UAV's is applicable.
-        if (textureCreationDesc.usage == TextureUsage::CubeMap)
+        if (textureCreationDesc.usage == TextureUsage::CubeMap || textureCreationDesc.usage == TextureUsage::UAVTexture)
         {
             // Since cube map requires 6 Uav's, create them.
             // The Texture will hold the index to only the first uav, but they will be contiguous in nature since only
@@ -512,16 +512,16 @@ namespace helios::gfx
                                 {
                                     .MipSlice = 0u,
                                     .FirstArraySlice = 0u,
-                                    .ArraySize = 6u,
+                                    .ArraySize = textureCreationDesc.depthOrArraySize,
                                 },
                         },
                 },
                 texture.allocation.resource.Get());
 
-            if (textureCreationDesc.mipLevels == 6u)
+            if (textureCreationDesc.mipLevels > 1)
             {
-                // Create the remaining 5 uav's.
-                for (const uint32_t i : std::views::iota(1u, 6u))
+                // Create the remaining uav's.
+                for (const uint32_t i : std::views::iota(1u, textureCreationDesc.mipLevels))
                 {
                     // uavIndex will not be directly accesible to user, user must add the index to texture.uav index to
                     // retrive it.
@@ -534,7 +534,7 @@ namespace helios::gfx
                                         {
                                             .MipSlice = i,
                                             .FirstArraySlice = 0u,
-                                            .ArraySize = 6u,
+                                            .ArraySize = textureCreationDesc.depthOrArraySize,
                                         },
                                 },
                         },

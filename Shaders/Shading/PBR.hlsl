@@ -42,6 +42,8 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
 
     TextureCube<float4> irradianceTexture = ResourceDescriptorHeap[renderResources.irradianceTextureIndex];
+    TextureCube<float4> preFilterTexture = ResourceDescriptorHeap[renderResources.prefilterTextureIndex];
+    Texture2D<float2> brdfLUTTexture = ResourceDescriptorHeap[renderResources.brdfLUTTextureIndex];
 
     const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
@@ -95,16 +97,25 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     // Calculate ambient lighting from irradiance map.
     
     const float3 worldSpaceNormal = normalize(mul(normal, inverseViewMatrix));
+    const float3 reflectionDirection = normalize(mul(reflect(-viewDirection, normal), inverseViewMatrix));
+
 
     const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
     
-    const float3 kS = fresnelSchlickFunction(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
+    const float3 kS = fresnelSchlickFunctionRoughness(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
     const float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
     
     const float3 irradiance = irradianceTexture.Sample(linearClampSampler, worldSpaceNormal).rgb;
-    const float3 diffuseIBL = kD * irradiance * albedo.xyz;
+    const float3 diffuseIBL = kD * irradiance * albedo.xyz / (float)PI;
 
-    const float3 ambient = diffuseIBL * ao;
+    const float3 specularPreFilter = preFilterTexture.SampleLevel(minMapLinearMipPointClampSampler, reflectionDirection, roughnessFactor * 6.0f).xyz;
+    
+    const float nDotV = saturate(dot(viewDirection, normal));
+    const float2 brdfLut = brdfLUTTexture.Sample(pointWrapSampler, float2(nDotV, roughnessFactor)).xy;
+
+    const float3 specularIBL = specularPreFilter  * (f0 * brdfLut.x  + brdfLut.y);
+
+    const float3 ambient = (diffuseIBL + specularIBL) * ao;
 
     lo += emissive + ambient;
     return float4(lo, 1.0f);

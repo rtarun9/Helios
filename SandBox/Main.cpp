@@ -11,6 +11,33 @@ class SandBox final : public helios::core::Application
 
     void loadContent() override
     {
+        loadScene();
+
+        loadTextures();
+
+        loadPipelineStates();
+
+        m_postProcessingBuffer = m_graphicsDevice->createBuffer<interlop::PostProcessingBuffer>(gfx::BufferCreationDesc{
+            .usage = gfx::BufferUsage::ConstantBuffer,
+            .name = L"Post Processing Buffer",
+        });
+
+        m_deferredGPass =
+            std::make_unique<rendering::DeferredGeometryPass>(m_graphicsDevice.get(), m_windowWidth, m_windowHeight);
+
+        m_ibl = std::make_unique<rendering::IBL>(m_graphicsDevice.get());
+
+        m_irradianceTexture =
+            m_ibl->generateIrradianceTexture(m_graphicsDevice.get(), m_scene->m_cubeMap->m_cubeMapTexture);
+
+        m_prefilterTexture =
+            m_ibl->generatePrefilterTexture(m_graphicsDevice.get(), m_scene->m_cubeMap->m_cubeMapTexture);
+
+        m_brdfLUTTexture = m_ibl->generateBRDFLutTexture(m_graphicsDevice.get());
+    }
+
+    void loadScene()
+    {
         m_scene->addModel(m_graphicsDevice.get(),
                           scene::ModelCreationDesc{
                               .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -23,16 +50,16 @@ class SandBox final : public helios::core::Application
                               .modelName = L"MetalRough spheres",
                           });
 
-        //      m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
-        //                                                    .modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
-        //                                                    .modelName = L"Sponza",
-        //                                                    .scale =
-        //                                                        {
-        //                                                            0.1f,
-        //                                                            0.1f,
-        //                                                            0.1f,
-        //                                                        },
-        //                                                });
+        m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
+                                                      .modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+                                                      .modelName = L"Sponza",
+                                                      .scale =
+                                                          {
+                                                              0.1f,
+                                                              0.1f,
+                                                              0.1f,
+                                                          },
+                                                  });
 
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::DirectionalLightData});
@@ -45,6 +72,49 @@ class SandBox final : public helios::core::Application
                                 .equirectangularTexturePath = L"Assets/Textures/Environment.hdr",
                                 .name = L"Environment Cube Map",
                             });
+    }
+
+    void loadPipelineStates()
+    {
+
+        m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
+            .shaderModule =
+                {
+                    .vertexShaderPath = L"Shaders/Shading/PBR.hlsl",
+                    .pixelShaderPath = L"Shaders/Shading/PBR.hlsl",
+                },
+            .depthFormat = DXGI_FORMAT_UNKNOWN,
+            .pipelineName = L"PBR Pipeline",
+        });
+
+        m_postProcessingPipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
+            .shaderModule =
+                {
+                    .vertexShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
+                    .pixelShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
+                },
+            .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
+            .rtvCount = 1u,
+            .depthFormat = DXGI_FORMAT_D32_FLOAT,
+            .pipelineName = L"Post Processing Pipeline",
+        });
+
+        m_fullScreenTrianglePassPipelineState =
+            m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
+                .shaderModule =
+                    {
+                        .vertexShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
+                        .pixelShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
+                    },
+                .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
+                .rtvCount = 1u,
+                .depthFormat = DXGI_FORMAT_UNKNOWN,
+                .pipelineName = L"Full Screen Triangle Pass Pipeline",
+            });
+    }
+
+    void loadTextures()
+    {
         static constexpr std::array<uint32_t, 3u> indices = {
             0u,
             1u,
@@ -57,21 +127,6 @@ class SandBox final : public helios::core::Application
                 .name = L"Render Target Index Buffer",
             },
             indices);
-
-        m_postProcessingBuffer = m_graphicsDevice->createBuffer<interlop::PostProcessingBuffer>(gfx::BufferCreationDesc{
-            .usage = gfx::BufferUsage::ConstantBuffer,
-            .name = L"Post Processing Buffer",
-        });
-
-        m_pipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-            .shaderModule =
-                {
-                    .vertexShaderPath = L"Shaders/Shading/PBR.hlsl",
-                    .pixelShaderPath = L"Shaders/Shading/PBR.hlsl",
-                },
-            .depthFormat = DXGI_FORMAT_UNKNOWN,
-            .pipelineName = L"PBR Pipeline",
-        });
 
         m_depthTexture = m_graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::DepthStencil,
@@ -104,39 +159,6 @@ class SandBox final : public helios::core::Application
             .format = DXGI_FORMAT_R10G10B10A2_UNORM,
             .name = L"Post Processing Render Target",
         });
-
-        m_postProcessingPipelineState = m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-            .shaderModule =
-                {
-                    .vertexShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
-                    .pixelShaderPath = L"Shaders/PostProcessing/PostProcessing.hlsl",
-                },
-            .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
-            .rtvCount = 1u,
-            .depthFormat = DXGI_FORMAT_D32_FLOAT,
-            .pipelineName = L"Post Processing Pipeline",
-        });
-
-        m_fullScreenTrianglePassPipelineState =
-            m_graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-                .shaderModule =
-                    {
-                        .vertexShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
-                        .pixelShaderPath = L"Shaders/RenderPass/FullScreenTrianglePass.hlsl",
-                    },
-                .rtvFormats = {DXGI_FORMAT_R10G10B10A2_UNORM},
-                .rtvCount = 1u,
-                .depthFormat = DXGI_FORMAT_UNKNOWN,
-                .pipelineName = L"Full Screen Triangle Pass Pipeline",
-            });
-
-        m_deferredGPass =
-            std::make_unique<rendering::DeferredGeometryPass>(m_graphicsDevice.get(), m_windowWidth, m_windowHeight);
-
-        m_ibl = std::make_unique<rendering::IBL>(m_graphicsDevice.get());
-
-        m_irradianceTexture =
-            m_ibl->generateIrradianceTexture(m_graphicsDevice.get(), m_scene->m_cubeMap->m_cubeMapTexture);
     }
 
     void update(const float deltaTime) override
@@ -187,6 +209,8 @@ class SandBox final : public helios::core::Application
                 .normalEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
                 .aoMetalRoughnessEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.aoMetalRoughnessEmissiveRT.srvIndex,
                 .irradianceTextureIndex = m_irradianceTexture.srvIndex,
+                .prefilterTextureIndex = m_prefilterTexture.srvIndex,
+                .brdfLUTTextureIndex = m_brdfLUTTexture.srvIndex,
             };
 
             m_scene->renderModels(gctx.get(), renderResources);
@@ -319,6 +343,8 @@ class SandBox final : public helios::core::Application
     std::unique_ptr<rendering::IBL> m_ibl{};
 
     gfx::Texture m_irradianceTexture{};
+    gfx::Texture m_prefilterTexture{};
+    gfx::Texture m_brdfLUTTexture{};
 
     uint64_t m_frameCount{};
 };

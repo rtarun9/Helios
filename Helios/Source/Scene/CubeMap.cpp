@@ -11,8 +11,8 @@ namespace helios::scene
         const gfx::Texture equirectangularTexture = graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::HDRTextureFromPath,
             .format = DXGI_FORMAT_R32G32B32A32_FLOAT,
-            .mipLevels = 1u,
-            .name = L"Environment Equirectangular Texture",
+            .mipLevels = 6,
+            .name = cubeMapCreationDesc.name,
             .path = cubeMapCreationDesc.equirectangularTexturePath,
         });
 
@@ -24,7 +24,7 @@ namespace helios::scene
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
             .mipLevels = 6u,
             .depthOrArraySize = 6u,
-            .name = L"Cube Map",
+            .name = cubeMapCreationDesc.name + std::wstring(L"Cube Map"),
         });
 
         // Create compute pipeline to convert equirectangular texture to cube map.

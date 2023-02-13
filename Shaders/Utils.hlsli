@@ -82,7 +82,7 @@ float2 getMetalRoughness(float2 textureCoord, uint metalRoughnessTextureIndex, u
         return metalRoughnessTexture.Sample(samplerState, textureCoord).bg;
     }
 
-    return float2(1.0f, 1.0f);
+    return float2(0.5f, 0.5f);
 }
 
 float3 getSamplingVector(float2 pixelCoords, uint3 dispatchThreadID)

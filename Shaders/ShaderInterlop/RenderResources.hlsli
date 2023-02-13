@@ -108,6 +108,8 @@ namespace interlop
         uint aoMetalRoughnessEmissiveGBufferIndex;
 
         uint irradianceTextureIndex;
+        uint prefilterTextureIndex;
+        uint brdfLUTTextureIndex;
     };
 
     struct CubeFromEquirectRenderResources
@@ -127,5 +129,17 @@ namespace interlop
     {
         uint skyBoxTextureIndex;
         uint ouputIrradianceMapIndex;
+    };
+
+    struct PreFilterRenderResources
+    {
+        uint skyBoxTextureIndex;
+        uint outputPreFilteredCubeMapIndex;
+        uint mipLevel;
+    };
+
+    struct BRDFLutRenderResources
+    {
+        uint lutTextureIndex;   
     };
 }

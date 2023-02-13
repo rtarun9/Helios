@@ -142,7 +142,7 @@ namespace helios::editor
                     };
                 }
 
-                ImGui::SliderFloat3("Translate", &model->getTransformComponent().translate.x, -10.0f, 10.0f);
+                ImGui::SliderFloat3("Translate", &model->getTransformComponent().translate.x, -100.0f, 100.0f);
                 ImGui::SliderFloat3("Rotate", &model->getTransformComponent().rotation.x,
                                     DirectX::XMConvertToRadians(-180.0f), DirectX::XMConvertToRadians(180.0f));
 

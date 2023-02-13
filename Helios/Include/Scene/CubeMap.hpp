@@ -21,8 +21,7 @@ namespace helios::scene
         std::wstring name{};
     };
 
-    // CubeMap abstraction handles creation of TextureCube from equirectangular texture and also creates preprocessed
-    // textures for IBL (i.e irradiance map for diffuse IBL). Will also provide functions for rendering the cube map (it
+    // CubeMap abstraction handles creation of TextureCube from equirectangular texture and will also provide functions for rendering the cube map (it
     // stores a Cube Model).
     class CubeMap
     {

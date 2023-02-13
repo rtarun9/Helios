@@ -90,9 +90,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     // Using Monte Carlo integration to find irradiance of the hemisphere.
     // The final result should be 1 / N * summation (f(x) / PDF). PDF for sampling uniformly from hemisphere is 1 /
-    // TWO_PI. Since the integral is already consisting of division by 2.0f * PI, There is no need to do this while
-    // calculating total irradiance (kd * c * irradiance) is the diffuse IBL. For convinience sake, the result of this
-    // CS is multiplied back by 2.0. 
+    // TWO_PI. 
     float3 irradiance = float3(0.0f, 0.0f, 0.0f);
 
     // This loop, will for each sampling direction (i.e the surface normal) will generate random points on the
@@ -112,7 +110,6 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         irradiance += cubeMapTexture.SampleLevel(linearClampSampler, li, 0u).rgb * cosTheta;
     }
 
-    // As PDF is 1.0 / 2.0f * PI, PI gets cancelled out since the and the PBR shader should not divide by PI. (Lambertian diffuse is kd * C / PI), 
-    // but while computing diffuse IBL do not divide by PI.
-    outputIrradianceMap[dispatchThreadID] = float4(irradiance * 2.0f  * INV_SAMPLES, 1.0f);
+    // As PDF is 1.0 / 2.0f * PI, There is a division by PI required to cancel out the PI. The PBR shader must hence divide the sampled irradiance by PI.
+    outputIrradianceMap[dispatchThreadID] = float4(irradiance * 2.0f * PI * INV_SAMPLES, 1.0f);
 }

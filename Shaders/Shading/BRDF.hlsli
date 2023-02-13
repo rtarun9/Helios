@@ -19,7 +19,7 @@ float3 fresnelSchlickFunction(const float vDotH, const float3 f0)
 // Note : When using IBL, there is no single halfway vector to determine fresnel effect, as we account for all
 // directions within the hemisphere oriented towards normal from point p. So, the dot product is nDotV (and roughness is
 // also accounted for). Reference : https://seblagarde.wordpress.com/2011/08/17/hello-world/
-float3 fresnelSchlickFunction(const float3 f0, const float vDotN, const float roughnessFactor)
+float3 fresnelSchlickFunctionRoughness(const float3 f0, const float vDotN, const float roughnessFactor)
 {
     return f0 + (max(float3(1.0 - roughnessFactor, 1.0 - roughnessFactor, 1.0 - roughnessFactor), f0) - f0) *
                     pow(1.0 - vDotN, 5.0);
