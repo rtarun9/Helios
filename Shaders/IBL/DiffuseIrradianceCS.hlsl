@@ -11,20 +11,23 @@ static const float INV_SAMPLES = 1.0f / (float)SAMPLES;
 
 // Reference : https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 
-// Why this shader exists :
-// The diffuse half of the reflectance equation is integral(over hemisphere at point p) kD * albedo / PI * li(p, wi) *
-// n.wi Now, taking the constant terms out, the integral because (constant terms) * integral (over hemisphere at point
-// p) li(p, wi) * n.wi. We precompute this integral into a diffuse irradiance cube map, so that our PBR
-// shader can use a vector wi, sample into cube map and get the diffuse radiance at that point. Every sample direction
-// in the cube map will store the radiance by taking sample directions over the hemisphere at point p such that the sample direction is wo (the output/view direction).
-//  Note that in case wi is none other than the normal vector of a particular surface's point (p). The necessary is attained by
-// convoluting the cube map : i.e calculating the average radiance of each direction wi in the hemisphere at point p,
-// oriented along the surface normal.
 
-// Low discrepancy sequence will be used to generate samples that are uniformly distributed. Convolution is faster when samples
-// are not completely random but distributed in uniform fashion.
-// Using the VanDerCorput radical inverse along with HammersleySequence to get the low discrepancy sample i over total
-// number of samples (NUM_SAMPLES).
+// This shader is used to comupte the diffuse part of the cook torrence BRDF by considering each cube map texel
+// to be a light emitter. The diffuse part of the BRDF is only dependent on wi, the incoming light direction.
+// We want to precompute the diffuse irradiance map so that we can sample a texture, and recieve the irradiance along 
+// the view direction w0. In this case, the view direction wo in the PBR shader will be the objects normal.
+// The integral to be computed is [integral over hemisphere at point p] (Li(wi, p) * n.wi)dwi. Li(wi, p) is the radiance along the direction
+// wi, which can be obtained by just sampling the cube map, and n.wi is the dot product between all such incoming light directions wi and the sampling vector n
+// over the hemisphere. Since this integral cannot be solved analytically, we use a quasi-montecarlo integration technique to compute it.
+// Using a low descripancy sequence (such as the Hammerley sequence), we get uniformally distributed sample points in range [0, 1].
+// Passing this into a function that returns samples from a hemisphere where z is between 0 and 1.
+// Since this hemisphere sampled vector is in its own coordinate form, similar to normal mapping we compute a change of basis matrix (or in this case just 
+// transform the coordinate) from its own local space to 'world space' (i.e the space where the sampling vector forms one of the orthonormal basis vectors).
+// We can then compute n.wi, and as per montecarlo integration:
+// Integral f(x) dx = 1 / N * summation f(xi)/pdf(xi) where pdf is the probability density function. 
+// For a hemisphere, PDF is 1 / (2 PI). The lambert diffuse term is C / PI, Our result from this shader needs to be multiplied with PI * 2.0 and divide by number of samples.
+// We repeat this process for several number of samples.
+
 float vanDerCorputRadicalInverse(uint bits)
 {
     bits = (bits << 16u) | (bits >> 16u);
@@ -36,7 +39,7 @@ float vanDerCorputRadicalInverse(uint bits)
     return float(bits) * 2.3283064365386963e-10;
 }
 
-// Get the i'th point from Hammersley sequence.
+// Get the i'th point from Hammersley sequence, a low discrepancy sequence.
 float2 sampleHammersleySequence(uint i)
 {
     return float2((float)i * INV_SAMPLES, vanDerCorputRadicalInverse(i));
@@ -44,12 +47,12 @@ float2 sampleHammersleySequence(uint i)
 
 // Source used :
 // https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations Two
-// uniform random numbers are provided in u, and a vector on the hemisphere is returned.
-float3 uniformSampleHemisphere(float2 u)
+// uniform random numbers are provided in uv, and a vector on the hemisphere is returned.
+float3 uniformSampleHemisphere(float2 uv)
 {
-    float z = 1 - 2.0f * u.x;
-    float r = pow(max(0.0f, 1.0f - z * z), 0.5f);
-    float phi = 2.0f * PI * u.y;
+    const float z = uv.x;
+    const float r = pow(max(0.0f, 1.0f - z * z), 0.5f);
+    const float phi = 2.0f * PI * uv.y;
     return float3(r * cos(phi), r * sin(phi), z);
 }
 
@@ -70,17 +73,16 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     float textureWidth, textureHeight, textureDepth;
     outputIrradianceMap.GetDimensions(textureWidth, textureHeight, textureDepth);
 
-    // For each of the 6 cube faces, there will be threads which have the same 2d pixel coord. Do the sampling
-    // bilinearly.
-    float2 pixelCoords = (0.5f + dispatchThreadID.xy) / textureWidth;
+    // For each of the 6 cube faces, there will be threads which have the same 2d pixel coord. 
+    const float2 pixelCoords = (dispatchThreadID.xy) / textureWidth;
 
     // Based on current texture pixel coord (and the dispatch's z parameter : or the number of groupz on the z axis
     // (hardcoded to 6), it will calculate the normalized samling direction which we use to sample into the cube map.
     // Reference : https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/irmap.hlsl
-    float3 samplingVector = getSamplingVector(pixelCoords, dispatchThreadID);
+    const float3 samplingVector = getSamplingVector(pixelCoords, dispatchThreadID);
 
     // Calculation of basis vectors for converting a vector from Shading / Tangent space to world space.
-    float3 normal = samplingVector;
+    const float3 normal = normalize(samplingVector);
     float3 t = float3(0.0f, 0.0f, 0.0f);
     float3 s = float3(0.0f, 0.0f, 0.0f);
 
@@ -90,10 +92,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     // The final result should be 1 / N * summation (f(x) / PDF). PDF for sampling uniformly from hemisphere is 1 /
     // TWO_PI. Since the integral is already consisting of division by 2.0f * PI, There is no need to do this while
     // calculating total irradiance (kd * c * irradiance) is the diffuse IBL. For convinience sake, the result of this
-    // CS is multiplied back by 2.0. Division by PI already happens during BRDF calculation. Resource used for
-    // Montecarlo integration + Uniform sampling from hemisphere :
-    // https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration,
-    // https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations
+    // CS is multiplied back by 2.0. 
     float3 irradiance = float3(0.0f, 0.0f, 0.0f);
 
     // This loop, will for each sampling direction (i.e the surface normal) will generate random points on the
@@ -104,23 +103,16 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     {
         // Get a uniform random variable which will be used to get a point on the hemisphere.
 
-        float2 u = sampleHammersleySequence(i);
+        const float2 uv = sampleHammersleySequence(i);
 
-        // li is the incoming light direction vector in world space.
-        // The particular point on the hemisphere is chosen randomly using the Hammersley sequence.
-        // This random point on the hemisphere is converted to world space centered at origin (at the pixel coord of the
-        // cube face), and we can use it to sample into the input cube map, thereby finally calculating the average
-        // radiance of hemisphere centered at pixelCoords (For each face).
-        
-        float3 li = tangentToWorldCoords(uniformSampleHemisphere(u), normal, s, t);
+        const float3 li = tangentToWorldCoords(uniformSampleHemisphere(uv), normal, s, t);
 
-        float cosTheta = saturate(dot(li, normal));
+        const float cosTheta = saturate(dot(li, normal));
 
         irradiance += cubeMapTexture.SampleLevel(linearClampSampler, li, 0u).rgb * cosTheta;
     }
 
-    // As PDF is 2.0f * PI, I am multiplying by 2.0f so that this multiplication is not required while calculation final
-    // diffuse IBL.
-    float4 result = float4(irradiance * 2.0f / SAMPLES, 1.0f);
-    outputIrradianceMap[dispatchThreadID] =result;
+    // As PDF is 1.0 / 2.0f * PI, PI gets cancelled out since the and the PBR shader should not divide by PI. (Lambertian diffuse is kd * C / PI), 
+    // but while computing diffuse IBL do not divide by PI.
+    outputIrradianceMap[dispatchThreadID] = float4(irradiance * 2.0f  * INV_SAMPLES, 1.0f);
 }

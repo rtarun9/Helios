@@ -84,6 +84,7 @@ namespace helios::scene
 
         const interlop::SceneBuffer sceneBufferData = {
             .viewMatrix = m_camera.computeAndGetViewMatrix(),
+            .inverseViewMatrix = math::XMMatrixInverse(nullptr, m_camera.computeAndGetViewMatrix()),
             .viewProjectionMatrix =
                 m_camera.computeAndGetViewMatrix() *
                 math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
@@ -93,7 +94,7 @@ namespace helios::scene
 
         for (auto& [name, model] : m_models)
         {
-            model->getTransformComponent().update(sceneBufferData.viewMatrix);
+            model->getTransformComponent().update();
             model->updateMaterialBuffer();
         }
 
@@ -156,8 +157,7 @@ namespace helios::scene
         m_lights->render(graphicsContext, lightRenderResources);
     }
 
-    void Scene::renderCubeMap(const gfx::GraphicsContext* const graphicsContext,
-                              const uint32_t cubeMapTextureIndex)
+    void Scene::renderCubeMap(const gfx::GraphicsContext* const graphicsContext, const uint32_t cubeMapTextureIndex)
     {
         interlop::CubeMapRenderResources cubeMapRenderResources = {
             .sceneBufferIndex = m_sceneBuffer.cbvIndex,

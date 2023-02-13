@@ -10,9 +10,10 @@ struct VSOutput
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
     float3 normal : NORMAL;
-    float3 viewSpaceNormal : VIEW_SPACE_NORMAL;
+    float3 worldSpaceNormal : WORLD_SPACE_NORMAL;
     float3 viewSpacePosition : WORLD_SPACE_POSITION;
     float3x3 tbnMatrix : TBN_MATRIX;
+    float3x3 viewMatrix : VIEW_MATRIX;
 };
 
 ConstantBuffer<interlop::DeferredGPassRenderResources> renderResources : register(b0);
@@ -29,14 +30,15 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
 
     const matrix mvpMatrix = mul(transformBuffer.modelMatrix, sceneBuffer.viewProjectionMatrix);
     const matrix mvMatrix = mul(transformBuffer.modelMatrix, sceneBuffer.viewMatrix);
-    const float3x3 normalMatrix = (float3x3)transpose(transformBuffer.inverseModelViewMatrix);
+    const float3x3 normalMatrix = (float3x3)transpose(transformBuffer.inverseModelMatrix);
 
     VSOutput output;
     output.position = mul(float4(positionBuffer[vertexID], 1.0f), mvpMatrix);
     output.textureCoord = textureCoordBuffer[vertexID];
     output.normal = normalBuffer[vertexID];
+    output.worldSpaceNormal = normalize(mul(output.normal, normalMatrix));
     output.viewSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), mvMatrix).xyz;
-    output.viewSpaceNormal = normalize(mul(output.normal, normalMatrix));
+    output.viewMatrix = (float3x3)sceneBuffer.viewMatrix;
 
     const float3 tangent = generateTangent(output.normal).xyz;
     const float3 biTangent = normalize(cross(output.normal, tangent));
@@ -80,7 +82,8 @@ PsOutput PsMain(VSOutput psInput)
 
     output.positionEmissive = float4(psInput.viewSpacePosition, emissive.r);
 
-    output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.viewSpaceNormal, psInput.tbnMatrix), emissive.g);
+    output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.worldSpaceNormal, psInput.tbnMatrix), emissive.g);
+    output.normalEmissive.xyz = mul(output.normalEmissive.xyz, psInput.viewMatrix);
 
     float ao = getAO(psInput.textureCoord, renderResources.aoTextureIndex, renderResources.aoTextureSamplerIndex);
     float2 metalRoughness = getMetalRoughness(psInput.textureCoord, renderResources.metalRoughnessTextureIndex, renderResources.metalRoughnessTextureSamplerIndex) * float2(materialBuffer.metallicFactor, materialBuffer.roughnessFactor);

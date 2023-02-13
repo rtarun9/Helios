@@ -208,7 +208,7 @@ class SandBox final : public helios::core::Application
 
             m_scene->renderLights(gctx.get());
 
-            m_scene->renderCubeMap(gctx.get(), m_irradianceTexture.srvIndex);
+            m_scene->renderCubeMap(gctx.get());
         }
 
         // RenderPass 3 : Post Processing Stage:

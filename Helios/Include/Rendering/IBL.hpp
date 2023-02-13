@@ -21,7 +21,7 @@ namespace helios::rendering
                                                const gfx::Texture& cubeMapTexture);
 
       private:
-        static constexpr uint32_t IRRADIANCE_MAP_TEXTURE_DIMENSION = 32u;
+        static constexpr uint32_t IRRADIANCE_MAP_TEXTURE_DIMENSION = 64u;
         static constexpr uint32_t PREFILTER_MAP_TEXTURE_DIMENSION = 1024u;
         static constexpr uint32_t BRDF_LUT_TEXTURE_DIMENSION = 256u;
 

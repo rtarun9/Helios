@@ -13,7 +13,7 @@ namespace helios::scene
             .format = DXGI_FORMAT_R32G32B32A32_FLOAT,
             .mipLevels = 1u,
             .name = L"Environment Equirectangular Texture",
-            .path = L"Assets/Textures/Environment.hdr",
+            .path = cubeMapCreationDesc.equirectangularTexturePath,
         });
 
         // Create cube map texture.

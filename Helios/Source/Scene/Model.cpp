@@ -7,7 +7,7 @@
 
 namespace helios::scene
 {
-    void TransformComponent::update(const math::XMMATRIX viewMatrix)
+    void TransformComponent::update()
     {
         const math::XMVECTOR scalingVector = math::XMLoadFloat3(&scale);
         const math::XMVECTOR rotationVector = math::XMLoadFloat3(&rotation);
@@ -17,12 +17,9 @@ namespace helios::scene
                                            math::XMMatrixRotationRollPitchYawFromVector(rotationVector) *
                                            math::XMMatrixTranslationFromVector(translationVector);
 
-        const math::XMMATRIX modelViewMatrix = modelMatrix * viewMatrix;
-
         const interlop::TransformBuffer transformBufferData = {
             .modelMatrix = modelMatrix,
             .inverseModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix),
-            .inverseModelViewMatrix = DirectX::XMMatrixInverse(nullptr, modelViewMatrix),
         };
 
         transformBuffer.update(&transformBufferData);
@@ -51,7 +48,7 @@ namespace helios::scene
         m_transformComponent.rotation = modelCreationDesc.rotation;
         m_transformComponent.translate = modelCreationDesc.translate;
 
-        m_transformComponent.update(math::XMMATRIX{});
+        m_transformComponent.update();
 
         const std::string modelPathStr = wStringToString(m_modelPath);
         std::string modelDirectoryPathStr{};
@@ -197,7 +194,7 @@ namespace helios::scene
     }
 
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
-                interlop::CubeMapRenderResources& renderResources) const
+                       interlop::CubeMapRenderResources& renderResources) const
     {
 
         for (const Mesh& mesh : m_meshes)

@@ -24,11 +24,9 @@ float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, cons
 }
 
 
-float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3 viewSpaceNormal,
+float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextureSamplerIndex, float3 normal, float3 worldSpaceNormal,
                  float3x3 tbnMatrix)
 {
-    float3 inputNormal = normal;
-
     if (normalTextureIndex != INVALID_INDEX)
     {
         Texture2D<float4> normalTexture = ResourceDescriptorHeap[normalTextureIndex];
@@ -41,7 +39,7 @@ float3 getNormal(float2 textureCoord, uint normalTextureIndex, uint normalTextur
         return normal;
     }
 
-    return normalize(viewSpaceNormal);
+    return normalize(normal);
 }
 
 float3 getEmissive(float2 textureCoord, float3 albedoColor, float emissiveFactor, uint emissiveTextureIndex, uint emissiveTextureSamplerIndex)

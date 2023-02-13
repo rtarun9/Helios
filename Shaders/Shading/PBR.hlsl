@@ -31,6 +31,8 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
     ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
 
+    const float3x3 inverseViewMatrix = (float3x3)sceneBuffer.inverseViewMatrix;
+
     // Sample and extract data for the GBuffer's.
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
     Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResources.positionEmissiveGBufferIndex];
@@ -91,17 +93,20 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     }
 
     // Calculate ambient lighting from irradiance map.
+    
+    const float3 worldSpaceNormal = normalize(mul(normal, inverseViewMatrix));
+
     const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
     
     const float3 kS = fresnelSchlickFunction(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
     const float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
     
-    const float3 irradiance = irradianceTexture.Sample(linearWrapSampler, normal).rgb;
+    const float3 irradiance = irradianceTexture.Sample(linearClampSampler, worldSpaceNormal).rgb;
     const float3 diffuseIBL = kD * irradiance * albedo.xyz;
-   
+
     const float3 ambient = diffuseIBL * ao;
 
     lo += emissive + ambient;
-
     return float4(lo, 1.0f);
+
 }

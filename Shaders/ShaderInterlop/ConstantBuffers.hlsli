@@ -29,6 +29,7 @@ namespace interlop
     ConstantBufferStruct SceneBuffer
     {
         float4x4 viewMatrix;
+        float4x4 inverseViewMatrix;
         float4x4 viewProjectionMatrix;
     };
 
@@ -36,7 +37,6 @@ namespace interlop
     {
         float4x4 modelMatrix;
         float4x4 inverseModelMatrix;
-        float4x4 inverseModelViewMatrix;
     };
 
     enum class TextureDimensionType
