@@ -1,26 +1,11 @@
-# Generated VS Files from premake.
-.vcxproj
-.vcxproj.filters
-.vcxproj.user
-
-*.sln
-
+out/
+build/
 .vs/
-
-# Shader bytecode
-Shaders/**/*.cso
-
-# DXC Files copied into the shaders directory.
-Shaders/*.exe
-Shaders/*.dll
-Shaders/*.lib
-
-# Bin folder.
+Debug/
+Release/
+External/DirectXAgilitySDK
+External/DirectXShaderCompiler
+*.zip
 Bin/
- 
+VsBuild/
 Build/
-CmakeFiles/
-Engine/ThirdParty/DirectXAgilitySDK
-_deps
-agility.zip
-CMakeSettings.json

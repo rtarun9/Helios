@@ -1,101 +1,85 @@
-#include "../Common/BindlessRS.hlsli"
-#include "../Common/ConstantBuffers.hlsli"
-#include "../Common/Utils.hlsli"
+// clang-format off
+
+#include "Utils.hlsli"
+#include "RootSignature/BindlessRS.hlsli"
+#include "ShaderInterlop/ConstantBuffers.hlsli"
+#include "ShaderInterlop/RenderResources.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
-    float2 textureCoord : TEXTURE_COORD;
+    float2 textureCoord : Texture_Coord;
 };
 
-ConstantBuffer<DeferredLightingPassRenderResources> renderResource : register(b0);
+ConstantBuffer<interlop::BlinnPhongRenderResources> renderResources : register(b0);
 
 [RootSignature(BindlessRootSignature)]
 VSOutput VsMain(uint vertexID : SV_VertexID)
 {
-    StructuredBuffer<float2> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
-    StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
+    static const float3 VERTEX_POSITIONS[3] = {float3(-1.0f, 1.0f, 0.0f), float3(3.0f, 1.0f, 0.0f),
+                                               float3(-1.0f, -3.0f, 0.0f)};
 
     VSOutput output;
-
-    output.position = float4(positionBuffer[vertexID].xy, 0.0f, 1.0f);
-    output.textureCoord = textureCoordsBuffer[vertexID];
-
+    output.position = float4(VERTEX_POSITIONS[clamp(0, 3, vertexID)], 1.0f);
+    output.textureCoord = output.position.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
     return output;
 }
 
-[RootSignature(BindlessRootSignature)]
-float4 PsMain(VSOutput psInput) : SV_Target
+[RootSignature(BindlessRootSignature)] 
+float4 PsMain(VSOutput input) : SV_Target
 {
-    ConstantBuffer<LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResource.lightBufferIndex];
-    ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
+    ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
+    ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
 
-    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
-    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResource.normalEmissiveGBufferIndex];
-    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResource.positionEmissiveGBufferIndex];
+    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
+    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResources.normalEmissiveGBufferIndex];
+    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResources.positionEmissiveGBufferIndex];
 
-    float4 albedoColor = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
+    const float4 albedoColor = albedoTexture.Sample(pointClampSampler, input.textureCoord);
 
-    float3 normal = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
-    float3 position = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord).xyz;
+    float3 normal = normalEmissiveTexture.Sample(pointClampSampler, input.textureCoord).xyz;
+    const float3 position = positionEmissiveTexture.Sample(pointClampSampler, input.textureCoord).xyz;
 
-    float3 outgoingLight = float3(0.0f, 0.0f, 0.0f);
+    // Ambient lighting.
+    const float ambientStrength = 0.01;
+    float3 ambientLight = float3(0.0f, 0.0f, 0.0f);
 
-    for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
+    for (uint i = 0; i < interlop::TOTAL_LIGHTS; ++i)
     {
-        float3 pixelToLightDirection = normalize(lightBuffer.lightPosition[i].xyz - position);
-        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
+        ambientLight += albedoColor.xyz * ambientStrength * lightBuffer.lightColor[i].xyz; 
 
-        // Ambient light.
-        float ambientStrength = 0.00003f;
-        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
-
-        // Diffuse light.
-        float diffuseStrength = max(dot(normal, pixelToLightDirection), 0.0f);
-        float3 diffuseColor =  diffuseStrength * lightBuffer.lightColor[i].xyz;
-        bool isDiffuseZero = diffuseStrength <= MIN_FLOAT_VALUE;
-
-        // Specular light.
-        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
-        float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
-        
-        float specularStrength = 0.6f;
-        float shininessValue = 32.0f;
-
-        float3 reflectionDirection = normalize(reflect(-pixelToLightDirection, normal));
-        float3 specularColor = isDiffuseZero == true ? 0.0f : specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
-
-        // Calculate light attenuation.
-        float lightToPixelDistance = length(lightBuffer.lightPosition[i].xyz - position);
-
-        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz * 1.0f / pow(lightToPixelDistance, 2);
     }
 
-    for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
+    // Diffuse lighting.
+    normal = normalize(normal);
+
+    float3 diffuseLight = float3(0.0f, 0.0f, 0.0f);
+    
+    for (uint j = 0; j <interlop::TOTAL_POINT_LIGHTS; ++j)
     {
-        float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
-        float3 viewDirection = normalize(sceneBuffer.cameraPosition - position);
-
-        // Ambient light.
-        float ambientStrength = 0.01f;
-        float3 ambientColor = ambientStrength * lightBuffer.lightColor[i].xyz;
-
-        // Diffuse light.
-        float diffuseStrength = max(dot(normal, pixelToLightDirection), 0.0f);
-        float3 diffuseColor =  diffuseStrength * lightBuffer.lightColor[i].xyz;
-
-        // Specular light.
-        // lightDirection is negated as it is a vector from fragment to light, but the reflect function requires the opposite.
-        float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
-        
-        float specularStrength = 0.6f;
-        float shininessValue = 32.0f;
-
-        float3 reflectionDirection = normalize(reflect(-pixelToLightDirection, normal));
-        float3 specularColor =  specularStrength * lightBuffer.lightColor[i].xyz * pow(max(dot(halfWayVector, normal), 0.0f), shininessValue);
-
-        outgoingLight += albedoColor.xyz * ambientColor + (diffuseColor + specularColor)  * albedoColor.xyz;
+        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[j].xyz - position.xyz);
+        diffuseLight += max(dot(pixelToLightDirection, normal), 0.0f) * albedoColor.xyz * lightBuffer.lightColor[j].xyz;
     }
 
-    return float4(outgoingLight.xyz, 1.0f);
+    // Specular lighting.
+    float3 specularLight = float3(0.0f, 0.0f, 0.0f);
+    for (uint k = 0; k < interlop::TOTAL_POINT_LIGHTS; ++k)
+    {
+        const float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[k].xyz - position.xyz);
+
+        const float3 perfectReflectionDirection = reflect(-pixelToLightDirection, normal);
+        const float3 pixelToEyeDirection = normalize(-position.xyz);
+
+        const float specularPower = 128.0f;
+        const float3 halfWayVector = normalize(pixelToEyeDirection + pixelToLightDirection);
+        
+        const float specularIntensity = pow(max(dot(halfWayVector , normal), 0.0f), specularPower);
+        const float specularStrength = 0.2f;
+
+        specularLight += specularIntensity * specularStrength * lightBuffer.lightColor[k].xyz;
+    }
+
+
+    const float3 result = ambientLight + diffuseLight + specularLight;
+    return float4(result, 1.0f);
 }

@@ -1,10 +1,10 @@
-#include "../Common/BindlessRS.hlsli"
-#include "../Common/ConstantBuffers.hlsli"
-#include "../Common/Utils.hlsli"
-
-#include "../Shadows/PCFShadows.hlsli"
-
-#include "BRDF.hlsli"
+// clang-format off
+#include "RootSignature/BindlessRS.hlsli"
+#include "ShaderInterlop/ConstantBuffers.hlsli"
+#include "ShaderInterlop/renderResources.hlsli"
+#include "Utils.hlsli"
+#include "Shadow/PCFShadows.hlsli"
+#include "Shading/BRDF.hlsli"
 
 struct VSOutput
 {
@@ -13,57 +13,64 @@ struct VSOutput
     matrix lightSpaceMatrix : LIGHT_SPACE_MATRIX;
 };
 
-ConstantBuffer<DeferredLightingPassRenderResources> renderResource : register(b0);
+ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
-[RootSignature(BindlessRootSignature)]
-VSOutput VsMain(uint vertexID : SV_VertexID)
-{
-    StructuredBuffer<float2> positionBuffer = ResourceDescriptorHeap[renderResource.positionBufferIndex];
-    StructuredBuffer<float2> textureCoordsBuffer = ResourceDescriptorHeap[renderResource.textureBufferIndex];
+[RootSignature(BindlessRootSignature)] VSOutput VsMain(uint vertexID
+                                                       : SV_VertexID) {
+    static const float3 VERTEX_POSITIONS[3] = {float3(-1.0f, 1.0f, 0.0f), float3(3.0f, 1.0f, 0.0f),
+                                               float3(-1.0f, -3.0f, 0.0f)};
 
-    ConstantBuffer<ShadowMappingBuffer> shadowMappingBuffer = ResourceDescriptorHeap[renderResource.shadowMappingBufferIndex];
-
+    ConstantBuffer<interlop::ShadowBuffer> shadowBuffer = ResourceDescriptorHeap[renderResources.shadowBufferIndex];
+    
     VSOutput output;
-
-    output.position = float4(positionBuffer[vertexID].xy, 0.0f, 1.0f);
-    output.textureCoord = textureCoordsBuffer[vertexID];
-    output.lightSpaceMatrix = shadowMappingBuffer.viewProjectionMatrix;
+    output.position = float4(VERTEX_POSITIONS[vertexID], 1.0f);
+    output.textureCoord = output.position.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+    output.lightSpaceMatrix = shadowBuffer.lightViewProjectionMatrix;
 
     return output;
 }
 
-[RootSignature(BindlessRootSignature)]
-float4 PsMain(VSOutput psInput) : SV_Target
+    [RootSignature(BindlessRootSignature)] float4 PsMain(VSOutput psInput)
+    : SV_Target
 {
-    ConstantBuffer<LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResource.lightBufferIndex];
-    ConstantBuffer<SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResource.sceneBufferIndex];
+    ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
+    ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
+
+    const matrix inverseViewMatrix = sceneBuffer.inverseViewMatrix;
 
     // Sample and extract data for the GBuffer's.
-    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResource.albedoGBufferIndex];
-    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResource.positionEmissiveGBufferIndex];
-    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResource.normalEmissiveGBufferIndex];
-    Texture2D<float4> aoMetalRoughnessEmissiveTexture = ResourceDescriptorHeap[renderResource.aoMetalRoughnessEmissiveGBufferIndex];
+    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
+    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResources.positionEmissiveGBufferIndex];
+    Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResources.normalEmissiveGBufferIndex];
+    Texture2D<float4> aoMetalRoughnessEmissiveTexture =
+        ResourceDescriptorHeap[renderResources.aoMetalRoughnessEmissiveGBufferIndex];
 
-    TextureCube<float4> irradianceMap = ResourceDescriptorHeap[renderResource.irradianceMapIndex];
-    TextureCube<float4> prefilterMap = ResourceDescriptorHeap[renderResource.prefilterMapIndex];
-    Texture2D<float2> brdfLutMap = ResourceDescriptorHeap[renderResource.brdfLutIndex];
 
-    float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
-    float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
-    float4 normalEmissive = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
-    float4 aoMetalRoughnessEmissive = aoMetalRoughnessEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
+    TextureCube<float4> irradianceTexture = ResourceDescriptorHeap[renderResources.irradianceTextureIndex];
+    TextureCube<float4> preFilterTexture = ResourceDescriptorHeap[renderResources.prefilterTextureIndex];
+    Texture2D<float2> brdfLUTTexture = ResourceDescriptorHeap[renderResources.brdfLUTTextureIndex];
 
-    float3 position = positionEmissive.xyz;
-    float3 normal = normalize(normalEmissive.xyz);
+    Texture2D<float> blurredSSAOTexture = ResourceDescriptorHeap[renderResources.blurredSSAOTextureIndex];
 
-    float ao = aoMetalRoughnessEmissive.r;
-    float metallicFactor = aoMetalRoughnessEmissive.g;
-    float roughnessFactor = aoMetalRoughnessEmissive.b;
+    const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    float3 emissive = float3(positionEmissive.w, normalEmissive.w, aoMetalRoughnessEmissive.w);
+    const float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
+    const float4 normalEmissive = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
+    const float4 aoMetalRoughnessEmissive =
+        aoMetalRoughnessEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    float3 viewDirection = normalize(sceneBuffer.cameraPosition.xyz - position);
+    const float3 viewSpacePosition = positionEmissive.xyz;
+    const float3 normal = normalize(normalEmissive.xyz);
 
+    const float ao = aoMetalRoughnessEmissive.r;
+    const float metallicFactor = aoMetalRoughnessEmissive.g;
+    const float roughnessFactor = aoMetalRoughnessEmissive.b;
+
+    const float3 emissive = float3(positionEmissive.w, normalEmissive.w, aoMetalRoughnessEmissive.a);
+
+    const float3 viewDirection = normalize(-viewSpacePosition);
+
+    const float ssaoTerm = blurredSSAOTexture.Sample(linearWrapSampler, psInput.textureCoord);
     // Reflectance equation for reference.
     // lo(x, v) = le(x, v) + integral(over hemisphere centered at x)(fr(x, l, v, roughness) * li(x, l) * (l.n)dl
     // x is the pixel position
@@ -74,62 +81,66 @@ float4 PsMain(VSOutput psInput) : SV_Target
 
     float3 lo = float3(0.0f, 0.0f, 0.0f);
 
-    for (uint i = 0; i < TOTAL_POINT_LIGHTS; ++i)
+
+    for (uint i = 0; i < lightBuffer.numberOfLights; ++i)
     {
-        float3 pixelToLightDirection = normalize(lightBuffer.lightPosition[i].xyz - position);
+        float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
 
-        float3 brdf = BRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
-
-        float distance = length(lightBuffer.lightPosition[i].xyz - position);
+        const float distance = length(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
         float attenuation = 1.0f / (distance * distance);
 
-        float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
+        // Check if we are dealing with directional light. Directional light is always at index 0.
+        if (i == 0u)
+        {
+            pixelToLightDirection = normalize(-lightBuffer.viewSpaceLightPosition[i].xyz);
+            attenuation = 1.0f;
+            
+            // Since this is the directional light, the shading calculation must take into account shadow computation.
+            const float3 worldSpaceNormal = normalize(mul(normal, (float3x3)inverseViewMatrix));
+            const float4 worldSpacePosition = mul(float4(viewSpacePosition, 1.0f), inverseViewMatrix);
+            
+            const float3 worldPixelToLightDirection = normalize(-lightBuffer.lightPosition[0].xyz);
+            
+            const float nDotL = saturate(dot(worldSpaceNormal, worldPixelToLightDirection));
+            
+            const float4 lightSpacePosition = mul(worldSpacePosition, psInput.lightSpaceMatrix);
+            const float shadow = calculateShadow(lightSpacePosition, nDotL, renderResources.shadowDepthTextureIndex);
 
-        lo += brdf *  radiance * saturate(dot(pixelToLightDirection, normal)) * attenuation;
+            attenuation = (1.0f - shadow);
+        }
+
+        const float3 brdf =
+            cookTorrenceBRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
+        const float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
+
+        lo += brdf * radiance * saturate(dot(pixelToLightDirection, normal)) * attenuation;
     }
-
-    // Will be used for calculated bias in shadow mapping as well (as it is highly dependent on nDotL).
-    float nDotL = 0.0f;
-    float4 lightSpacePosition = mul(float4(position.xyz, 1.0f), psInput.lightSpaceMatrix);
-    float shadow = CalculateShadow(lightSpacePosition, nDotL, renderResource.shadowDepthTextureIndex);
-
-    for (uint i = DIRECTIONAL_LIGHT_OFFSET; i < DIRECTIONAL_LIGHT_OFFSET + TOTAL_DIRECTIONAL_LIGHTS; ++i)
-    {
-        float3 pixelToLightDirection = normalize(-lightBuffer.lightPosition[i].xyz);
-        
-        float3 brdf = BRDF(normal, viewDirection, pixelToLightDirection, albedo.xyz, roughnessFactor, metallicFactor);
-
-        float3 radiance = lightBuffer.lightColor[i].xyz * lightBuffer.radiusIntensity[i].y;
-
-        nDotL = saturate(dot(pixelToLightDirection, normal));
-        lo += brdf *  radiance * nDotL * (1.0f -  shadow);
-    }
-
-    // Calculate ambient lighting from irradiance map.
-    float3 f0 = lerp(BASE_DIELECTRIC_REFLECTIVITY, albedo.xyz, metallicFactor);
-    float3 kS = FresnelSchlickApproximation(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
-    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
-    float3 irradiance = irradianceMap.Sample(linearWrapSampler, normal).rgb;
-    float3 diffuseIBL = kD * irradiance * albedo.xyz;
-
-    // Calculate specular IBL.
-    float3 lr = reflect(-viewDirection, normal);
-    float cosLo = saturate(dot(viewDirection, normal));
     
-    uint prefilterTextureWidth, prefilterTextureHeight, levels;
-    prefilterMap.GetDimensions(0u, prefilterTextureWidth, prefilterTextureHeight, levels);
+    // Calculate ambient lighting from irradiance map.
+    
+    const float3 worldSpaceNormal = normalize(mul(normal, (float3x3)inverseViewMatrix));
+    const float3 reflectionDirection = normalize(mul(reflect(-viewDirection, normal), (float3x3)inverseViewMatrix));
 
-    float3 specularPrefilter = prefilterMap.SampleLevel(linearWrapSampler, lr, roughnessFactor * 6.0f).rgb;
-    float2 brdfLut = brdfLutMap.Sample(pointWrapSampler, float2(cosLo, roughnessFactor), 0.0f).rg;
 
-    float3 specularIBL = specularPrefilter * (f0 * brdfLut.x + brdfLut.y);
+    const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
+    
+    const float3 kS = fresnelSchlickFunctionRoughness(f0, saturate(dot(viewDirection, normal)), roughnessFactor);
+    const float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - kS, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+    
+    const float3 irradiance = irradianceTexture.Sample(linearClampSampler, worldSpaceNormal).rgb;
+    const float3 diffuseIBL = kD * irradiance * albedo.xyz / (float)PI;
 
-    // Dimming the diffuseIBL component is not physically accurate, but does give a little better / realistic look.
-    float shadowAmbientFactor = (1.0f - shadow) == 0.0f ? 1.0f : 1.0f;
+    const float3 specularPreFilter = preFilterTexture.SampleLevel(minMapLinearMipPointClampSampler, reflectionDirection, roughnessFactor * 6.0f).xyz;
+    
+    const float nDotV = saturate(dot(viewDirection, normal));
+    const float2 brdfLut = brdfLUTTexture.Sample(pointWrapSampler, float2(nDotV, roughnessFactor)).xy;
 
-    float3 ambient =  (diffuseIBL + specularIBL) * ao * shadowAmbientFactor;
+    const float3 specularIBL = specularPreFilter  * (f0 * brdfLut.x  + brdfLut.y);
+
+    float3 ambient = (diffuseIBL + specularIBL) * ao * ssaoTerm;
 
     lo += emissive + ambient;
 
-    return float4(lo, albedo.w);
+    return float4(lo, 1.0f);
+
 }

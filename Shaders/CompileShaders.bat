@@ -1,3 +1,0 @@
-python CompileShaders.py
-
-PAUSE

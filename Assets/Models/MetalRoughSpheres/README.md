@@ -1,12 +1,3 @@
-# Metal-Rough Spheres
-
-
-## Screenshot
-
-![screenshot](screenshot/screenshot.png)
-
-## License Information
-
-Copyright 2017 Analytical Graphics, Inc.
-CC-BY 4.0 https://creativecommons.org/licenses/by/4.0/
-Model and textures by Ed Mackey.
+version https://git-lfs.github.com/spec/v1
+oid sha256:c49080e76696f6aac4c211724787c92ddb18e3a477c0efb141cddce24c656dfb
+size 244
