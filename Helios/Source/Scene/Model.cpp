@@ -307,6 +307,7 @@ namespace helios::scene
             const int indexByteStride = indexAccesor.ByteStride(indexBufferView);
             const uint8_t* indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
+            
             {
                 const std::jthread vertexAttributesThread([&]() {
                     {
@@ -548,7 +549,9 @@ namespace helios::scene
             textureCreationDesc.width = static_cast<uint32_t>(width);
             textureCreationDesc.height = static_cast<uint32_t>(height);
 
-            return graphicsDevice->createTexture(textureCreationDesc, (std::byte*)data);
+            auto texture = graphicsDevice->createTexture(textureCreationDesc, (std::byte*)data);
+
+            return std::move(texture);
         };
 
         size_t index{0};
@@ -655,15 +658,21 @@ namespace helios::scene
                 .usage = gfx::BufferUsage::ConstantBuffer,
                 .name = m_modelName + L"_MaterialBuffer" + std::to_wstring(index),
             });
-
+            
             pbrMaterial.materialBufferData = {
                 .roughnessFactor = 1.0f,
                 .metallicFactor = 1.0f,
                 .emissiveFactor = 0.0f,
+                .albedoColor =
+                    math::XMFLOAT3{
+                        material.pbrMetallicRoughness.baseColorFactor[0],
+                        material.pbrMetallicRoughness.baseColorFactor[1],
+                        material.pbrMetallicRoughness.baseColorFactor[2],
+                    },
             };
 
             pbrMaterial.materialIndex = index;
             m_materials[index++] = std::move(pbrMaterial);
-        }
+        } // namespace helios::scene
     }
 } // namespace helios::scene

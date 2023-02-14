@@ -23,6 +23,7 @@ namespace helios::gfx
 
         void clearRenderTargetView(const Texture& renderTarget, const std::span<const float, 4> color);
         void clearRenderTargetView(const std::span<const Texture> renderTargets, const std::span<const float, 4> color);
+        void clearRenderTargetView(const Texture& texture, const float color);
         void clearDepthStencilView(const Texture& texture);
         void setDescriptorHeaps() const;
 

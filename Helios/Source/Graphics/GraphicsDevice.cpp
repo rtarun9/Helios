@@ -542,16 +542,6 @@ namespace helios::gfx
                 }
             }
         }
-        // Now that data is copied / set into GPU memory, freeing it.
-        if (textureData)
-        {
-            stbi_image_free((void*)textureData);
-        }
-
-        if (hdrTextureData)
-        {
-            stbi_image_free(hdrTextureData);
-        }
 
         // Generate mip maps.
         m_mipMapGenerator->generateMips(texture);

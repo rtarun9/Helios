@@ -50,6 +50,8 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     TextureCube<float4> preFilterTexture = ResourceDescriptorHeap[renderResources.prefilterTextureIndex];
     Texture2D<float2> brdfLUTTexture = ResourceDescriptorHeap[renderResources.brdfLUTTextureIndex];
 
+    Texture2D<float> blurredSSAOTexture = ResourceDescriptorHeap[renderResources.blurredSSAOTextureIndex];
+
     const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
 
     const float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
@@ -68,6 +70,7 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
     const float3 viewDirection = normalize(-viewSpacePosition);
 
+    const float ssaoTerm = blurredSSAOTexture.Sample(linearWrapSampler, psInput.textureCoord);
     // Reflectance equation for reference.
     // lo(x, v) = le(x, v) + integral(over hemisphere centered at x)(fr(x, l, v, roughness) * li(x, l) * (l.n)dl
     // x is the pixel position
@@ -134,9 +137,10 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
     const float3 specularIBL = specularPreFilter  * (f0 * brdfLut.x  + brdfLut.y);
 
-    const float3 ambient = (diffuseIBL + specularIBL) * ao;
+    float3 ambient = (diffuseIBL + specularIBL) * ao * ssaoTerm;
 
     lo += emissive + ambient;
+
     return float4(lo, 1.0f);
 
 }

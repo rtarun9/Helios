@@ -6,7 +6,7 @@
 
 ConstantBuffer<interlop::IrradianceRenderResources> renderResources : register(b0);
 
-static const uint SAMPLES = 65536;
+static const uint SAMPLES = 16384;
 static const float INV_SAMPLES = 1.0f / (float)SAMPLES;
 
 // Reference : https://learnopengl.com/PBR/IBL/Diffuse-irradiance

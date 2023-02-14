@@ -64,7 +64,7 @@ namespace helios::editor
     // May seem like lot of code squashed into a single function, but this makes the engine code clean
     void Editor::render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
                         rendering::DeferredGeometryBuffer& deferredGBuffer,
-                        rendering::PCFShadowMappingPass* const shadowMappingPass,
+                        rendering::PCFShadowMappingPass* const shadowMappingPass, rendering::SSAOPass* const ssaoPass,
                         interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                         gfx::GraphicsContext* const graphicsContext)
     {
@@ -106,6 +106,9 @@ namespace helios::editor
 
             // Render shadow mapping pass.
             renderShadowMappingPass(graphicsDevice, shadowMappingPass);
+
+            // Render SSAO pass.
+            renderSSAOPass(graphicsDevice, ssaoPass);
 
             // Render post processing data.
             renderPostProcessingProperties(postProcessBuffer);
@@ -330,7 +333,7 @@ namespace helios::editor
     }
 
     void Editor::renderShadowMappingPass(const gfx::GraphicsDevice* const graphicsDevice,
-                                         rendering::PCFShadowMappingPass* const shadowMappingPass)
+                                         rendering::PCFShadowMappingPass* const shadowMappingPass) const
     {
         ImGui::Begin("Shadow Pass");
         const auto srvDescriptorHandle = graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
@@ -344,6 +347,33 @@ namespace helios::editor
         ImGui::SliderFloat("Extents", &shadowMappingPass->m_shadowBufferData.extents, 0.0f, 300.0f);
         ImGui::SliderFloat("Near Plane", &shadowMappingPass->m_shadowBufferData.nearPlane, 0.0f, 10.0f);
         ImGui::SliderFloat("Far Plane", &shadowMappingPass->m_shadowBufferData.farPlane, 50.0f, 500.0f);
+
+        ImGui::End();
+    }
+
+    void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass* const ssaoPass) const
+    {   
+        ImGui::Begin("SSAO Pass");
+        const auto ssaoTextureSrvDescriptorHandle = graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+            ssaoPass->m_ssaoTexture.srvIndex);
+
+         const auto blurSSAOTextureSrvDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                ssaoPass->m_blurSSAOTexture.srvIndex);
+
+
+        ImGui::Begin("SSAO Texture");
+        ImGui::Image((ImTextureID)(ssaoTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+                     ImGui::GetWindowViewport()->WorkSize);
+        ImGui::End();
+
+        ImGui::Begin("SSAO Blur Texture");
+        ImGui::Image((ImTextureID)(blurSSAOTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+                     ImGui::GetWindowViewport()->WorkSize);
+        ImGui::End();
+
+        ImGui::SliderFloat("Bias", &ssaoPass->m_ssaoBufferData.bias, 0.0f, 3.0f);
+        ImGui::SliderFloat("Radius", &ssaoPass->m_ssaoBufferData.radius, 0.0f, 10.0f);
 
         ImGui::End();
     }

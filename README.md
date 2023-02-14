@@ -5,17 +5,19 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 # Features
 * Bindless Rendering (Using SM 6.6's Resource / Sampler descriptor Heap).
 * Normal Mapping.
-* Diffuse and Specular IBL.
 * Physically based rendering (PBR).
+* Diffuse and Specular IBL.
 * Blinn-Phong Shading.
 * Deferred Shading.
 * HDR and Tone Mapping.
 * Instanced rendering.
 * OmniDirectional Shadow Mapping.
+* Screen Space Ambient Occlusion (SSAO).
 * Editor (ImGui Integration) with Logging and Content Browser with drag-drop functionality for GLTF models.
 * Compute Shader mip map generation.
 * Multi-threaded asset loading.
 * D3D12MA integration.
+* Shader Compilation using DirectX Shader Compiler (DXC).
 
 # Gallery
 > PBR and IBL
@@ -26,6 +28,8 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 > Omni-directional Shadow Mapping (With PCF)
 ![](Assets/Screenshots/PCFShadows1.png)
 
+> SSAO (Screen Space Ambient Occlusion)
+![](Assets/Screenshots/SSAO.png)
 > Editor (using ImGui)
 ![](Assets/Screenshots/Editor1.png)
 
@@ -49,10 +53,10 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 cmake -S . -B Build
 cmake --build Build --config Release
 ```
-Alternatively open the folder if your IDE supports doing so. The application will take care of relative file paths.
-+ Run the `setup.bat` file, which will install the DirectXAgility SDK. 
-+ Ensure you have installed the `DirectXShaderCompiler` (must support atleast SM 6.6). You can install it from [here](https://github.com/microsoft/DirectXShaderCompiler/releases). Make sure you set the path in your system environment variables.
-+ Shaders are automatically compiled after build process, however to compile manually, run the `CompileShaders.bat` (or alternatively the     `CompileShaders.py` script) from the Shaders directory. This is necessary for the first setup and run.
+
+Alternatively open the folder in Visual Studio's open folder mode.
++ Run the `Setup.bat` file, which will install the DirectXAgility SDK and the DirectXShader Compiler. You will be asked to enter the build path, which was the same path you gave in cmake -S . -B 'BuildPath'. 
+
 
 # Reference Projects :
 [Wicked Engine](https://github.com/turanszkij/WickedEngine) By Turánszki János. \

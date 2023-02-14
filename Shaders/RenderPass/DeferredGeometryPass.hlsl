@@ -71,7 +71,7 @@ PsOutput PsMain(VSOutput psInput)
 
     PsOutput output;
 
-    output.albedo = getAlbedo(psInput.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex);
+    output.albedo = getAlbedo(psInput.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex, materialBuffer.albedoColor);
     
     if (output.albedo.a < 0.9f)
     {

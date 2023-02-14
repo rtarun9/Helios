@@ -29,6 +29,7 @@ namespace interlop
     ConstantBufferStruct SceneBuffer
     {
         float4x4 viewMatrix;
+        float4x4 projectionMatrix;
         float4x4 inverseViewMatrix;
         float4x4 viewProjectionMatrix;
     };
@@ -104,6 +105,9 @@ namespace interlop
         float roughnessFactor;
         float metallicFactor;
         float emissiveFactor;
+        float padding;
+        float3 albedoColor;
+        float padding2;
     };
 
     ConstantBufferStruct ShadowBuffer
@@ -113,6 +117,14 @@ namespace interlop
         float extents;
         float nearPlane;
         float farPlane;
+    };
+
+    ConstantBufferStruct SSAOBuffer
+    {
+        float4 sampleVectors[64];
+        float radius;
+        float bias;
+        float2 padding;
     };
 
 } // namespace interlop

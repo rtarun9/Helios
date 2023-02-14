@@ -89,6 +89,7 @@ namespace helios::gfx
 
         [[nodiscard]] std::unique_ptr<ComputeContext>& getComputeContext()
         {
+            std::scoped_lock<std::mutex> lock(m_computeContextMutex);
             return m_computeContext;
         }
 
@@ -191,6 +192,10 @@ namespace helios::gfx
         std::unique_ptr<MipMapGenerator> m_mipMapGenerator{};
 
         mutable std::recursive_mutex m_resourceMutex{};
+        
+        // Slightly strange that this is required, and is most likely temporary.
+        mutable std::mutex m_computeContextMutex{};
+
         bool m_isInitialized{false};
 
         friend class MipMapGenerator;

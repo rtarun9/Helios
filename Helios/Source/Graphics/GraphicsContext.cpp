@@ -51,6 +51,14 @@ namespace helios::gfx
         m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
     }
 
+      void GraphicsContext::clearRenderTargetView(const Texture& renderTarget, const float color)
+    {
+        const auto rtvDescriptorHandle =
+            graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.rtvIndex);
+
+        m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, (FLOAT*)&color, 0u, nullptr);
+    }
+
     void GraphicsContext::clearRenderTargetView(const std::span<const Texture> renderTargets,
                                                 const std::span<const float, 4> color)
     {

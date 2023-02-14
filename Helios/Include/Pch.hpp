@@ -9,6 +9,7 @@
 #include <iostream>
 #include <ranges>
 #include <source_location>
+#include <random>
 #include <span>
 #include <string>
 #include <string_view>

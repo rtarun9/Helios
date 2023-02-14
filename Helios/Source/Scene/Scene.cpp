@@ -84,6 +84,8 @@ namespace helios::scene
 
         const interlop::SceneBuffer sceneBufferData = {
             .viewMatrix = m_camera.computeAndGetViewMatrix(),
+            .projectionMatrix =
+                math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
             .inverseViewMatrix = math::XMMatrixInverse(nullptr, m_camera.computeAndGetViewMatrix()),
             .viewProjectionMatrix =
                 m_camera.computeAndGetViewMatrix() *

@@ -55,6 +55,9 @@ set(SRC_FILES
     "Source/Rendering/PCFShadowMappingPass.cpp"
     "Include/Rendering/PCFShadowMappingPass.hpp"
 
+    "Source/Rendering/SSAOPass.cpp"
+    "Include/Rendering/SSAOPass.hpp"
+
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
 

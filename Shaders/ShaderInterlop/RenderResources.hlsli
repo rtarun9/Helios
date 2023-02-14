@@ -113,6 +113,8 @@ namespace interlop
 
         uint shadowBufferIndex;
         uint shadowDepthTextureIndex;
+
+        uint blurredSSAOTextureIndex;
     };
 
     struct CubeFromEquirectRenderResources
@@ -151,5 +153,19 @@ namespace interlop
         uint positionBufferIndex;
         uint transformBufferIndex;
         uint shadowBufferIndex;
+    };
+   
+    struct SSAORenderResources
+    {
+        uint positionTextureIndex;
+        uint normalTextureIndex;
+        uint randomRotationTextureIndex;
+        uint sceneBufferIndex;
+        uint ssaoBufferIndex;
+    };
+
+    struct BoxBlurRenderResources
+    {
+        uint textureIndex;
     };
 }

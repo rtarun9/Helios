@@ -10,11 +10,11 @@ static const float INV_PI = 1.0f / PI;
 static const float INV_TWO_PI = 1.0f / TWO_PI;
 static const float INVALID_INDEX = 4294967295; // UINT32_MAX;
 
-float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, const uint albedoTextureSamplerIndex)
+float4 getAlbedo(const float2 textureCoords, const uint albedoTextureIndex, const uint albedoTextureSamplerIndex, const float3 albedoColor)
 {
     if (albedoTextureIndex == INVALID_INDEX)
     {
-        return float4(0.0f, 0.0f, 0.0f, 1.0f);
+        return float4(albedoColor, 1.0f);
     }
 
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[albedoTextureIndex];
