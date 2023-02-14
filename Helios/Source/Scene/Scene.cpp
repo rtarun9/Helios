@@ -148,6 +148,16 @@ namespace helios::scene
         }
     }
 
+    void Scene::renderModels(const gfx::GraphicsContext* const graphicsContext,
+                             const interlop::ShadowPassRenderResources& renderResources)
+    {
+        interlop::ShadowPassRenderResources shadowPassRenderResources = renderResources;
+
+        for (const auto& [name, model] : m_models)
+        {
+            model->render(graphicsContext, shadowPassRenderResources);
+        }
+    }
     void Scene::renderLights(const gfx::GraphicsContext* const graphicsContext)
     {
         interlop::LightRenderResources lightRenderResources = {

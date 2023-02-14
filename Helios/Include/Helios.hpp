@@ -18,6 +18,7 @@
 
 #include "Rendering/DeferredGeometryPass.hpp"
 #include "Rendering/IBL.hpp"
+#include "Rendering/PCFShadowMappingPass.hpp"
 
 #include "Scene/Camera.hpp"
 #include "Scene/Materials.hpp"

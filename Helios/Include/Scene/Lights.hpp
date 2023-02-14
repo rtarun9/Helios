@@ -43,7 +43,7 @@ namespace helios::scene
         void render(const gfx::GraphicsContext* graphicsContext, interlop::LightRenderResources& lightRenderResources);
 
       public:
-        static constexpr float DIRECTIONAL_LIGHT_ANGLE{123.0f};
+        static constexpr float DIRECTIONAL_LIGHT_ANGLE{-99.0f};
 
       public:
         // Store light positions, color, intensities, etc.

@@ -88,7 +88,7 @@ namespace interlop
         // float4 because of struct packing (16byte alignment).
         // radiusIntensity[0] stores the radius, while index 1 stores the intensity.
         float4 radiusIntensity[MAX_LIGHTS];
-
+        
         uint numberOfLights;
     };
 
@@ -104,6 +104,15 @@ namespace interlop
         float roughnessFactor;
         float metallicFactor;
         float emissiveFactor;
+    };
+
+    ConstantBufferStruct ShadowBuffer
+    {
+        float4x4 lightViewProjectionMatrix;
+        float backOffDistance;
+        float extents;
+        float nearPlane;
+        float farPlane;
     };
 
 } // namespace interlop

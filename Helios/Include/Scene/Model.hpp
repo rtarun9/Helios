@@ -76,11 +76,14 @@ namespace helios::scene
         void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::DeferredGPassRenderResources& renderResources) const;
 
-         void render(const gfx::GraphicsContext* const graphicsContext,
+        void render(const gfx::GraphicsContext* const graphicsContext,
                     interlop::CubeMapRenderResources& renderResources) const;
 
         void render(const gfx::GraphicsContext* const graphicsContext,
-                    interlop::LightRenderResources& renderResources, const uint32_t lightInstancesCount) const;
+                    interlop::ShadowPassRenderResources& renderResources) const;
+
+        void render(const gfx::GraphicsContext* const graphicsContext, interlop::LightRenderResources& renderResources,
+                    const uint32_t lightInstancesCount) const;
 
       private:
         void loadNode(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc,

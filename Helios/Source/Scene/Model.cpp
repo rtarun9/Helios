@@ -210,6 +210,22 @@ namespace helios::scene
     }
 
     void Model::render(const gfx::GraphicsContext* const graphicsContext,
+                       interlop::ShadowPassRenderResources& renderResources) const
+    {
+        for (const Mesh& mesh : m_meshes)
+        {
+            graphicsContext->setIndexBuffer(mesh.indexBuffer);
+
+            renderResources.positionBufferIndex = mesh.positionBuffer.srvIndex;
+            renderResources.transformBufferIndex = m_transformComponent.transformBuffer.cbvIndex;
+
+            graphicsContext->set32BitGraphicsConstants(&renderResources);
+
+            graphicsContext->drawInstanceIndexed(mesh.indicesCount);
+        }
+    }
+
+    void Model::render(const gfx::GraphicsContext* const graphicsContext,
                        interlop::LightRenderResources& renderResources, const uint32_t lightInstancesCount) const
     {
         for (const Mesh& mesh : m_meshes)

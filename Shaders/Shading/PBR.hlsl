@@ -3,13 +3,14 @@
 #include "ShaderInterlop/ConstantBuffers.hlsli"
 #include "ShaderInterlop/renderResources.hlsli"
 #include "Utils.hlsli"
-
+#include "Shadow/PCFShadows.hlsli"
 #include "Shading/BRDF.hlsli"
 
 struct VSOutput
 {
     float4 position : SV_Position;
     float2 textureCoord : TEXTURE_COORD;
+    matrix lightSpaceMatrix : LIGHT_SPACE_MATRIX;
 };
 
 ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
@@ -19,9 +20,13 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     static const float3 VERTEX_POSITIONS[3] = {float3(-1.0f, 1.0f, 0.0f), float3(3.0f, 1.0f, 0.0f),
                                                float3(-1.0f, -3.0f, 0.0f)};
 
+    ConstantBuffer<interlop::ShadowBuffer> shadowBuffer = ResourceDescriptorHeap[renderResources.shadowBufferIndex];
+    
     VSOutput output;
     output.position = float4(VERTEX_POSITIONS[vertexID], 1.0f);
     output.textureCoord = output.position.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+    output.lightSpaceMatrix = shadowBuffer.lightViewProjectionMatrix;
+
     return output;
 }
 
@@ -31,7 +36,7 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
     ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];
 
-    const float3x3 inverseViewMatrix = (float3x3)sceneBuffer.inverseViewMatrix;
+    const matrix inverseViewMatrix = sceneBuffer.inverseViewMatrix;
 
     // Sample and extract data for the GBuffer's.
     Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
@@ -73,6 +78,7 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
     float3 lo = float3(0.0f, 0.0f, 0.0f);
 
+
     for (uint i = 0; i < lightBuffer.numberOfLights; ++i)
     {
         float3 pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz - viewSpacePosition);
@@ -83,8 +89,21 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
         // Check if we are dealing with directional light. Directional light is always at index 0.
         if (i == 0u)
         {
-            pixelToLightDirection = normalize(lightBuffer.viewSpaceLightPosition[i].xyz);
+            pixelToLightDirection = normalize(-lightBuffer.viewSpaceLightPosition[i].xyz);
             attenuation = 1.0f;
+            
+            // Since this is the directional light, the shading calculation must take into account shadow computation.
+            const float3 worldSpaceNormal = normalize(mul(normal, (float3x3)inverseViewMatrix));
+            const float4 worldSpacePosition = mul(float4(viewSpacePosition, 1.0f), inverseViewMatrix);
+            
+            const float3 worldPixelToLightDirection = normalize(-lightBuffer.lightPosition[0].xyz);
+            
+            const float nDotL = saturate(dot(worldSpaceNormal, worldPixelToLightDirection));
+            
+            const float4 lightSpacePosition = mul(worldSpacePosition, psInput.lightSpaceMatrix);
+            const float shadow = calculateShadow(lightSpacePosition, nDotL, renderResources.shadowDepthTextureIndex);
+
+            attenuation = (1.0f - shadow);
         }
 
         const float3 brdf =
@@ -93,11 +112,11 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
         lo += brdf * radiance * saturate(dot(pixelToLightDirection, normal)) * attenuation;
     }
-
+    
     // Calculate ambient lighting from irradiance map.
     
-    const float3 worldSpaceNormal = normalize(mul(normal, inverseViewMatrix));
-    const float3 reflectionDirection = normalize(mul(reflect(-viewDirection, normal), inverseViewMatrix));
+    const float3 worldSpaceNormal = normalize(mul(normal, (float3x3)inverseViewMatrix));
+    const float3 reflectionDirection = normalize(mul(reflect(-viewDirection, normal), (float3x3)inverseViewMatrix));
 
 
     const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);

@@ -52,6 +52,9 @@ set(SRC_FILES
     "Source/Rendering/IBL.cpp"
     "Include/Rendering/IBL.hpp"
 
+    "Source/Rendering/PCFShadowMappingPass.cpp"
+    "Include/Rendering/PCFShadowMappingPass.hpp"
+
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
 

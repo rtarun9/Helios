@@ -2,6 +2,7 @@
 
 #include "../Graphics/Resources.hpp"
 #include "../Rendering/DeferredGeometryPass.hpp"
+#include "../Rendering/PCFShadowMappingPass.hpp"
 
 namespace helios::gfx
 {
@@ -32,6 +33,7 @@ namespace helios::editor
         // clean as well. This function is heavy WIP and not given as much importance as other abstractions.
         void render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
                     rendering::DeferredGeometryBuffer& deferredGBuffer,
+                    rendering::PCFShadowMappingPass* const shadowMappingPass,
                     interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
                     gfx::GraphicsContext* const graphicsContext);
 
@@ -48,10 +50,12 @@ namespace helios::editor
 
         // Handles camera and other scene related properties.
         void renderSceneProperties(scene::Scene* const scene) const;
-        
 
         void renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
                                    const rendering::DeferredGeometryBuffer& deferredGBuffer) const;
+
+        void renderShadowMappingPass(const gfx::GraphicsDevice* const graphicsDevice,
+                                     rendering::PCFShadowMappingPass* const shadowMappingPass);
 
         void renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const;
 

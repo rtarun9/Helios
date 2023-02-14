@@ -110,6 +110,9 @@ namespace interlop
         uint irradianceTextureIndex;
         uint prefilterTextureIndex;
         uint brdfLUTTextureIndex;
+
+        uint shadowBufferIndex;
+        uint shadowDepthTextureIndex;
     };
 
     struct CubeFromEquirectRenderResources
@@ -141,5 +144,12 @@ namespace interlop
     struct BRDFLutRenderResources
     {
         uint lutTextureIndex;   
+    };
+    
+    struct ShadowPassRenderResources
+    {
+        uint positionBufferIndex;
+        uint transformBufferIndex;
+        uint shadowBufferIndex;
     };
 }

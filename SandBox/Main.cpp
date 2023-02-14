@@ -34,6 +34,9 @@ class SandBox final : public helios::core::Application
             m_ibl->generatePrefilterTexture(m_graphicsDevice.get(), m_scene->m_cubeMap->m_cubeMapTexture);
 
         m_brdfLUTTexture = m_ibl->generateBRDFLutTexture(m_graphicsDevice.get());
+
+        m_shadowMappingPass =
+            std::make_unique<rendering::PCFShadowMappingPass>(m_graphicsDevice.get());
     }
 
     void loadScene()
@@ -51,7 +54,7 @@ class SandBox final : public helios::core::Application
                           });
 
         m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
-                                                      .modelPath = L"Assets/Models/Sponza/glTF/Sponza.gltf",
+                                                      .modelPath = L"Assets/Models/Sponza/sponza.glb",
                                                       .modelName = L"Sponza",
                                                       .scale =
                                                           {
@@ -188,6 +191,11 @@ class SandBox final : public helios::core::Application
             m_deferredGPass->render(m_scene.get(), gctx.get(), m_depthTexture, m_windowWidth, m_windowHeight);
         }
 
+        // RenderPass 1 : Shadow mapping pass.
+        {
+            m_shadowMappingPass->render(m_scene.get(), gctx.get());
+        }
+
         // RenderPass 1 : Lighting Pass
         {
             gctx->setGraphicsRootSignatureAndPipeline(m_pipelineState);
@@ -211,6 +219,8 @@ class SandBox final : public helios::core::Application
                 .irradianceTextureIndex = m_irradianceTexture.srvIndex,
                 .prefilterTextureIndex = m_prefilterTexture.srvIndex,
                 .brdfLUTTextureIndex = m_brdfLUTTexture.srvIndex,
+                .shadowBufferIndex = m_shadowMappingPass->m_shadowBuffer.cbvIndex,
+                .shadowDepthTextureIndex = m_shadowMappingPass->m_shadowDepthBuffer.srvIndex,
             };
 
             m_scene->renderModels(gctx.get(), renderResources);
@@ -300,7 +310,8 @@ class SandBox final : public helios::core::Application
             gctx->drawInstanceIndexed(3u);
 
             m_editor->render(m_graphicsDevice.get(), m_scene.get(), m_deferredGPass->m_gBuffer,
-                             m_postProcessingBufferData, m_postProcessingRenderTarget, gctx.get());
+                             m_shadowMappingPass.get(), m_postProcessingBufferData, m_postProcessingRenderTarget,
+                             gctx.get());
 
             gctx->addResourceBarrier(m_postProcessingRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -341,6 +352,7 @@ class SandBox final : public helios::core::Application
 
     std::unique_ptr<rendering::DeferredGeometryPass> m_deferredGPass{};
     std::unique_ptr<rendering::IBL> m_ibl{};
+    std::unique_ptr<rendering::PCFShadowMappingPass> m_shadowMappingPass{};
 
     gfx::Texture m_irradianceTexture{};
     gfx::Texture m_prefilterTexture{};

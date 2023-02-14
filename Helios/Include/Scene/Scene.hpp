@@ -44,6 +44,8 @@ namespace helios::scene
                           const interlop::PBRRenderResources& renderResources);
         void renderModels(const gfx::GraphicsContext* const graphicsContext,
                           const interlop::DeferredGPassRenderResources& renderResources);
+        void renderModels(const gfx::GraphicsContext* const graphicsContext,
+                          const interlop::ShadowPassRenderResources& renderResources);
 
         void renderLights(const gfx::GraphicsContext* const graphicsContext);
 
