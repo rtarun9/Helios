@@ -183,6 +183,7 @@ namespace helios::gfx
         D3D12_RESOURCE_STATES optionalInitialState{D3D12_RESOURCE_STATE_COMMON};
         uint32_t mipLevels{1u};
         uint32_t depthOrArraySize{1u};
+        uint32_t bytesPerPixel{4u};
         std::wstring_view name{};
         std::wstring path{};
     };

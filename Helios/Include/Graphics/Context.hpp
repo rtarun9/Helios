@@ -30,5 +30,7 @@ namespace helios::gfx
         // The resource barriers are executed when the ExecuteResourceBarriers() call is invoked, which must happen
         // before command list is sent over to the device for execution, or be batched as much as possible.
         std::vector<CD3DX12_RESOURCE_BARRIER> m_resourceBarriers{};
+
+        std::recursive_mutex m_mutex{};
     };
 } // namespace helios::gfx

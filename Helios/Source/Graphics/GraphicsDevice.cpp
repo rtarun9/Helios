@@ -281,7 +281,7 @@ namespace helios::gfx
     }
 
     Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc,
-                                          const std::byte* data) const
+                                          const void* data) const
     {
         Texture texture{};
 
@@ -392,16 +392,16 @@ namespace helios::gfx
             {
                 textureSubresourceData = {
                     .pData = hdrTextureData,
-                    .RowPitch = width * componentCount * 4,
-                    .SlicePitch = width * height * componentCount * 4,
+                    .RowPitch = width * textureCreationDesc.bytesPerPixel,
+                    .SlicePitch = width * height * textureCreationDesc.bytesPerPixel,
                 };
             }
             else // TexureUsage:: TextureFromPath (non HDR).
             {
                 textureSubresourceData = {
                     .pData = textureData,
-                    .RowPitch = width * componentCount,
-                    .SlicePitch = width * height * componentCount,
+                    .RowPitch = width * textureCreationDesc.bytesPerPixel,
+                    .SlicePitch = width * height * textureCreationDesc.bytesPerPixel,
                 };
             }
 

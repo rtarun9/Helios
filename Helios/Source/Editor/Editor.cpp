@@ -351,16 +351,17 @@ namespace helios::editor
         ImGui::End();
     }
 
-    void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass* const ssaoPass) const
-    {   
+    void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice,
+                                rendering::SSAOPass* const ssaoPass) const
+    {
         ImGui::Begin("SSAO Pass");
-        const auto ssaoTextureSrvDescriptorHandle = graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-            ssaoPass->m_ssaoTexture.srvIndex);
+        const auto ssaoTextureSrvDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                ssaoPass->m_ssaoTexture.srvIndex);
 
-         const auto blurSSAOTextureSrvDescriptorHandle =
+        const auto blurSSAOTextureSrvDescriptorHandle =
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
                 ssaoPass->m_blurSSAOTexture.srvIndex);
-
 
         ImGui::Begin("SSAO Texture");
         ImGui::Image((ImTextureID)(ssaoTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
@@ -381,6 +382,10 @@ namespace helios::editor
     void Editor::renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const
     {
         ImGui::Begin("Post Processing Properties");
+        static int showSSAOTexture{};
+        ImGui::SliderInt("Show SSAO Texture", &showSSAOTexture, 0, 1);
+        postProcessBufferData.debugShowSSAOTexture = static_cast<uint32_t>(showSSAOTexture);
+
         ImGui::End();
     }
 

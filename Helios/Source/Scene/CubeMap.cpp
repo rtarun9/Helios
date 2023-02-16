@@ -12,6 +12,7 @@ namespace helios::scene
             .usage = gfx::TextureUsage::HDRTextureFromPath,
             .format = DXGI_FORMAT_R32G32B32A32_FLOAT,
             .mipLevels = 6,
+            .bytesPerPixel = 16u,
             .name = cubeMapCreationDesc.name,
             .path = cubeMapCreationDesc.equirectangularTexturePath,
         });

@@ -95,6 +95,7 @@ namespace interlop
 
     ConstantBufferStruct PostProcessingBuffer
     {
+        uint debugShowSSAOTexture;
         float4 padding;
     };
 
@@ -121,10 +122,15 @@ namespace interlop
 
     ConstantBufferStruct SSAOBuffer
     {
-        float4 sampleVectors[64];
+        float4 sampleVectors[128];
         float radius;
         float bias;
-        float2 padding;
+        uint sampleVectorCount;
+        float padding;
+        float noiseTextureWidth;
+        float noiseTextureHeight;
+        float screenWidth;
+        float screenHeight;
     };
 
 } // namespace interlop

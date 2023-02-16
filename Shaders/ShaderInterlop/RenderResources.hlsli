@@ -62,7 +62,9 @@ namespace interlop
 
     struct PostProcessingRenderResources
     {
+        uint postProcessBufferIndex;
         uint renderTextureIndex;
+        uint ssaoTextureIndex;
     };
 
     struct FullScreenTrianglePassRenderResources
@@ -159,6 +161,7 @@ namespace interlop
     {
         uint positionTextureIndex;
         uint normalTextureIndex;
+        uint depthTextureIndex;
         uint randomRotationTextureIndex;
         uint sceneBufferIndex;
         uint ssaoBufferIndex;

@@ -64,7 +64,7 @@ class SandBox final : public helios::core::Application
                                                               0.1f,
                                                           },
                                                   });
-  
+
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::DirectionalLightData});
 
@@ -168,6 +168,8 @@ class SandBox final : public helios::core::Application
     void update(const float deltaTime) override
     {
         m_scene->update(deltaTime, m_input, static_cast<float>(m_windowWidth) / m_windowHeight);
+
+        m_postProcessingBuffer.update(&m_postProcessingBufferData);
     }
 
     void render() override
@@ -194,13 +196,22 @@ class SandBox final : public helios::core::Application
 
         // RenderPass 2 : SSAO Pass.
         {
+            gctx->addResourceBarrier(m_depthTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            gctx->executeResourceBarriers();
+
             interlop::SSAORenderResources renderResources = {
                 .positionTextureIndex = m_deferredGPass->m_gBuffer.positionEmissiveRT.srvIndex,
                 .normalTextureIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
+                .depthTextureIndex = m_depthTexture.srvIndex,
                 .sceneBufferIndex = m_scene->m_sceneBuffer.cbvIndex,
             };
 
             m_ssaoPass->render(gctx.get(), m_renderTargetIndexBuffer, renderResources, m_windowWidth, m_windowHeight);
+
+            gctx->addResourceBarrier(m_depthTexture.allocation.resource.Get(),
+                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            gctx->executeResourceBarriers();
         }
 
         // RenderPass 3 : Shadow mapping pass.
@@ -278,7 +289,9 @@ class SandBox final : public helios::core::Application
             gctx->setRenderTarget(m_postProcessingRenderTarget, m_fullScreenPassDepthTexture);
 
             interlop::PostProcessingRenderResources renderResources = {
+                .postProcessBufferIndex = m_postProcessingBuffer.cbvIndex,
                 .renderTextureIndex = m_offscreenRenderTarget.srvIndex,
+                .ssaoTextureIndex = m_ssaoPass->m_blurSSAOTexture.srvIndex,
             };
 
             gctx->set32BitGraphicsConstants(&renderResources);

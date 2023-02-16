@@ -29,7 +29,13 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 ![](Assets/Screenshots/PCFShadows1.png)
 
 > SSAO (Screen Space Ambient Occlusion)
-![](Assets/Screenshots/SSAO.png)
+* Blurred SSAO texture
+![](Assets/Screenshots/BlurredSSAOTexture.png)
+
+* SSAO Disabled (Top) with SSAO Enabled (Bottom)
+![](Assets/Screenshots/NoSSAO.png) 
+![](Assets/Screenshots/SSAOEnbled.png)
+
 > Editor (using ImGui)
 ![](Assets/Screenshots/Editor1.png)
 

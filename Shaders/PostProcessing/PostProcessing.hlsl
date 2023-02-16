@@ -40,6 +40,14 @@ float3 acesNarkowicz(const float3 color)
 
 float4 PsMain(VSOutput input) : SV_Target
 {
+    ConstantBuffer<interlop::PostProcessingBuffer> postProcessingBuffer = ResourceDescriptorHeap[renderResources.postProcessBufferIndex];
+    if (postProcessingBuffer.debugShowSSAOTexture)
+    {
+        Texture2D<float> ssaoTexture = ResourceDescriptorHeap[renderResources.ssaoTextureIndex];
+        const float value = ssaoTexture.Sample(linearClampSampler, input.textureCoord);
+        return float4(value, value, value, 1.0f);
+    }
+
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[renderResources.renderTextureIndex];
     float3 color = renderTexture.Sample(linearWrapSampler, input.textureCoord).xyz;
     

@@ -19,7 +19,9 @@ namespace helios::rendering
         std::uniform_real_distribution<float> minusOneToOneDistribution{-1.0f, 1.0f};
         std::default_random_engine generator{};
 
-        for (const uint32_t i : std::views::iota(0u, 64u))
+        m_ssaoBufferData.sampleVectorCount = 128;
+
+        for (const uint32_t i : std::views::iota(0u, m_ssaoBufferData.sampleVectorCount))
         {
             math::XMVECTOR samplePosition = math::XMVector3Normalize(
                 math::XMVectorSet(minusOneToOneDistribution(generator), minusOneToOneDistribution(generator),
@@ -47,12 +49,15 @@ namespace helios::rendering
             .name = L"SSAO Buffer",
         });
 
-        m_ssaoBufferData.bias = 0.05f;
-        m_ssaoBufferData.radius = 0.5f;
+        m_ssaoBufferData.bias = 0.022f;
+        m_ssaoBufferData.radius = 1.0f;
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
 
         // Create the random rotation texture (a 4/4 texture in range ([-1, 1], [-1, 1]).
+        m_ssaoBufferData.noiseTextureWidth = 4.0f;
+        m_ssaoBufferData.noiseTextureHeight = 4.0f;
+
         std::array<math::XMFLOAT2, 16> randomRotationTextureData{};
         for (const uint32_t i : std::views::iota(0u, 16u))
         {
@@ -66,9 +71,10 @@ namespace helios::rendering
                 .width = 4u,
                 .height = 4u,
                 .format = DXGI_FORMAT_R8G8_SNORM,
+                .bytesPerPixel = 2u,
                 .name = L"Random Rotation Texture",
             },
-            reinterpret_cast<std::byte*>(randomRotationTextureData.data()));
+            randomRotationTextureData.data());
 
         // Create render targets and pipeline states.
         m_ssaoTexture = graphicsDevice->createTexture(gfx::TextureCreationDesc{
@@ -100,22 +106,24 @@ namespace helios::rendering
             .name = L"SSAO Texture Texture",
         });
 
-        m_boxBlurPipelineState  =
-            graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-                .shaderModule =
-                    {
-                        .vertexShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
-                        .pixelShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
-                    },
-                .rtvFormats = {DXGI_FORMAT_R32_FLOAT},
-                .depthFormat = DXGI_FORMAT_UNKNOWN,
-                .pipelineName = L"Box Blur Pipeline State",
-            });
+        m_boxBlurPipelineState = graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
+            .shaderModule =
+                {
+                    .vertexShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
+                    .pixelShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
+                },
+            .rtvFormats = {DXGI_FORMAT_R32_FLOAT},
+            .depthFormat = DXGI_FORMAT_UNKNOWN,
+            .pipelineName = L"Box Blur Pipeline State",
+        });
     }
 
     void SSAOPass::render(gfx::GraphicsContext* const graphicsContext, const gfx::Buffer& renderTargetIndexBuffer,
                           interlop::SSAORenderResources& renderResources, const uint32_t width, const uint32_t height)
     {
+        m_ssaoBufferData.screenWidth = width;
+        m_ssaoBufferData.screenHeight = height;
+
         // Put this in update maybe?
         m_ssaoBuffer.update(&m_ssaoBufferData);
 

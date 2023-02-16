@@ -22,7 +22,7 @@ namespace helios::rendering
                 },
             .rtvFormats =
                 {
-                    DXGI_FORMAT_R8G8B8A8_UNORM,
+                    DXGI_FORMAT_R16G16B16A16_FLOAT,
                     DXGI_FORMAT_R16G16B16A16_FLOAT,
                     DXGI_FORMAT_R16G16B16A16_FLOAT,
                     DXGI_FORMAT_R16G16B16A16_FLOAT,
@@ -36,7 +36,7 @@ namespace helios::rendering
             .usage = gfx::TextureUsage::RenderTarget,
             .width = width,
             .height = height,
-            .format = DXGI_FORMAT_R8G8B8A8_UNORM,
+            .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
             .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass Albedo Texture",
         });

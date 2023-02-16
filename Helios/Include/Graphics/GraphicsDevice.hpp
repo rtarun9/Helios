@@ -119,7 +119,7 @@ namespace helios::gfx
         // supported). In that case, a upload buffer will be created, after which a copy command is issued so that
         // finally the texture on GPU only memory has the required data.
         [[nodiscard]] Texture createTexture(const TextureCreationDesc& textureCreationDesc,
-                                            const std::byte* data = nullptr) const;
+                                            const void* data = nullptr) const;
 
         // Create a sampler (which is just an index into the sampler descriptor heap).
         // Do note that unlike createCbv/Srv/Uav this is placed in public access and not with the other create
