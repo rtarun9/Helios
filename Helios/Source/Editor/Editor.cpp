@@ -64,9 +64,9 @@ namespace helios::editor
     // May seem like lot of code squashed into a single function, but this makes the engine code clean
     void Editor::render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
                         rendering::DeferredGeometryBuffer& deferredGBuffer,
-                        rendering::PCFShadowMappingPass* const shadowMappingPass, rendering::SSAOPass* const ssaoPass,
-                        interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
-                        gfx::GraphicsContext* const graphicsContext)
+                        rendering::PCFShadowMappingPass& shadowMappingPass, rendering::SSAOPass& ssaoPass,
+                        rendering::BloomPass& bloomPass, interlop::PostProcessingBuffer& postProcessBuffer,
+                        gfx::Texture& renderTarget, gfx::GraphicsContext* const graphicsContext)
     {
         if (m_showUI)
         {
@@ -109,6 +109,9 @@ namespace helios::editor
 
             // Render SSAO pass.
             renderSSAOPass(graphicsDevice, ssaoPass);
+
+            // Render Bloom pass.
+            renderBloomPass(graphicsDevice, bloomPass);
 
             // Render post processing data.
             renderPostProcessingProperties(postProcessBuffer);
@@ -333,35 +336,33 @@ namespace helios::editor
     }
 
     void Editor::renderShadowMappingPass(const gfx::GraphicsDevice* const graphicsDevice,
-                                         rendering::PCFShadowMappingPass* const shadowMappingPass) const
+                                         rendering::PCFShadowMappingPass& shadowMappingPass) const
     {
         ImGui::Begin("Shadow Pass");
         const auto srvDescriptorHandle = graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-            shadowMappingPass->m_shadowDepthBuffer.srvIndex);
+            shadowMappingPass.m_shadowDepthBuffer.srvIndex);
 
         ImGui::Begin("Shadow Depth Map");
         ImGui::Image((ImTextureID)(srvDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
-        ImGui::SliderFloat("Backoff distance", &shadowMappingPass->m_shadowBufferData.backOffDistance, 0.0f, 300.0f);
-        ImGui::SliderFloat("Extents", &shadowMappingPass->m_shadowBufferData.extents, 0.0f, 300.0f);
-        ImGui::SliderFloat("Near Plane", &shadowMappingPass->m_shadowBufferData.nearPlane, 0.0f, 10.0f);
-        ImGui::SliderFloat("Far Plane", &shadowMappingPass->m_shadowBufferData.farPlane, 50.0f, 500.0f);
+        ImGui::SliderFloat("Backoff distance", &shadowMappingPass.m_shadowBufferData.backOffDistance, 0.0f, 300.0f);
+        ImGui::SliderFloat("Extents", &shadowMappingPass.m_shadowBufferData.extents, 0.0f, 300.0f);
+        ImGui::SliderFloat("Near Plane", &shadowMappingPass.m_shadowBufferData.nearPlane, 0.0f, 10.0f);
+        ImGui::SliderFloat("Far Plane", &shadowMappingPass.m_shadowBufferData.farPlane, 50.0f, 500.0f);
 
         ImGui::End();
     }
 
-    void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice,
-                                rendering::SSAOPass* const ssaoPass) const
+    void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass& ssaoPass) const
     {
         ImGui::Begin("SSAO Pass");
         const auto ssaoTextureSrvDescriptorHandle =
-            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-                ssaoPass->m_ssaoTexture.srvIndex);
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(ssaoPass.m_ssaoTexture.srvIndex);
 
         const auto blurSSAOTextureSrvDescriptorHandle =
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-                ssaoPass->m_blurSSAOTexture.srvIndex);
+                ssaoPass.m_blurSSAOTexture.srvIndex);
 
         ImGui::Begin("SSAO Texture");
         ImGui::Image((ImTextureID)(ssaoTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
@@ -373,8 +374,51 @@ namespace helios::editor
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
-        ImGui::SliderFloat("Bias", &ssaoPass->m_ssaoBufferData.bias, 0.0f, 3.0f);
-        ImGui::SliderFloat("Radius", &ssaoPass->m_ssaoBufferData.radius, 0.0f, 10.0f);
+        ImGui::SliderFloat("Bias", &ssaoPass.m_ssaoBufferData.bias, 0.0f, 3.0f);
+        ImGui::SliderFloat("Radius", &ssaoPass.m_ssaoBufferData.radius, 0.0f, 10.0f);
+
+        ImGui::End();
+    }
+
+    void Editor::renderBloomPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::BloomPass& bloomPass) const
+    {
+        ImGui::Begin("Bloom Pass");
+
+        ImGui::SliderFloat("Threshold", &bloomPass.m_bloomBufferData.threshHold, 0.0f, 10.0f);
+        ImGui::SliderFloat("Radius", &bloomPass.m_bloomBufferData.radius, 0.0f, 10.0f);
+
+         const auto bloomExtractTextureSrvDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                bloomPass.m_extractionTexture.srvIndex);
+
+         ImGui::Begin("Bloom Extract Texture");
+         ImGui::Image((ImTextureID)(bloomExtractTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+                      ImGui::GetMainViewport()->WorkSize);
+         ImGui::End();
+
+        static int bloomDownSampleMipIndex{0};
+        ImGui::SliderInt("DownSample Mip Level", &bloomDownSampleMipIndex, 0, interlop::BLOOM_PASSES-1);
+
+        const auto bloomDownPassTextureSrvDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                bloomPass.m_bloomDownSampleTexture.srvIndex + bloomDownSampleMipIndex);
+
+        ImGui::Begin("Bloom Downsample Texture");
+        ImGui::Image((ImTextureID)(bloomDownPassTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+                     ImGui::GetWindowViewport()->WorkSize);
+        ImGui::End();
+
+         static int bloomUpSampleMipIndex{0};
+        ImGui::SliderInt("UpSample Mip Level", &bloomUpSampleMipIndex, 0, interlop::BLOOM_PASSES - 1);
+
+        const auto bloomUpSampleTextureSrvDescriptorHandle =
+            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
+                bloomPass.m_bloomUpSampleTexture.srvIndex + bloomUpSampleMipIndex);
+
+        ImGui::Begin("Bloom UpSample Texture");
+        ImGui::Image((ImTextureID)(bloomUpSampleTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+                     ImGui::GetWindowViewport()->WorkSize);
+        ImGui::End();
 
         ImGui::End();
     }
@@ -385,7 +429,10 @@ namespace helios::editor
         static int showSSAOTexture{};
         ImGui::SliderInt("Show SSAO Texture", &showSSAOTexture, 0, 1);
         postProcessBufferData.debugShowSSAOTexture = static_cast<uint32_t>(showSSAOTexture);
-
+        static int enableBloom{0};
+        ImGui::SliderInt("Enable Bloom", &enableBloom, 0, 1);
+        postProcessBufferData.enableBloom = static_cast<uint32_t>(enableBloom);
+        ImGui::SliderFloat("Bloom Strength", &postProcessBufferData.bloomStrength, 0.0f, 1.0f);
         ImGui::End();
     }
 

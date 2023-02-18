@@ -86,18 +86,12 @@ namespace helios::gfx
 
             // NOTE : UAV's have a limited set of formats they can use.
             // Refer : https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads.
-            std::array<uint32_t, 4u> mipUavs{};
-            for (uint32_t uav : std::views::iota(0u, static_cast<uint32_t>(mipCount)))
-            {
-                UavCreationDesc uavCreationDesc{
-                    .uavDesc{.Format = gfx::Texture::getNonSRGBFormat(sourceResourceDesc.Format),
-                             .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
-                             .Texture2D{.MipSlice = uav + 1 + srcMipLevel, .PlaneSlice = 0u}}};
-
-                //  Reading from a SRV/UAV mapped to a null resource will return black and writing to a UAV mapped to a
-                //  null resource will have no effect (from 3DGEP).
-                mipUavs[uav] = graphicsDevice.createUav(uavCreationDesc, texture.allocation.resource.Get());
-            }
+            std::array<uint32_t, 4u> mipUavs = {
+                texture.uavIndex + srcMipLevel + 1u,
+                texture.uavIndex + srcMipLevel + 2u,
+                texture.uavIndex + srcMipLevel + 3u,
+                texture.uavIndex + srcMipLevel + 4u,
+            };
 
             const interlop::MipMapGenerationBuffer mipMapGenerationBufferData = {
                 .isSRGB = gfx::Texture::isTextureSRGB(sourceResourceDesc.Format),

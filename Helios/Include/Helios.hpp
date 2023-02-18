@@ -20,6 +20,7 @@
 #include "Rendering/IBL.hpp"
 #include "Rendering/PCFShadowMappingPass.hpp"
 #include "Rendering/SSAOPass.hpp"
+#include "Rendering/BloomPass.hpp"
 
 #include "Scene/Camera.hpp"
 #include "Scene/Materials.hpp"

@@ -24,8 +24,10 @@
     "TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP), "                                                       \
     "StaticSampler(s7, filter = FILTER_MIN_MAG_POINT_MIP_LINEAR, addressU = TEXTURE_ADDRESS_WRAP, addressV = "         \
     "TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP), "                                                         \
-    "StaticSampler(s8, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)"
-
+    "StaticSampler(s8, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16), "                                             \
+    "StaticSampler(s9, filter = FILTER_MIN_MAG_MIP_LINEAR,  addressU = TEXTURE_ADDRESS_BORDER, addressV = "            \
+    "TEXTURE_ADDRESS_BORDER, addressW = TEXTURE_ADDRESS_BORDER, borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK)"
+  
 // Samplers
 SamplerState pointClampSampler : register(s0);
 SamplerState pointWrapSampler : register(s1);
@@ -36,4 +38,5 @@ SamplerState minMapLinearMipPointWrapSampler : register(s5);
 SamplerState minMapPointMipLinearClampSampler : register(s6);
 SamplerState minMapPointMipLinearWrapSampler : register(s7);
 SamplerState anisotropicSampler : register(s8);
+SamplerState linearClampToBorder : register(s9);
 

@@ -280,8 +280,7 @@ namespace helios::gfx
         createBackBufferRTVs();
     }
 
-    Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc,
-                                          const void* data) const
+    Texture GraphicsDevice::createTexture(const TextureCreationDesc& paramTextureCreationDesc, const void* data) const
     {
         Texture texture{};
 
@@ -462,6 +461,30 @@ namespace helios::gfx
 
         texture.srvIndex = createSrv(srvCreationDesc, texture.allocation.resource.Get());
 
+        // Create SRV's for mip levels. Can be accessed by in code by texture.srvIndex + i.
+        // Only doing this for textures which are specified as UAV textures.
+        if (textureCreationDesc.mipLevels > 1 && textureCreationDesc.usage == TextureUsage::UAVTexture)
+        {
+            for (const uint32_t i : std::views::iota(1u, textureCreationDesc.mipLevels))
+            {
+                const uint32_t srvIndex = createSrv(
+                    gfx::SrvCreationDesc{
+                        .srvDesc =
+                            {
+                                .Format = format,
+                                .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+                                .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+                                .Texture2D =
+                                    {
+                                        .MostDetailedMip = i,
+                                        .MipLevels = 1,
+                                    },
+                            },
+                    },
+                    texture.allocation.resource.Get());
+            }
+        }
+
         // Create DSV (if applicable).
         if (textureCreationDesc.usage == TextureUsage::DepthStencil)
         {
@@ -496,39 +519,23 @@ namespace helios::gfx
         }
 
         // Create UAV's is applicable.
-        if (textureCreationDesc.usage == TextureUsage::CubeMap || textureCreationDesc.usage == TextureUsage::UAVTexture)
+        if (textureCreationDesc.usage != TextureUsage::DepthStencil)
         {
-            // Since cube map requires 6 Uav's, create them.
-            // The Texture will hold the index to only the first uav, but they will be contiguous in nature since only
-            // single large descriptor heap is used for each descriptor type.
+            // The Texture will hold the index to only the first uav, but they will be contiguous in nature
+            // since only single large descriptor heap is used for each descriptor type.
 
-            // Create the first UAV index.
-            texture.uavIndex = createUav(
-                UavCreationDesc{
-                    .uavDesc =
-                        {
-                            .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
-                            .Texture2DArray =
-                                {
-                                    .MipSlice = 0u,
-                                    .FirstArraySlice = 0u,
-                                    .ArraySize = textureCreationDesc.depthOrArraySize,
-                                },
-                        },
-                },
-                texture.allocation.resource.Get());
-
-            if (textureCreationDesc.mipLevels > 1)
+            if (textureCreationDesc.depthOrArraySize > 1u)
             {
                 // Create the remaining uav's.
-                for (const uint32_t i : std::views::iota(1u, textureCreationDesc.mipLevels))
+                for (const uint32_t i : std::views::iota(0u, textureCreationDesc.mipLevels))
                 {
-                    // uavIndex will not be directly accesible to user, user must add the index to texture.uav index to
-                    // retrive it.
+                    // uavIndex will not be directly accesible to user, user must add the index to texture.uav
+                    // index to retrive it.
                     const uint32_t uavIndex = createUav(
                         UavCreationDesc{
                             .uavDesc =
                                 {
+                                    .Format = gfx::Texture::getNonSRGBFormat(textureCreationDesc.format),
                                     .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY,
                                     .Texture2DArray =
                                         {
@@ -539,6 +546,39 @@ namespace helios::gfx
                                 },
                         },
                         texture.allocation.resource.Get());
+
+                    if (i == 0u)
+                    {
+                        texture.uavIndex = uavIndex;
+                    }
+                }
+            }
+            else // Texture is just a Texture 2D.
+            {
+                // Create the remaining uav's.
+                for (const uint32_t i : std::views::iota(0u, textureCreationDesc.mipLevels))
+                {
+                    // uavIndex will not be directly accesible to user, user must add the index to texture.uav
+                    // index to retrive it.
+                    const uint32_t uavIndex = createUav(
+                        UavCreationDesc{
+                            .uavDesc =
+                                {
+                                    .Format = gfx::Texture::getNonSRGBFormat(textureCreationDesc.format),
+                                    .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+                                    .Texture2D =
+                                        {
+                                            .MipSlice = i,
+                                            .PlaneSlice = 0u,
+                                        },
+                                },
+                        },
+                        texture.allocation.resource.Get());
+
+                    if (i == 0u)
+                    {
+                        texture.uavIndex = uavIndex;
+                    }
                 }
             }
         }

@@ -49,8 +49,12 @@ float4 PsMain(VSOutput input) : SV_Target
     }
 
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[renderResources.renderTextureIndex];
+    Texture2D<float4> bloomTexture = ResourceDescriptorHeap[renderResources.bloomTextureIndex];
+
     float3 color = renderTexture.Sample(linearWrapSampler, input.textureCoord).xyz;
-    
+    const float3 bloomColor = (bloomTexture.Sample(linearWrapSampler, input.textureCoord).xyz * postProcessingBuffer.enableBloom);
+
+    color = lerp(color, bloomColor, postProcessingBuffer.bloomStrength);
     color = acesNarkowicz(color);
 
     return float4(pow(color, 1 / 2.2f), 1.0f);

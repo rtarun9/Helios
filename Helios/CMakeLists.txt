@@ -58,6 +58,9 @@ set(SRC_FILES
     "Source/Rendering/SSAOPass.cpp"
     "Include/Rendering/SSAOPass.hpp"
 
+    "Source/Rendering/BloomPass.cpp"
+    "Include/Rendering/BloomPass.hpp"
+
     "Source/Scene/Camera.cpp"
     "Include/Scene/Camera.hpp"
 

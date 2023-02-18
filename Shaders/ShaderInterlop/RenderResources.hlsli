@@ -4,6 +4,7 @@
 #ifdef __cplusplus
 
 #define uint uint32_t
+#define float2 math::XMFLOAT2
 
 #endif
 
@@ -65,6 +66,7 @@ namespace interlop
         uint postProcessBufferIndex;
         uint renderTextureIndex;
         uint ssaoTextureIndex;
+        uint bloomTextureIndex;
     };
 
     struct FullScreenTrianglePassRenderResources
@@ -170,5 +172,36 @@ namespace interlop
     struct BoxBlurRenderResources
     {
         uint textureIndex;
+    };
+
+    struct BloomExtractRenderResources
+    {
+        uint inputTextureIndex;
+        uint outputTextureIndex;
+
+        uint bloomBufferIndex;
+    };
+
+    // Having a float2 here to prevent having to flush the command queue (which is required if constant buffer is used to store texel size).
+    struct BloomDownSampleRenderResources
+    {
+        uint inputTextureIndex;
+        uint inputTextureMipLevel;
+        uint outputTextureIndex;
+        uint bloomPassIndex;
+        float2 texelSize;
+    };
+
+     // Having a float2 here to prevent having to flush the command queue (which is required if constant buffer is used to store texel size).
+    struct BloomUpSampleRenderResources
+    {
+        uint inputPreviousUpSampleSrvIndex;
+        uint inputPreviousUpSampleMipLevel;
+        uint inputCurrentDownSampleUavIndex;
+        uint outputCurrentUpSampleMipIndex;
+        uint bloomPassIndex;
+        uint bloomBufferIndex;
+        uint padding2;
+        float2 texelSize;
     };
 }

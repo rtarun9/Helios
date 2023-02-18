@@ -96,6 +96,8 @@ namespace interlop
     ConstantBufferStruct PostProcessingBuffer
     {
         uint debugShowSSAOTexture;
+        uint enableBloom;
+        float bloomStrength;
         float4 padding;
     };
 
@@ -133,4 +135,10 @@ namespace interlop
         float screenHeight;
     };
 
+    static const uint BLOOM_PASSES = 10u;
+    ConstantBufferStruct BloomBuffer
+    {
+        float threshHold;
+        float radius;
+    };
 } // namespace interlop

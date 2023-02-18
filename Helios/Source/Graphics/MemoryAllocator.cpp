@@ -142,14 +142,14 @@ namespace helios::gfx
         break;
 
         case TextureUsage::RenderTarget: {
-            resourceCreationDesc.resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            resourceCreationDesc.resourceDesc.Flags =
+                D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
             allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
             resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
         }
         break;
 
-        // Note : All resource loaded from path must be able to be used by UAVs.
         case TextureUsage::TextureFromPath:
         case TextureUsage::TextureFromData:
         case TextureUsage::HDRTextureFromPath:

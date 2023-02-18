@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Graphics/Resources.hpp"
+#include "../Rendering/BloomPass.hpp"
 #include "../Rendering/DeferredGeometryPass.hpp"
 #include "../Rendering/PCFShadowMappingPass.hpp"
 #include "../Rendering/SSAOPass.hpp"
@@ -34,9 +35,9 @@ namespace helios::editor
         // clean as well. This function is heavy WIP and not given as much importance as other abstractions.
         void render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
                     rendering::DeferredGeometryBuffer& deferredGBuffer,
-                    rendering::PCFShadowMappingPass* const shadowMappingPass, rendering::SSAOPass* const ssaoPass,
-                    interlop::PostProcessingBuffer& postProcessBuffer, gfx::Texture& renderTarget,
-                    gfx::GraphicsContext* const graphicsContext);
+                    rendering::PCFShadowMappingPass& shadowMappingPass, rendering::SSAOPass& ssaoPass,
+                    rendering::BloomPass& bloomPass, interlop::PostProcessingBuffer& postProcessBuffer,
+                    gfx::Texture& renderTarget, gfx::GraphicsContext* const graphicsContext);
 
         void showUI(const bool value);
 
@@ -56,9 +57,11 @@ namespace helios::editor
                                    const rendering::DeferredGeometryBuffer& deferredGBuffer) const;
 
         void renderShadowMappingPass(const gfx::GraphicsDevice* const graphicsDevice,
-                                     rendering::PCFShadowMappingPass* const shadowMappingPass) const;
+                                     rendering::PCFShadowMappingPass& shadowMappingPass) const;
 
-        void renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass* const ssaoPass) const;
+        void renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass& ssaoPass) const;
+
+        void renderBloomPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::BloomPass& bloomPass) const;
 
         void renderPostProcessingProperties(interlop::PostProcessingBuffer& postProcessBufferData) const;
 

@@ -35,6 +35,9 @@ namespace helios::gfx
         void setIndexBuffer(const Buffer& buffer) const;
         void set32BitGraphicsConstants(const void* renderResources) const;
 
+        void setComputeRootSignatureAndPipeline(const PipelineState& pipelineState) const;
+        void set32BitComputeConstants(const void* renderResources) const;
+
         void setViewport(const D3D12_VIEWPORT& viewport) const;
 
         void setPrimitiveTopologyLayout(const D3D_PRIMITIVE_TOPOLOGY primitiveTopology) const;
@@ -48,6 +51,9 @@ namespace helios::gfx
         // Draw functions.
         void drawInstanceIndexed(const uint32_t indicesCount, const uint32_t instanceCount = 1u) const;
         void drawIndexed(const uint32_t indicesCount, const uint32_t instanceCount = 1u) const;
+
+        // Dispatch functions.
+        void dispatch(const uint32_t threadGroupDimX, const uint32_t threadGroupDimY, const uint32_t threadGroupDimZ);
 
       private:
         static constexpr uint32_t NUMBER_32_BIT_CONSTANTS = 64;

@@ -51,7 +51,7 @@ namespace helios::gfx
         m_commandList->ClearRenderTargetView(rtvDescriptorHandle.cpuDescriptorHandle, color.data(), 0u, nullptr);
     }
 
-      void GraphicsContext::clearRenderTargetView(const Texture& renderTarget, const float color)
+    void GraphicsContext::clearRenderTargetView(const Texture& renderTarget, const float color)
     {
         const auto rtvDescriptorHandle =
             graphicsDevice.getRtvDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.rtvIndex);
@@ -109,6 +109,17 @@ namespace helios::gfx
     void GraphicsContext::set32BitGraphicsConstants(const void* renderResources) const
     {
         m_commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
+    }
+
+    void GraphicsContext::setComputeRootSignatureAndPipeline(const PipelineState& pipelineState) const
+    {
+        m_commandList->SetComputeRootSignature(PipelineState::s_rootSignature.Get());
+        m_commandList->SetPipelineState(pipelineState.m_pipelineStateObject.Get());
+    }
+
+    void GraphicsContext::set32BitComputeConstants(const void* renderResources) const
+    {
+        m_commandList->SetComputeRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
     }
 
     void GraphicsContext::setViewport(const D3D12_VIEWPORT& viewport) const
@@ -177,6 +188,12 @@ namespace helios::gfx
     void GraphicsContext::drawIndexed(const uint32_t indicesCount, const uint32_t instanceCount) const
     {
         m_commandList->DrawInstanced(indicesCount, instanceCount, 0u, 0u);
+    }
+
+    void GraphicsContext::dispatch(const uint32_t threadGroupDimX, const uint32_t threadGroupDimY,
+                                   const uint32_t threadGroupDimZ)
+    {
+        m_commandList->Dispatch(threadGroupDimX, threadGroupDimY, threadGroupDimZ);
     }
 
 } // namespace helios::gfx

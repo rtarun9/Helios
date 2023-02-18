@@ -7,15 +7,16 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 * Normal Mapping.
 * Physically based rendering (PBR).
 * Diffuse and Specular IBL.
+* Bloom (Based on the Call of Duty Next Generation Post Processing presentation).
+* Screen Space Ambient Occlusion (SSAO).
 * Blinn-Phong Shading.
 * Deferred Shading.
 * HDR and Tone Mapping.
-* Instanced rendering.
 * OmniDirectional Shadow Mapping.
-* Screen Space Ambient Occlusion (SSAO).
-* Editor (ImGui Integration) with Logging and Content Browser with drag-drop functionality for GLTF models.
+* Instanced rendering.
 * Compute Shader mip map generation.
 * Multi-threaded asset loading.
+* Editor (ImGui Integration) with Logging and Content Browser with drag-drop functionality for GLTF models.
 * D3D12MA integration.
 * Shader Compilation using DirectX Shader Compiler (DXC).
 
@@ -35,6 +36,10 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 * SSAO Disabled (Top) with SSAO Enabled (Bottom)
 ![](Assets/Screenshots/NoSSAO.png) 
 ![](Assets/Screenshots/SSAOEnbled.png)
+
+> Bloom (Inspired from the Call of Duty Presentation on Next Generation Post Processing)
+![](Assets/Screenshots/Bloom2.png)
+![](Assets/Screenshots/Bloom1.png)
 
 > Editor (using ImGui)
 ![](Assets/Screenshots/Editor1.png)

@@ -15,6 +15,11 @@ namespace helios::gfx
 
         void addResourceBarrier(ID3D12Resource* const resource, const D3D12_RESOURCE_STATES previousState,
                                 const D3D12_RESOURCE_STATES newState);
+
+        void addResourceBarrier(ID3D12Resource* const resource);
+        
+        void addResourceBarrier(const CD3DX12_RESOURCE_BARRIER& resourceBarrier);
+
         void executeResourceBarriers();
 
         virtual void reset();
