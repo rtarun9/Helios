@@ -34,7 +34,7 @@ namespace helios::rendering
       public:
         DeferredGeometryPass(const gfx::GraphicsDevice* const device, const uint32_t width, const uint32_t height);
 
-        void render(scene::Scene* const scene, gfx::GraphicsContext* const graphicsContext, gfx::Texture& depthBuffer, const uint32_t width, const uint32_t height);
+        void render(scene::Scene& scene, gfx::GraphicsContext* const graphicsContext, gfx::Texture& depthBuffer, const uint32_t width, const uint32_t height);
 
       public:
         DeferredGeometryBuffer m_gBuffer{};

@@ -66,8 +66,14 @@ cmake --build Build --config Release
 ```
 
 Alternatively open the folder in Visual Studio's open folder mode.
-+ Run the `Setup.bat` file, which will install the DirectXAgility SDK and the DirectXShader Compiler. You will be asked to enter the build path, which was the same path you gave in cmake -S . -B 'BuildPath'. 
++ Run the `Setup.bat` file, which will install the DirectXAgility SDK and the DirectXShader Compiler. You will be asked to enter the build path, which was the same path you gave in cmake -S . -B 'BuildPath'. If you followed the commands above, BuildPath = Build.
 
+# Controls
++ WASD -> Move camera.
++ Arrow keys -> Modify camera orientation.
++ Space -> Hold to disable editor UI.
++ Escape -> Exit editor.
++ Drag GLTF / GLB models from scene hierarchy to the main viewport (you might have to drag and drop in a region around the actual model path text).
 
 # Reference Projects :
 [Wicked Engine](https://github.com/turanszkij/WickedEngine) By Turánszki János. \

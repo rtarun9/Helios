@@ -334,6 +334,8 @@ namespace helios::gfx
             textureCreationDesc.height = height;
         }
 
+        std::scoped_lock<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
+
         // Create a Allocation for the texture (GPU only memory).
         texture.allocation = m_memoryAllocator->createTextureResourceAllocation(textureCreationDesc);
 
@@ -364,7 +366,6 @@ namespace helios::gfx
         break;
         }
 
-        std::scoped_lock<std::recursive_mutex> resourceLockGuard(m_resourceMutex);
 
         // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub
         // resource data from a upload buffer into the GPU only texture.

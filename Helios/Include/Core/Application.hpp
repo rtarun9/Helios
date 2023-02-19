@@ -52,7 +52,7 @@ namespace helios::core
         std::unique_ptr<gfx::GraphicsDevice> m_graphicsDevice{};
 
         Input m_input{};
-        std::unique_ptr<scene::Scene> m_scene{};
-        std::unique_ptr<editor::Editor> m_editor{};
+        std::optional<scene::Scene> m_scene;
+        std::optional<editor::Editor> m_editor;
     };
 } // namespace helios::core

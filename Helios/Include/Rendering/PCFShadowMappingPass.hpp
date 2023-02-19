@@ -27,7 +27,7 @@ namespace helios::rendering
         PCFShadowMappingPass(gfx::GraphicsDevice* const graphicsDevice);
 
         // Note : the directional light is always at index 0 of the light buffer.
-        void render(scene::Scene* const scene, gfx::GraphicsContext* const graphicsContext);
+        void render(scene::Scene& scene, gfx::GraphicsContext* const graphicsContext);
 
       public:
         static constexpr uint32_t SHADOW_MAP_DIMENSIONS = 2048u;

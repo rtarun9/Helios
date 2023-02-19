@@ -21,7 +21,6 @@ namespace helios::scene
     {
       public:
         explicit Scene(const gfx::GraphicsDevice* const graphicsDevice);
-        ~Scene() = default;
 
       public:
         void addModel(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc);
@@ -59,8 +58,8 @@ namespace helios::scene
         float m_farPlane{300.0f};
         float m_fov{45.0f};
 
-        std::unique_ptr<Lights> m_lights{};
-        std::unique_ptr<CubeMap> m_cubeMap{};
+        std::optional<Lights> m_lights{};
+        std::optional<CubeMap> m_cubeMap{};
 
         std::unordered_map<std::wstring, std::unique_ptr<Model>> m_models{};
 

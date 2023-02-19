@@ -44,7 +44,7 @@ namespace helios::scene
         });
 
         // Setup directional light with intensity as 0 initially.
-        m_lightsBufferData.radiusIntensity[0].y = 0.0f;
+        m_lightsBufferData.radiusIntensity[0].y = 8.601f;
         m_lightsBufferData.lightColor[0] = {
             1.0f,
             1.0f,

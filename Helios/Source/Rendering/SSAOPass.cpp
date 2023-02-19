@@ -50,7 +50,7 @@ namespace helios::rendering
         });
 
         m_ssaoBufferData.bias = 0.022f;
-        m_ssaoBufferData.radius = 1.0f;
+        m_ssaoBufferData.radius = 5.0f;
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
 

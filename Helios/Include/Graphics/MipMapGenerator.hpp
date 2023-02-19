@@ -21,7 +21,7 @@ namespace helios::gfx
 
         GraphicsDevice& graphicsDevice;
 
-        std::mutex m_generatorMutex{};
+        std::recursive_mutex m_generatorMutex{};
     };
 
 } // namespace helios::gfx

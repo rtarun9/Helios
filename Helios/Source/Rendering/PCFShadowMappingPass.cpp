@@ -46,9 +46,9 @@ namespace helios::rendering
         m_shadowBuffer.update(&m_shadowBufferData);
     }
 
-    void PCFShadowMappingPass::render(scene::Scene* const scene, gfx::GraphicsContext* const graphicsContext)
+    void PCFShadowMappingPass::render(scene::Scene& scene, gfx::GraphicsContext* const graphicsContext)
     {
-        const auto directionalLightPosition = scene->m_lights->m_lightsBufferData.lightPosition[0];
+        const auto directionalLightPosition = scene.m_lights->m_lightsBufferData.lightPosition[0];
         const auto directionalLightPositionVector = math::XMLoadFloat4(&directionalLightPosition);
 
         const math::XMVECTOR lightPosition =
@@ -91,7 +91,7 @@ namespace helios::rendering
             .shadowBufferIndex = m_shadowBuffer.cbvIndex,
         };
 
-        scene->renderModels(graphicsContext, shadowRenderResources);
+        scene.renderModels(graphicsContext, shadowRenderResources);
 
         graphicsContext->addResourceBarrier(m_shadowDepthBuffer.allocation.resource.Get(),
                                             D3D12_RESOURCE_STATE_DEPTH_WRITE,

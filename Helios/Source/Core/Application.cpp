@@ -71,12 +71,12 @@ namespace helios::core
 
     void Application::initScene()
     {
-        m_scene = std::make_unique<scene::Scene>(m_graphicsDevice.get());
+        m_scene = scene::Scene(m_graphicsDevice.get());
     }
 
     void Application::initEditor()
     {
-        m_editor = std::make_unique<editor::Editor>(m_graphicsDevice.get(), m_window, m_windowWidth, m_windowHeight);
+        m_editor.emplace(m_graphicsDevice.get(), m_window, m_windowWidth, m_windowHeight);
     }
 
     void Application::init()

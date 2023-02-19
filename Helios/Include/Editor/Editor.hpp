@@ -33,25 +33,25 @@ namespace helios::editor
 
         // Goal is to call this single function from the engine which does all the UI internally, helps make the engine
         // clean as well. This function is heavy WIP and not given as much importance as other abstractions.
-        void render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
-                    rendering::DeferredGeometryBuffer& deferredGBuffer,
+        void render(const gfx::GraphicsDevice* const graphicsDevice, gfx::GraphicsContext* const graphicsContext,
+                    scene::Scene& scene, rendering::DeferredGeometryBuffer& deferredGBuffer,
                     rendering::PCFShadowMappingPass& shadowMappingPass, rendering::SSAOPass& ssaoPass,
                     rendering::BloomPass& bloomPass, interlop::PostProcessingBuffer& postProcessBuffer,
-                    gfx::Texture& renderTarget, gfx::GraphicsContext* const graphicsContext);
+                    gfx::Texture& renderTarget);
 
         void showUI(const bool value);
 
         void resize(const uint32_t width, const uint32_t height) const;
 
       private:
-        void renderSceneHierarchy(scene::Scene* const scene) const;
+        void renderSceneHierarchy(scene::Scene& scene) const;
 
-        void renderMaterialProperties(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene) const;
+        void renderMaterialProperties(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene& scene) const;
 
-        void renderLightProperties(scene::Scene* const scene) const;
+        void renderLightProperties(scene::Scene& scene) const;
 
         // Handles camera and other scene related properties.
-        void renderSceneProperties(scene::Scene* const scene) const;
+        void renderSceneProperties(scene::Scene& scene) const;
 
         void renderDeferredGBuffer(const gfx::GraphicsDevice* const graphicsDevice,
                                    const rendering::DeferredGeometryBuffer& deferredGBuffer) const;
@@ -68,7 +68,7 @@ namespace helios::editor
         // Accepts the pay load (accepts data which is dragged in from content browser to the scene view port, and loads
         // the model (if path belongs to a .gltf file).
         void renderSceneViewport(const gfx::GraphicsDevice* device, gfx::Texture& renderTarget,
-                                 scene::Scene* const scene) const;
+                                 scene::Scene& scene) const;
 
         // Handle drag and drop of models into view port at run time.
         void renderContentBrowser();

@@ -71,7 +71,7 @@ namespace helios::rendering
         });
     }
 
-    void DeferredGeometryPass::render(scene::Scene* const scene, gfx::GraphicsContext* const graphicsContext,
+    void DeferredGeometryPass::render(scene::Scene& scene, gfx::GraphicsContext* const graphicsContext,
                                       gfx::Texture& depthBuffer, const uint32_t width, const uint32_t height)
     {
         std::array<const gfx::Texture, 4u> renderTargets = {
@@ -109,7 +109,7 @@ namespace helios::rendering
 
         interlop::DeferredGPassRenderResources deferredGPassRenderResources{};
 
-        scene->renderModels(graphicsContext, deferredGPassRenderResources);
+        scene.renderModels(graphicsContext, deferredGPassRenderResources);
 
         for (const auto& renderTarget : renderTargets)
         {

@@ -26,8 +26,6 @@ namespace helios::gfx
 
     void Context::reset()
     {
-        std::scoped_lock<std::recursive_mutex> lock(m_mutex);
-
         throwIfFailed(m_commandAllocator->Reset());
         throwIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
     }

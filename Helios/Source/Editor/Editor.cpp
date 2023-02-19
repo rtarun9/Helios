@@ -62,11 +62,12 @@ namespace helios::editor
 
     // This massive class will do all rendering of UI and its settings / configs within in.
     // May seem like lot of code squashed into a single function, but this makes the engine code clean
-    void Editor::render(const gfx::GraphicsDevice* const graphicsDevice, scene::Scene* const scene,
+    void Editor::render(const gfx::GraphicsDevice* const graphicsDevice,
+                        gfx::GraphicsContext* const graphicsContext, scene::Scene& scene,
                         rendering::DeferredGeometryBuffer& deferredGBuffer,
                         rendering::PCFShadowMappingPass& shadowMappingPass, rendering::SSAOPass& ssaoPass,
                         rendering::BloomPass& bloomPass, interlop::PostProcessingBuffer& postProcessBuffer,
-                        gfx::Texture& renderTarget, gfx::GraphicsContext* const graphicsContext)
+                        gfx::Texture& renderTarget)
     {
         if (m_showUI)
         {
@@ -129,13 +130,13 @@ namespace helios::editor
         }
     }
 
-    void Editor::renderSceneHierarchy(scene::Scene* const scene) const
+    void Editor::renderSceneHierarchy(scene::Scene& scene) const
     {
         ImGui::Begin("Scene Hierarchy");
 
         static bool uniformScale{true};
 
-        for (auto& [name, model] : scene->m_models)
+        for (auto& [name, model] : scene.m_models)
         {
             if (ImGui::TreeNode(wStringToString(model->getName()).c_str()))
             {
@@ -164,11 +165,11 @@ namespace helios::editor
     }
 
     void Editor::renderMaterialProperties(const gfx::GraphicsDevice* const graphicsDevice,
-                                          scene::Scene* const scene) const
+                                          scene::Scene& scene) const
     {
         ImGui::Begin("Material Properties");
 
-        for (auto& [name, model] : scene->m_models)
+        for (auto& [name, model] : scene.m_models)
         {
             std::vector<scene::PBRMaterial>& material = model->getPBRMaterials();
 
@@ -206,9 +207,9 @@ namespace helios::editor
         ImGui::End();
     }
 
-    void Editor::renderLightProperties(scene::Scene* const scene) const
+    void Editor::renderLightProperties(scene::Scene& scene) const
     {
-        interlop::LightBuffer& lightBuffer = scene->m_lights->m_lightsBufferData;
+        interlop::LightBuffer& lightBuffer = scene.m_lights->m_lightsBufferData;
 
         ImGui::Begin("Light Properties");
 
@@ -267,26 +268,26 @@ namespace helios::editor
         ImGui::End();
     }
 
-    void Editor::renderSceneProperties(scene::Scene* scene) const
+    void Editor::renderSceneProperties(scene::Scene& scene) const
     {
         ImGui::Begin("Scene Properties");
 
         if (ImGui::TreeNode("Primary Camera"))
         {
             // Scale uniformally along all axises.
-            ImGui::SliderFloat("Movement Speed", &scene->m_camera.m_movementSpeed, 0.1f, 3.0f);
-            ImGui::SliderFloat("Rotation Speed", &scene->m_camera.m_rotationSpeed, 0.1f, 1.0f);
+            ImGui::SliderFloat("Movement Speed", &scene.m_camera.m_movementSpeed, 0.1f, 3.0f);
+            ImGui::SliderFloat("Rotation Speed", &scene.m_camera.m_rotationSpeed, 0.1f, 1.0f);
 
-            ImGui::SliderFloat("Friction Factor", &scene->m_camera.m_frictionFactor, 0.0f, 1.0f);
+            ImGui::SliderFloat("Friction Factor", &scene.m_camera.m_frictionFactor, 0.0f, 1.0f);
             //	ImGui::SliderFloat("Sun Angle Speed", &scene->mSunChangeSpeed, -100.0f, 50.0f);
             ImGui::TreePop();
         }
 
         if (ImGui::TreeNode("Projection Params"))
         {
-            ImGui::SliderFloat("FOV", &scene->m_fov, 0.5f, 90.0f);
-            ImGui::SliderFloat("Near Plane", &scene->m_nearPlane, 0.1f, 100.0f);
-            ImGui::SliderFloat("Far Plane", &scene->m_farPlane, 10.0f, 10000.0f);
+            ImGui::SliderFloat("FOV", &scene.m_fov, 0.5f, 90.0f);
+            ImGui::SliderFloat("Near Plane", &scene.m_nearPlane, 0.1f, 100.0f);
+            ImGui::SliderFloat("Far Plane", &scene.m_farPlane, 10.0f, 10000.0f);
 
             ImGui::TreePop();
         }
@@ -429,7 +430,7 @@ namespace helios::editor
         static int showSSAOTexture{};
         ImGui::SliderInt("Show SSAO Texture", &showSSAOTexture, 0, 1);
         postProcessBufferData.debugShowSSAOTexture = static_cast<uint32_t>(showSSAOTexture);
-        static int enableBloom{0};
+        static int enableBloom{1};
         ImGui::SliderInt("Enable Bloom", &enableBloom, 0, 1);
         postProcessBufferData.enableBloom = static_cast<uint32_t>(enableBloom);
         ImGui::SliderFloat("Bloom Strength", &postProcessBufferData.bloomStrength, 0.0f, 1.0f);
@@ -437,7 +438,7 @@ namespace helios::editor
     }
 
     void Editor::renderSceneViewport(const gfx::GraphicsDevice* const graphicsDevice, gfx::Texture& renderTarget,
-                                     scene::Scene* const scene) const
+                                     scene::Scene& scene) const
     {
         const gfx::DescriptorHandle& rtvSrvHandle =
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.srvIndex);
@@ -473,8 +474,8 @@ namespace helios::editor
                         .modelName = modelName,
                     };
 
-                    scene->addModel(graphicsDevice, modelCreationDesc);
-                    scene->completeResourceLoading();
+                    scene.addModel(graphicsDevice, modelCreationDesc);
+                    scene.completeResourceLoading();
                 }
             }
 

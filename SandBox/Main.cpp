@@ -22,6 +22,8 @@ class SandBox final : public helios::core::Application
             .name = L"Post Processing Buffer",
         });
 
+        m_postProcessingBufferData.bloomStrength = 0.237f;
+
         m_deferredGPass = rendering::DeferredGeometryPass(m_graphicsDevice.get(), m_windowWidth, m_windowHeight);
 
         m_ibl = rendering::IBL(m_graphicsDevice.get());
@@ -43,50 +45,47 @@ class SandBox final : public helios::core::Application
 
     void loadScene()
     {
-        m_scene->addModel(m_graphicsDevice.get(),
-                          scene::ModelCreationDesc{
-                              .modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-                              .modelName = L"Damaged Helmet",
-                          });
-    
-    //    m_scene->addModel(m_graphicsDevice.get(),
-    //                      scene::ModelCreationDesc{
-    //                          .modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-    //                          .modelName = L"MetalRough spheres",
-    //                      });
-    // 
-       // m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
-       //                                               .modelPath = L"Assets/Models/Sponza/sponza.glb",
-       //                                               .modelName = L"Sponza",
-       //                                               .scale =
-       //                                                   {
-       //                                                       0.1f,
-       //                                                       0.1f,
-       //                                                       0.1f,
-       //                                                   },
-       //                                           });
-       //
-        m_scene->addLight(m_graphicsDevice.get(),
-                          scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
+        // m_scene->addModel(m_graphicsDevice.get(),
+        //	scene::ModelCreationDesc{
+        //		.modelPath = L"Assets/Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+        //		.modelName = L"Damaged Helmet",
+        //	});
 
-                m_scene->addLight(m_graphicsDevice.get(),
-                          scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
+        //    m_scene->addModel(m_graphicsDevice.get(),
+        //                      scene::ModelCreationDesc{
+        //                          .modelPath = L"Assets/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+        //                          .modelName = L"MetalRough spheres",
+        //                      });
+        //
+        m_scene->addModel(m_graphicsDevice.get(), scene::ModelCreationDesc{
+                                                      .modelPath = L"Assets/Models/Sponza/sponza.glb",
+                                                      .modelName = L"Sponza",
+                                                      .scale =
+                                                          {
+                                                              0.1f,
+                                                              0.1f,
+                                                              0.1f,
+                                                          },
+                                                  });
 
-                        m_scene->addLight(m_graphicsDevice.get(),
-                                  scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
+        m_scene->addLight(
+            m_graphicsDevice.get(),
+            scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData,
+                                     .worldSpaceLightPosition = {sinf(math::XMConvertToRadians(0)) * 15.0f, 0.0f,
+                                                                 cosf(math::XMConvertToRadians(0)) * 15.0f}});
 
-                                m_scene->addLight(m_graphicsDevice.get(),
-                                          scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
+        m_scene->addLight(
+            m_graphicsDevice.get(),
+            scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData,
+                                     .worldSpaceLightPosition = {sinf(math::XMConvertToRadians(22.50f)) * 15.0f, 0.0f,
+                                                                 cosf(math::XMConvertToRadians(22.50f)) * 15.0f}});
 
-                                        m_scene->addLight(
-                                    m_graphicsDevice.get(),
-                                    scene::LightCreationDesc{.lightType = scene::LightTypes::PointLightData});
         m_scene->addLight(m_graphicsDevice.get(),
                           scene::LightCreationDesc{.lightType = scene::LightTypes::DirectionalLightData});
 
         m_scene->addCubeMap(m_graphicsDevice.get(),
                             scene::CubeMapCreationDesc{
-                                .equirectangularTexturePath = L"Assets/Textures/syferfontein_1d_clear_puresky_4k.hdr",
+                                .equirectangularTexturePath = L"Assets/Textures/Environment.hdr",
                                 .name = L"Environment Cube Map",
                             });
     }
@@ -204,7 +203,7 @@ class SandBox final : public helios::core::Application
 
         // RenderPass 0 : Deferred GPass.
         {
-            m_deferredGPass->render(m_scene.get(), gctx.get(), m_depthTexture, m_windowWidth, m_windowHeight);
+            m_deferredGPass->render(m_scene.value(), gctx.get(), m_depthTexture, m_windowWidth, m_windowHeight);
         }
 
         // RenderPass 2 : SSAO Pass.
@@ -229,7 +228,7 @@ class SandBox final : public helios::core::Application
 
         // RenderPass 3 : Shadow mapping pass.
         {
-            m_shadowMappingPass->render(m_scene.get(), gctx.get());
+            m_shadowMappingPass->render(m_scene.value(), gctx.get());
         }
 
         // RenderPass 4 : Shading Pass
@@ -279,7 +278,7 @@ class SandBox final : public helios::core::Application
 
             m_scene->renderLights(gctx.get());
 
-           m_scene->renderCubeMap(gctx.get());
+            m_scene->renderCubeMap(gctx.get());
             gctx->addResourceBarrier(m_offscreenRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             gctx->executeResourceBarriers();
@@ -353,9 +352,9 @@ class SandBox final : public helios::core::Application
             gctx->setIndexBuffer(m_renderTargetIndexBuffer);
             gctx->drawInstanceIndexed(3u);
 
-            m_editor->render(m_graphicsDevice.get(), m_scene.get(), m_deferredGPass->m_gBuffer,
+            m_editor->render(m_graphicsDevice.get(), gctx.get(), m_scene.value(), m_deferredGPass->m_gBuffer,
                              m_shadowMappingPass.value(), m_ssaoPass.value(), m_bloomPass.value(),
-                             m_postProcessingBufferData, m_postProcessingRenderTarget, gctx.get());
+                             m_postProcessingBufferData, m_postProcessingRenderTarget);
 
             gctx->addResourceBarrier(m_postProcessingRenderTarget.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);

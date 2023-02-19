@@ -18,7 +18,7 @@ namespace helios::scene
             .name = L"Scene Buffer",
         });
 
-        m_lights = std::make_unique<Lights>(graphicsDevice);
+        m_lights = Lights(graphicsDevice);
     }
 
     void Scene::addModel(const gfx::GraphicsDevice* const graphicsDevice, const ModelCreationDesc& modelCreationDesc)
@@ -45,7 +45,7 @@ namespace helios::scene
         {
             m_lights->m_lightsBufferData.lightColor[0] = {1.0f, 1.0f, 1.0f, 1.0f};
             m_lights->m_lightsBufferData.radiusIntensity[0].x = 0.1f;
-            m_lights->m_lightsBufferData.radiusIntensity[0].y = 1.0f;
+            m_lights->m_lightsBufferData.radiusIntensity[0].y = 8.61f;
 
             m_lights->m_lightsBufferData.lightPosition[0] =
                 math::XMFLOAT4(0.0f, sin(math::XMConvertToRadians(Lights::DIRECTIONAL_LIGHT_ANGLE)),
@@ -56,6 +56,8 @@ namespace helios::scene
             m_lights->m_lightsBufferData.lightColor[m_lights->m_currentLightCount] =
                 math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
+            m_lights->m_lightsBufferData.lightPosition[m_lights->m_currentLightCount] = math::XMFLOAT4(lightCreationDesc.worldSpaceLightPosition.x, lightCreationDesc.worldSpaceLightPosition.y,
+                               lightCreationDesc.worldSpaceLightPosition.z, 1.0f);
             m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].x = 0.1f;
             m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].y = 1.0f;
 
@@ -65,7 +67,7 @@ namespace helios::scene
 
     void Scene::addCubeMap(gfx::GraphicsDevice* const graphicsDevice, const CubeMapCreationDesc& cubeMapCreationDesc)
     {
-        m_cubeMap = std::make_unique<CubeMap>(graphicsDevice, cubeMapCreationDesc);
+        m_cubeMap = CubeMap(graphicsDevice, cubeMapCreationDesc);
     }
 
     void Scene::completeResourceLoading()

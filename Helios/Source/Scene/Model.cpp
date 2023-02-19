@@ -551,7 +551,7 @@ namespace helios::scene
 
             auto texture = graphicsDevice->createTexture(textureCreationDesc, (std::byte*)data);
 
-            return std::move(texture);
+            return texture;
         };
 
         size_t index{0};

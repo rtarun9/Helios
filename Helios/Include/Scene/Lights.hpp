@@ -24,6 +24,7 @@ namespace helios::scene
     struct LightCreationDesc
     {
         LightTypes lightType{};
+        math::XMFLOAT3 worldSpaceLightPosition{0.0f, 0.0f, 0.0f};
     };
 
     // Lights is the Light Manager abstraction for all lights in the engine.
