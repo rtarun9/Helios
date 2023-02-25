@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <future>
+#include <queue>
 #include <vector>
 
 // Win32 / DirectX12 / DXGI includes.

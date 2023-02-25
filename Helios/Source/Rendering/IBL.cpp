@@ -42,7 +42,7 @@ namespace helios::rendering
 
         // Run the compute shader for irradiance map computation.
 
-        auto& computeContext = graphicsDevice->getComputeContext();
+        auto computeContext = graphicsDevice->getComputeContext();
         computeContext->reset();
         computeContext->addResourceBarrier(irradianceTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_COMMON,
                                            D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -62,13 +62,7 @@ namespace helios::rendering
         computeContext->addResourceBarrier(irradianceTexture.allocation.resource.Get(),
                                            D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
         computeContext->executeResourceBarriers();
-
-        const std::array<gfx::Context*, 1u> contexts = {
-            computeContext.get(),
-        };
-
-        graphicsDevice->getComputeCommandQueue()->executeContext(contexts);
-        graphicsDevice->getComputeCommandQueue()->flush();
+        graphicsDevice->executeAndFlushComputeContext(std::move(computeContext));
 
         return irradianceTexture;
     }
@@ -88,7 +82,7 @@ namespace helios::rendering
         });
 
         // Run compute shader to generate prefilter map from skybox texture.
-        auto& computeContext = graphicsDevice->getComputeContext();
+        auto computeContext = graphicsDevice->getComputeContext();
         computeContext->reset();
 
         computeContext->addResourceBarrier(prefilterTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_COMMON,
@@ -120,12 +114,7 @@ namespace helios::rendering
                                            D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
         computeContext->executeResourceBarriers();
 
-        const std::array<gfx::Context*, 1u> contexts = {
-            computeContext.get(),
-        };
-
-        graphicsDevice->getComputeCommandQueue()->executeContext(contexts);
-        graphicsDevice->getComputeCommandQueue()->flush();
+        graphicsDevice->executeAndFlushComputeContext(std::move(computeContext));
 
         return prefilterTexture;
     }
@@ -143,7 +132,7 @@ namespace helios::rendering
         });
 
         // Run compute shader to generate BRDF LUT.
-        auto& computeContext = graphicsDevice->getComputeContext();
+        auto computeContext = graphicsDevice->getComputeContext();
         computeContext->reset();
 
         computeContext->addResourceBarrier(brdfLutTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_COMMON,
@@ -164,12 +153,7 @@ namespace helios::rendering
                                            D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
         computeContext->executeResourceBarriers();
 
-        const std::array<gfx::Context*, 1u> contexts = {
-            computeContext.get(),
-        };
-
-        graphicsDevice->getComputeCommandQueue()->executeContext(contexts);
-        graphicsDevice->getComputeCommandQueue()->flush();
+        graphicsDevice->executeAndFlushComputeContext(std::move(computeContext));
 
         return brdfLutTexture;
     }

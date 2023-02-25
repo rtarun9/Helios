@@ -112,7 +112,7 @@ namespace helios::gfx
                 .mipMapGenerationBufferIndex = m_mipMapBuffer.cbvIndex,
             };
 
-            std::unique_ptr<ComputeContext>& computeContext = graphicsDevice.getComputeContext();
+            std::unique_ptr<ComputeContext> computeContext = graphicsDevice.getComputeContext();
             computeContext->reset();
 
             computeContext->setComputeRootSignatureAndPipeline(m_mipMapPipelineState);
@@ -121,11 +121,7 @@ namespace helios::gfx
             computeContext->dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u),
                                      std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1);
 
-            const std::array<Context*, 1u> contexts = {
-                computeContext.get(),
-            };
-            graphicsDevice.getComputeCommandQueue()->executeContext(contexts);
-            graphicsDevice.getComputeCommandQueue()->flush();
+            graphicsDevice.executeAndFlushComputeContext(std::move(computeContext));
 
             srcMipLevel += static_cast<uint32_t>(mipCount);
         }

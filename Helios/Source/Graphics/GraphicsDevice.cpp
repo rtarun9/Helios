@@ -199,7 +199,7 @@ namespace helios::gfx
         }
 
         m_copyContext = std::make_unique<CopyContext>(this);
-        m_computeContext = std::make_unique<ComputeContext>(this);
+        m_computeContextQueue.push(std::make_unique<ComputeContext>(this));
     }
 
     void GraphicsDevice::initBindlessRootSignature()
@@ -236,6 +236,32 @@ namespace helios::gfx
         {
             m_rtvDescriptorHeap->offsetCurrentHandle(FRAMES_IN_FLIGHT);
         }
+    }
+
+    std::unique_ptr<ComputeContext> GraphicsDevice::getComputeContext()
+    {
+        if (!m_computeContextQueue.empty())
+        {
+            std::unique_ptr<ComputeContext> context = std::move(m_computeContextQueue.front());
+            m_computeContextQueue.pop();
+            return context;
+        }
+        else
+        {
+            // Create a compute context.
+            std::unique_ptr<ComputeContext> context = std::make_unique<ComputeContext>(this);
+            return context;
+        }
+    }
+
+    void GraphicsDevice::executeAndFlushComputeContext(std::unique_ptr<ComputeContext>&& computeContext)
+    {
+        // Execute compute context and push to the queue.
+        std::array<const Context*, 1u> contexts = {computeContext.get()};
+        m_computeCommandQueue->executeContext(contexts);
+        m_computeCommandQueue->flush();
+
+        m_computeContextQueue.emplace(std::move(computeContext));
     }
 
     void GraphicsDevice::beginFrame()

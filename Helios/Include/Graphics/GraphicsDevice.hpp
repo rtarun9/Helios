@@ -87,15 +87,15 @@ namespace helios::gfx
             return m_copyContext;
         }
 
-        [[nodiscard]] std::unique_ptr<ComputeContext>& getComputeContext()
-        {
-            return m_computeContext;
-        }
 
         [[nodiscard]] Texture& getCurrentBackBuffer()
         {
             return m_backBuffers[m_currentFrameIndex];
         }
+
+        [[nodiscard]] std::unique_ptr<ComputeContext> getComputeContext();
+        void executeAndFlushComputeContext(std::unique_ptr<ComputeContext>&& computeContext);
+
 
         // Resets the current context (i.e the command list and the allocator).
         void beginFrame();
@@ -171,7 +171,7 @@ namespace helios::gfx
 
         std::array<std::unique_ptr<GraphicsContext>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
         std::unique_ptr<CopyContext> m_copyContext{};
-        std::unique_ptr<ComputeContext> m_computeContext{};
+        std::queue<std::unique_ptr<ComputeContext>> m_computeContextQueue{};
 
         std::array<FenceValues, FRAMES_IN_FLIGHT> m_fenceValues{};
         std::array<Texture, FRAMES_IN_FLIGHT> m_backBuffers{};

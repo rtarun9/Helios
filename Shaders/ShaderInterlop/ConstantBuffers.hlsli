@@ -135,7 +135,8 @@ namespace interlop
         float screenHeight;
     };
 
-    static const uint BLOOM_PASSES = 10u;
+    static const uint BLOOM_PASSES = 7u;
+
     ConstantBufferStruct BloomBuffer
     {
         float threshHold;

@@ -35,7 +35,7 @@ namespace helios::scene
                 .pipelineName = L"Equirect Texture To Cube Map",
             });
 
-        auto& computeContext = graphicsDevice->getComputeContext();
+        auto computeContext = graphicsDevice->getComputeContext();
         computeContext->reset();
 
         computeContext->addResourceBarrier(m_cubeMapTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_COMMON,
@@ -66,12 +66,7 @@ namespace helios::scene
 
         computeContext->executeResourceBarriers();
 
-        const std::array<gfx::Context*, 1u> contexts = {
-            computeContext.get(),
-        };
-
-        graphicsDevice->getComputeCommandQueue()->executeContext(contexts);
-        graphicsDevice->getComputeCommandQueue()->flush();
+        graphicsDevice->executeAndFlushComputeContext(std::move(computeContext));
 
         // Generate mips for all the cube faces.
         graphicsDevice->getMipMapGenerator()->generateMips(m_cubeMapTexture);
