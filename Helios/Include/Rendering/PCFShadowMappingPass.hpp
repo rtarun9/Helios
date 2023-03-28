@@ -18,7 +18,7 @@ namespace helios::scene
 
 namespace helios::rendering
 {
-    // Renders the scene from the point of viwe of the directional light source to obtain a depth map that was created
+    // Renders the scene from the point of view of the directional light source to obtain a depth map that was created
     // by rendering the scene from the POV of the directional light source.
     class PCFShadowMappingPass
     {

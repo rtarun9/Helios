@@ -22,8 +22,7 @@ namespace interlop
     {
         uint sceneBufferIndex;
         uint lightBufferIndex;
-        uint albedoGBufferIndex;
-        uint positionEmissiveGBufferIndex;
+        uint albedoEmissiveGBufferIndex;
         uint normalEmissiveGBufferIndex;
         uint aoMetalRoughnessEmissiveGBufferIndex;
     };
@@ -106,8 +105,7 @@ namespace interlop
     {
         uint sceneBufferIndex;
         uint lightBufferIndex;
-        uint albedoGBufferIndex;
-        uint positionEmissiveGBufferIndex;
+        uint albedoEmissiveGBufferIndex;
         uint normalEmissiveGBufferIndex;
         uint aoMetalRoughnessEmissiveGBufferIndex;
 
@@ -119,6 +117,8 @@ namespace interlop
         uint shadowDepthTextureIndex;
 
         uint blurredSSAOTextureIndex;
+        
+        uint depthTextureIndex;
     };
 
     struct CubeFromEquirectRenderResources
@@ -161,7 +161,6 @@ namespace interlop
    
     struct SSAORenderResources
     {
-        uint positionTextureIndex;
         uint normalTextureIndex;
         uint depthTextureIndex;
         uint randomRotationTextureIndex;

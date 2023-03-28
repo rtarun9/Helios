@@ -140,3 +140,14 @@ void computeBasisVectors(float3 normal, out float3 s, out float3 t)
     t = normalize(t);
     s = normalize(cross(normal, t));
 }
+
+// Algorithm taken from here : https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/.
+// Aims to reconstruct the view space 3D position using the inverse projection matrix, screen space uv texture coords,
+// and the depth buffer.
+float3 viewSpaceCoordsFromDepthBuffer(const float depthValue, const float2 uvCoords, const float4x4 inverseProjectionMatrix)
+{
+    float2 ndc = float2(uvCoords.x, 1.0f - uvCoords.y) * 2.0f - 1.0f;
+   
+    float4 unprojectedPosition = mul(float4(ndc, depthValue, 1.0f), inverseProjectionMatrix);
+    return unprojectedPosition.xyz / unprojectedPosition.w;
+}

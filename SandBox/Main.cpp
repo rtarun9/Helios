@@ -213,7 +213,6 @@ class SandBox final : public helios::core::Application
             gctx->executeResourceBarriers();
 
             interlop::SSAORenderResources renderResources = {
-                .positionTextureIndex = m_deferredGPass->m_gBuffer.positionEmissiveRT.srvIndex,
                 .normalTextureIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
                 .depthTextureIndex = m_depthTexture.srvIndex,
                 .sceneBufferIndex = m_scene->m_sceneBuffer.cbvIndex,
@@ -247,8 +246,7 @@ class SandBox final : public helios::core::Application
             gctx->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             interlop::PBRRenderResources renderResources = {
-                .albedoGBufferIndex = m_deferredGPass->m_gBuffer.albedoRT.srvIndex,
-                .positionEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.positionEmissiveRT.srvIndex,
+                .albedoEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.albedoEmissiveRT.srvIndex,
                 .normalEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
                 .aoMetalRoughnessEmissiveGBufferIndex = m_deferredGPass->m_gBuffer.aoMetalRoughnessEmissiveRT.srvIndex,
                 .irradianceTextureIndex = m_irradianceTexture.srvIndex,
@@ -257,6 +255,7 @@ class SandBox final : public helios::core::Application
                 .shadowBufferIndex = m_shadowMappingPass->m_shadowBuffer.cbvIndex,
                 .shadowDepthTextureIndex = m_shadowMappingPass->m_shadowDepthBuffer.srvIndex,
                 .blurredSSAOTextureIndex = m_ssaoPass->m_blurSSAOTexture.srvIndex,
+                .depthTextureIndex = m_depthTexture.srvIndex,
             };
 
             m_scene->renderModels(gctx.get(), renderResources);

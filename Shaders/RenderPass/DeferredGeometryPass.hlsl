@@ -11,7 +11,6 @@ struct VSOutput
     float2 textureCoord : TEXTURE_COORD;
     float3 normal : NORMAL;
     float3 worldSpaceNormal : WORLD_SPACE_NORMAL;
-    float3 viewSpacePosition : WORLD_SPACE_POSITION;
     float3x3 tbnMatrix : TBN_MATRIX;
     float3x3 viewMatrix : VIEW_MATRIX;
 };
@@ -37,7 +36,6 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     output.textureCoord = textureCoordBuffer[vertexID];
     output.normal = normalBuffer[vertexID];
     output.worldSpaceNormal = normalize(mul(output.normal, normalMatrix));
-    output.viewSpacePosition = mul(float4(positionBuffer[vertexID], 1.0f), mvMatrix).xyz;
     output.viewMatrix = (float3x3)sceneBuffer.viewMatrix;
 
     const float3 tangent = generateTangent(output.normal).xyz;
@@ -53,15 +51,15 @@ VSOutput VsMain(uint vertexID : SV_VertexID)
     return output;
 }
 
-// positionEmissive : .xyz is position, .w is emissive.r
-// normal emissive : .xyz is normal, .w is emissive.g
-// aoMetalRoughness : .x is ao, .y is metallic factor, .z is roughness factor, .w is emissive.b
+// Geometry buffer breakdown:
+// float4 albedoEmissive : SV_Target0;
+// float4 normalEmissive : SV_Target1;
+// float4 aoMetalRoughnessEmissive : SV_Target2;
 struct PsOutput
 {
-    float4 albedo : SV_Target0;
-    float4 positionEmissive : SV_Target1;
-    float4 normalEmissive : SV_Target2;
-    float4 aoMetalRoughnessEmissive : SV_Target3;
+    float4 albedoEmissive : SV_Target0;
+    float4 normalEmissive : SV_Target1;
+    float4 aoMetalRoughnessEmissive : SV_Target2;
 };
 
 [RootSignature(BindlessRootSignature)] 
@@ -71,16 +69,16 @@ PsOutput PsMain(VSOutput psInput)
 
     PsOutput output;
 
-    output.albedo = getAlbedo(psInput.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex, materialBuffer.albedoColor);
+    output.albedoEmissive = getAlbedo(psInput.textureCoord, renderResources.albedoTextureIndex, renderResources.albedoTextureSamplerIndex, materialBuffer.albedoColor);
     
-    if (output.albedo.a < 0.9f)
+    if (output.albedoEmissive.a < 0.9f)
     {
         discard;
     }
 
-    float3 emissive = getEmissive(psInput.textureCoord, output.albedo.xyz, materialBuffer.emissiveFactor, renderResources.emissiveTextureIndex, renderResources.emissiveTextureSamplerIndex);
+    float3 emissive = getEmissive(psInput.textureCoord, output.albedoEmissive.xyz, materialBuffer.emissiveFactor, renderResources.emissiveTextureIndex, renderResources.emissiveTextureSamplerIndex);
 
-    output.positionEmissive = float4(psInput.viewSpacePosition, emissive.r);
+    output.albedoEmissive = float4(output.albedoEmissive.xyz, emissive.r);
 
     output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.worldSpaceNormal, psInput.tbnMatrix), emissive.g);
     output.normalEmissive.xyz = mul(output.normalEmissive.xyz, psInput.viewMatrix);

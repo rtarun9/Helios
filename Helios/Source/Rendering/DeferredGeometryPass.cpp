@@ -2,11 +2,10 @@
 
 #include "Graphics/GraphicsDevice.hpp"
 
-// GBuffer composition:
-// float4 albedo : SV_Target0;
-// float4 positionEmissive : SV_Target1;
-// float4 normalEmissive : SV_Target2;
-// float4 aoMetalRoughnessEmissive : SV_Target3;
+// Geometry buffer breakdown:
+// float4 albedoEmissive : SV_Target0;
+// float4 normalEmissive : SV_Target1;
+// float4 aoMetalRoughnessEmissive : SV_Target2;
 
 namespace helios::rendering
 {
@@ -32,24 +31,13 @@ namespace helios::rendering
         });
 
         // Create MRT's for GBuffer.
-        m_gBuffer.albedoRT = graphicsDevice->createTexture(gfx::TextureCreationDesc{
+        m_gBuffer.albedoEmissiveRT = graphicsDevice->createTexture(gfx::TextureCreationDesc{
             .usage = gfx::TextureUsage::RenderTarget,
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
             .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass Albedo Texture",
-        });
-
-        m_gBuffer.positionEmissiveRT = graphicsDevice->createTexture(gfx::TextureCreationDesc{
-            gfx::TextureCreationDesc{
-                .usage = gfx::TextureUsage::RenderTarget,
-                .width = width,
-                .height = height,
-                .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-                .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                .name = L"Deferred Pass Position Emissive Texture",
-            },
         });
 
         m_gBuffer.normalEmissiveRT = graphicsDevice->createTexture(gfx::TextureCreationDesc{
@@ -74,10 +62,9 @@ namespace helios::rendering
     void DeferredGeometryPass::render(scene::Scene& scene, gfx::GraphicsContext* const graphicsContext,
                                       gfx::Texture& depthBuffer, const uint32_t width, const uint32_t height)
     {
-        std::array<const gfx::Texture, 4u> renderTargets = {
+        std::array<const gfx::Texture, 3u> renderTargets = {
 
-            m_gBuffer.albedoRT,
-            m_gBuffer.positionEmissiveRT,
+            m_gBuffer.albedoEmissiveRT,
             m_gBuffer.normalEmissiveRT,
             m_gBuffer.aoMetalRoughnessEmissiveRT,
         };

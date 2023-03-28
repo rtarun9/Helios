@@ -14,21 +14,20 @@ namespace helios::gfx
 namespace helios::rendering
 {
     // Holds the different render targets that constitute the geometry buffer (GBuffer).
-    
+    // The view space position will be reconstructed from the depth buffer.
+
     // Geometry buffer breakdown:
-    // float4 albedo : SV_Target0;
-    // float4 positionEmissive : SV_Target1;
-    // float4 normalEmissive : SV_Target2;
-    // float4 aoMetalRoughnessEmissive : SV_Target3;
+    // float4 albedoEmissive : SV_Target0;
+    // float4 normalEmissive : SV_Target1;
+    // float4 aoMetalRoughnessEmissive : SV_Target2;
     struct DeferredGeometryBuffer
     {
-        gfx::Texture albedoRT{};
-        gfx::Texture positionEmissiveRT{};
+        gfx::Texture albedoEmissiveRT{};
         gfx::Texture normalEmissiveRT{};
         gfx::Texture aoMetalRoughnessEmissiveRT{};
     };
 
-    // This abstraction produces MRT's for various attributes (positions, albedo, normal etc) for a given scene.
+    // This abstraction produces MRT's for various attributes (aoMetalRoughness, albedo, normal etc) for a given scene.
     class DeferredGeometryPass
     {
       public:

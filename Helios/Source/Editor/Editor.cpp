@@ -304,10 +304,7 @@ namespace helios::editor
         // viewable from the editor.
         const gfx::DescriptorHandle& albedoEmissiveDescriptorHandle =
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-                deferredGBuffer.albedoRT.srvIndex);
-        // const gfx::DescriptorHandle& positionEmissiveDescriptorHandle =
-        //     graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
-        //         deferredGBuffer.positionEmissiveRT.srvIndex);
+                deferredGBuffer.albedoEmissiveRT.srvIndex);
         // const gfx::DescriptorHandle& normalEmissiveDescriptorHandle =
         //     graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
         //         deferredGBuffer.normalEmissiveRT.srvIndex);

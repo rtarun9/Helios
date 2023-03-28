@@ -56,7 +56,8 @@ namespace helios::scene
             m_lights->m_lightsBufferData.lightColor[m_lights->m_currentLightCount] =
                 math::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-            m_lights->m_lightsBufferData.lightPosition[m_lights->m_currentLightCount] = math::XMFLOAT4(lightCreationDesc.worldSpaceLightPosition.x, lightCreationDesc.worldSpaceLightPosition.y,
+            m_lights->m_lightsBufferData.lightPosition[m_lights->m_currentLightCount] =
+                math::XMFLOAT4(lightCreationDesc.worldSpaceLightPosition.x, lightCreationDesc.worldSpaceLightPosition.y,
                                lightCreationDesc.worldSpaceLightPosition.z, 1.0f);
             m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].x = 0.1f;
             m_lights->m_lightsBufferData.radiusIntensity[m_lights->m_currentLightCount].y = 1.0f;
@@ -89,6 +90,9 @@ namespace helios::scene
             .projectionMatrix =
                 math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
             .inverseViewMatrix = math::XMMatrixInverse(nullptr, m_camera.computeAndGetViewMatrix()),
+            .inverseProjectionMatrix =
+                math::XMMatrixInverse(nullptr, math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov),
+                                                                              aspectRatio, m_nearPlane, m_farPlane)),
             .viewProjectionMatrix =
                 m_camera.computeAndGetViewMatrix() *
                 math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),

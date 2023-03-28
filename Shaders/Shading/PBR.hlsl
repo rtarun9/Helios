@@ -39,34 +39,36 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
     const matrix inverseViewMatrix = sceneBuffer.inverseViewMatrix;
 
     // Sample and extract data for the GBuffer's.
-    Texture2D<float4> albedoTexture = ResourceDescriptorHeap[renderResources.albedoGBufferIndex];
-    Texture2D<float4> positionEmissiveTexture = ResourceDescriptorHeap[renderResources.positionEmissiveGBufferIndex];
+    Texture2D<float4> albedoEmissiveTexture = ResourceDescriptorHeap[renderResources.albedoEmissiveGBufferIndex];
     Texture2D<float4> normalEmissiveTexture = ResourceDescriptorHeap[renderResources.normalEmissiveGBufferIndex];
     Texture2D<float4> aoMetalRoughnessEmissiveTexture =
         ResourceDescriptorHeap[renderResources.aoMetalRoughnessEmissiveGBufferIndex];
-
 
     TextureCube<float4> irradianceTexture = ResourceDescriptorHeap[renderResources.irradianceTextureIndex];
     TextureCube<float4> preFilterTexture = ResourceDescriptorHeap[renderResources.prefilterTextureIndex];
     Texture2D<float2> brdfLUTTexture = ResourceDescriptorHeap[renderResources.brdfLUTTextureIndex];
 
     Texture2D<float> blurredSSAOTexture = ResourceDescriptorHeap[renderResources.blurredSSAOTextureIndex];
+    
+    Texture2D<float> depthTexture = ResourceDescriptorHeap[renderResources.depthTextureIndex];
+    const float currentDepthValue = depthTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    const float4 albedo = albedoTexture.Sample(pointClampSampler, psInput.textureCoord);
+    const float4 albedoEmissive = albedoEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
+       
+    const float3 albedo = albedoEmissive.xyz;
 
-    const float4 positionEmissive = positionEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
     const float4 normalEmissive = normalEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
     const float4 aoMetalRoughnessEmissive =
         aoMetalRoughnessEmissiveTexture.Sample(pointClampSampler, psInput.textureCoord);
 
-    const float3 viewSpacePosition = positionEmissive.xyz;
+    const float3 viewSpacePosition = viewSpaceCoordsFromDepthBuffer(currentDepthValue, psInput.textureCoord, sceneBuffer.inverseProjectionMatrix);;//positionEmissive.xyz;
     const float3 normal = normalize(normalEmissive.xyz);
 
     const float ao = aoMetalRoughnessEmissive.r;
     const float metallicFactor = aoMetalRoughnessEmissive.g;
     const float roughnessFactor = aoMetalRoughnessEmissive.b;
 
-    const float3 emissive = float3(positionEmissive.w, normalEmissive.w, aoMetalRoughnessEmissive.a);
+    const float3 emissive = float3(albedoEmissive.w, normalEmissive.w, aoMetalRoughnessEmissive.a);
 
     const float3 viewDirection = normalize(-viewSpacePosition);
 
