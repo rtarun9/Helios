@@ -131,13 +131,13 @@ class SandBox final : public helios::core::Application
 
     void loadTextures()
     {
-        static constexpr std::array<uint32_t, 3u> indices = {
+        static constexpr std::array<uint16_t, 3u> indices = {
             0u,
             1u,
             2u,
         };
 
-        m_renderTargetIndexBuffer = m_graphicsDevice->createBuffer<uint32_t>(
+        m_renderTargetIndexBuffer = m_graphicsDevice->createBuffer<uint16_t>(
             gfx::BufferCreationDesc{
                 .usage = gfx::BufferUsage::IndexBuffer,
                 .name = L"Render Target Index Buffer",

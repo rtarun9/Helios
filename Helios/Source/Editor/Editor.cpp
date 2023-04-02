@@ -372,8 +372,10 @@ namespace helios::editor
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
-        ImGui::SliderFloat("Bias", &ssaoPass.m_ssaoBufferData.bias, 0.0f, 3.0f);
+        ImGui::SliderFloat("Bias", &ssaoPass.m_ssaoBufferData.bias, 0.0f, 1.0f);
         ImGui::SliderFloat("Radius", &ssaoPass.m_ssaoBufferData.radius, 0.0f, 10.0f);
+        ImGui::SliderFloat("Power", &ssaoPass.m_ssaoBufferData.power, 0.0f, 10.0f);
+        ImGui::SliderFloat("Occlusion Multiplier", &ssaoPass.m_ssaoBufferData.occlusionMultiplier, 1.0f, 5.0f);
 
         ImGui::End();
     }

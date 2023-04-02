@@ -269,7 +269,7 @@ namespace helios::scene
             std::vector<math::XMFLOAT2> modelTextureCoords{};
             std::vector<math::XMFLOAT3> modelNormals{};
 
-            std::vector<uint32_t> indices{};
+            std::vector<uint16_t> indices{};
 
             // Reference used :
             // https://github.com/mateeeeeee/Adria-DX12/blob/fc98468095bf5688a186ca84d94990ccd2f459b0/Adria/Rendering/EntityLoader.cpp.
@@ -344,13 +344,13 @@ namespace helios::scene
                     {
                         if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                         {
-                            indices.push_back(static_cast<uint32_t>(
-                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride)))[0]));
+                            indices.emplace_back
+                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
                         }
                         else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
                         {
-                            indices.push_back(static_cast<uint32_t>(
-                                (reinterpret_cast<uint32_t const*>(indexes + (i * indexByteStride)))[0]));
+                            indices.emplace_back
+                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
                         }
                     }
                 });
@@ -377,7 +377,7 @@ namespace helios::scene
                 },
                 modelNormals);
 
-            mesh.indexBuffer = device->createBuffer<uint32_t>(
+            mesh.indexBuffer = device->createBuffer<uint16_t>(
                 gfx::BufferCreationDesc{
                     .usage = gfx::BufferUsage::StructuredBuffer,
                     .name = meshName + L" index buffer",

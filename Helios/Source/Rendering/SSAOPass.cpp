@@ -19,7 +19,7 @@ namespace helios::rendering
         std::uniform_real_distribution<float> minusOneToOneDistribution{-1.0f, 1.0f};
         std::default_random_engine generator{};
 
-        m_ssaoBufferData.sampleVectorCount = 128;
+        m_ssaoBufferData.sampleVectorCount = interlop::SAMPLE_VECTOR_COUNT;
 
         for (const uint32_t i : std::views::iota(0u, m_ssaoBufferData.sampleVectorCount))
         {
@@ -37,7 +37,7 @@ namespace helios::rendering
             // fashion, the scale goes more towards 1. Since normalized i is between 0 and 1, the square grows slowly.
             // This means more sample positions will be close to the origin than farther away.
 
-            const float normalizedI = static_cast<float>(i) / 64.0f;
+            const float normalizedI = static_cast<float>(i) / static_cast<float>(interlop::SAMPLE_VECTOR_COUNT);
             const float scale = std::lerp<float, float>(0.1f, 1.0f, normalizedI * normalizedI);
 
             samplePosition = samplePosition * scale;
@@ -49,10 +49,10 @@ namespace helios::rendering
             .name = L"SSAO Buffer",
         });
 
-        m_ssaoBufferData.bias = 0.022f;
-        m_ssaoBufferData.radius = 2.0f;
-
-        m_ssaoBuffer.update(&m_ssaoBufferData);
+        m_ssaoBufferData.bias = 0.025f;
+        m_ssaoBufferData.radius = 2.562f;
+        m_ssaoBufferData.power = 1.312f;
+        m_ssaoBufferData.occlusionMultiplier = 1.219f;
 
         // Create the random rotation texture (a 4/4 texture in range ([-1, 1], [-1, 1]).
         m_ssaoBufferData.noiseTextureWidth = 4.0f;
@@ -116,6 +116,8 @@ namespace helios::rendering
             .depthFormat = DXGI_FORMAT_UNKNOWN,
             .pipelineName = L"Box Blur Pipeline State",
         });
+
+        m_ssaoBuffer.update(&m_ssaoBufferData);
     }
 
     void SSAOPass::render(gfx::GraphicsContext* const graphicsContext, const gfx::Buffer& renderTargetIndexBuffer,
@@ -124,7 +126,6 @@ namespace helios::rendering
         m_ssaoBufferData.screenWidth = width;
         m_ssaoBufferData.screenHeight = height;
 
-        // Put this in update maybe?
         m_ssaoBuffer.update(&m_ssaoBufferData);
 
         graphicsContext->addResourceBarrier(m_ssaoTexture.allocation.resource.Get(),

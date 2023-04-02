@@ -72,7 +72,7 @@ ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
     const float3 viewDirection = normalize(-viewSpacePosition);
 
-    const float ssaoTerm = blurredSSAOTexture.Sample(linearWrapSampler, psInput.textureCoord);
+    const float ssaoTerm = blurredSSAOTexture.Sample(linearClampSampler, psInput.textureCoord);
     // Reflectance equation for reference.
     // lo(x, v) = le(x, v) + integral(over hemisphere centered at x)(fr(x, l, v, roughness) * li(x, l) * (l.n)dl
     // x is the pixel position

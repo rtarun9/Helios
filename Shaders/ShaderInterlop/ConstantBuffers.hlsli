@@ -123,13 +123,16 @@ namespace interlop
         float farPlane;
     };
 
+    static const uint SAMPLE_VECTOR_COUNT = 32u;
+
     ConstantBufferStruct SSAOBuffer
     {
-        float4 sampleVectors[128];
+        float4 sampleVectors[SAMPLE_VECTOR_COUNT];
         float radius;
         float bias;
+        float power;
+        float occlusionMultiplier;
         uint sampleVectorCount;
-        float padding;
         float noiseTextureWidth;
         float noiseTextureHeight;
         float screenWidth;

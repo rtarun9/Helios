@@ -14,7 +14,7 @@ namespace helios::gfx
 
 namespace helios::rendering
 {
-    // Handles SSAO (screen space ambient occlusion) pass. Will also create a blurred ssao texture for use in the shading shaders.
+    // Handles SSAO (screen space ambient occlusion) pass. Will also create a blurred ssao texture.
     class SSAOPass
     {
       public:
