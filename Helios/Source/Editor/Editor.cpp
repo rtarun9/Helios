@@ -355,17 +355,10 @@ namespace helios::editor
     void Editor::renderSSAOPass(const gfx::GraphicsDevice* const graphicsDevice, rendering::SSAOPass& ssaoPass) const
     {
         ImGui::Begin("SSAO Pass");
-        const auto ssaoTextureSrvDescriptorHandle =
-            graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(ssaoPass.m_ssaoTexture.srvIndex);
 
         const auto blurSSAOTextureSrvDescriptorHandle =
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
                 ssaoPass.m_blurSSAOTexture.srvIndex);
-
-        ImGui::Begin("SSAO Texture");
-        ImGui::Image((ImTextureID)(ssaoTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
-                     ImGui::GetWindowViewport()->WorkSize);
-        ImGui::End();
 
         ImGui::Begin("SSAO Blur Texture");
         ImGui::Image((ImTextureID)(blurSSAOTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),

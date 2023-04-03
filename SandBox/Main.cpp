@@ -218,16 +218,14 @@ class SandBox final : public helios::core::Application
         gctx->addResourceBarrier(m_shadowMappingPass->m_shadowDepthBuffer.allocation.resource.Get(),
                                  D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-        gctx->addResourceBarrier(m_ssaoPass->m_ssaoTexture.allocation.resource.Get(),
-                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
         gctx->addResourceBarrier(m_ssaoPass->m_blurSSAOTexture.allocation.resource.Get(),
-                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-        // Separate high intensity pixel's from the texture using the bloom extract pipeline.
+        gctx->addResourceBarrier(m_ssaoPass->m_ssaoTexture.allocation.resource.Get(),
+                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
         gctx->addResourceBarrier(m_bloomPass->m_extractionTexture.allocation.resource.Get(),
-                                                D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-                                                D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+                                 D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
         gctx->executeResourceBarriers();
 
@@ -235,7 +233,7 @@ class SandBox final : public helios::core::Application
         {
             m_deferredGPass->render(m_scene.value(), gctx.get(), m_depthTexture, m_windowWidth, m_windowHeight);
         }
-    
+
         // RenderPass 1 : Shadow mapping pass.
         {
             m_shadowMappingPass->render(m_scene.value(), gctx.get());
@@ -244,25 +242,25 @@ class SandBox final : public helios::core::Application
         // RenderPass 2 : SSAO Pass.
         {
             gctx->addResourceBarrier(m_depthTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                                     D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
             gctx->addResourceBarrier(m_deferredGPass->m_gBuffer.normalEmissiveRT.allocation.resource.Get(),
                                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-            
-            // The m_ssaoPass->render() adds few more resource barriers and executes them, so not doing that explicity here.
+
+            gctx->executeResourceBarriers();
+
             interlop::SSAORenderResources renderResources = {
                 .normalTextureIndex = m_deferredGPass->m_gBuffer.normalEmissiveRT.srvIndex,
                 .depthTextureIndex = m_depthTexture.srvIndex,
                 .sceneBufferIndex = m_scene->m_sceneBuffer.cbvIndex,
             };
 
-            m_ssaoPass->render(gctx.get(), m_renderTargetIndexBuffer, renderResources, m_windowWidth, m_windowHeight);
+            m_ssaoPass->render(gctx.get(), renderResources, m_windowWidth, m_windowHeight);
         }
 
         // Transition all resources that are required for the shading pass but not in the appropriate resource state.
         gctx->addResourceBarrier(m_ssaoPass->m_blurSSAOTexture.allocation.resource.Get(),
-                                             D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                                 D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         gctx->addResourceBarrier(m_shadowMappingPass->m_shadowDepthBuffer.allocation.resource.Get(),
                                  D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -272,6 +270,10 @@ class SandBox final : public helios::core::Application
 
         gctx->addResourceBarrier(m_deferredGPass->m_gBuffer.aoMetalRoughnessEmissiveRT.allocation.resource.Get(),
                                  D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+        gctx->addResourceBarrier(m_depthTexture.allocation.resource.Get(),
+                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         gctx->executeResourceBarriers();
 

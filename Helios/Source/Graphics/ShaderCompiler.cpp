@@ -75,6 +75,7 @@ namespace helios::gfx::ShaderCompiler
         }
         else
         {
+            compilationArguments.push_back(DXC_ARG_DEBUG);
             compilationArguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
         }
 
@@ -104,7 +105,7 @@ namespace helios::gfx::ShaderCompiler
         if (errors && errors->GetStringLength() > 0)
         {
             const LPCSTR errorMessage = errors->GetStringPointer();
-            fatalError(errorMessage);
+            fatalError(std::format("Shader path : {}, Error : {}", wStringToString(shaderPath), errorMessage));
         }
 
         wrl::ComPtr<IDxcBlob> compiledShaderBlob{nullptr};

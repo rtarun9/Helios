@@ -52,7 +52,7 @@ namespace helios::rendering
         m_ssaoBufferData.bias = 0.025f;
         m_ssaoBufferData.radius = 1.625f;
         m_ssaoBufferData.power = 1.0f;
-        m_ssaoBufferData.occlusionMultiplier = 2.186f;
+        m_ssaoBufferData.occlusionMultiplier = 1.311f;
 
         // Create the random rotation texture (a 4/4 texture in range ([-1, 1], [-1, 1]).
         m_ssaoBufferData.noiseTextureWidth = 4.0f;
@@ -78,120 +78,73 @@ namespace helios::rendering
 
         // Create render targets and pipeline states.
         m_ssaoTexture = graphicsDevice->createTexture(gfx::TextureCreationDesc{
-            .usage = gfx::TextureUsage::RenderTarget,
+            .usage = gfx::TextureUsage::UAVTexture,
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R32_FLOAT,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-            .name = L"SSAO Texture Texture",
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+            .name = L"SSAO Texture",
         });
 
-        m_ssaoPipelineState = graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-            .shaderModule =
-                {
-                    .vertexShaderPath = L"Shaders/RenderPass/SSAOPass.hlsl",
-                    .pixelShaderPath = L"Shaders/RenderPass/SSAOPass.hlsl",
-                },
-            .rtvFormats = {DXGI_FORMAT_R32_FLOAT},
-            .depthFormat = DXGI_FORMAT_UNKNOWN,
+        m_ssaoPipelineState = graphicsDevice->createPipelineState(gfx::ComputePipelineStateCreationDesc{
+            .csShaderPath = L"Shaders/RenderPass/SSAOPass.hlsl",
             .pipelineName = L"SSAO Pipeline State",
         });
 
         m_blurSSAOTexture = graphicsDevice->createTexture(gfx::TextureCreationDesc{
-            .usage = gfx::TextureUsage::RenderTarget,
+            .usage = gfx::TextureUsage::UAVTexture,
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R32_FLOAT,
             .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-            .name = L"SSAO Texture Texture",
+            .name = L"SSAO Blur Texture",
         });
 
-        m_boxBlurPipelineState = graphicsDevice->createPipelineState(gfx::GraphicsPipelineStateCreationDesc{
-            .shaderModule =
-                {
-                    .vertexShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
-                    .pixelShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
-                },
-            .rtvFormats = {DXGI_FORMAT_R32_FLOAT},
-            .depthFormat = DXGI_FORMAT_UNKNOWN,
+        m_boxBlurPipelineState = graphicsDevice->createPipelineState(gfx::ComputePipelineStateCreationDesc{
+            .csShaderPath = L"Shaders/PostProcessing/BoxBlur.hlsl",
             .pipelineName = L"Box Blur Pipeline State",
         });
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
     }
 
-    void SSAOPass::render(gfx::GraphicsContext* const graphicsContext, const gfx::Buffer& renderTargetIndexBuffer,
-                          interlop::SSAORenderResources& renderResources, const uint32_t width, const uint32_t height)
+    void SSAOPass::render(gfx::GraphicsContext* const graphicsContext, interlop::SSAORenderResources& renderResources,
+                          const uint32_t width, const uint32_t height)
     {
         m_ssaoBufferData.screenWidth = width;
         m_ssaoBufferData.screenHeight = height;
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
 
-
         // Setup the SSAO texture.
         {
-            graphicsContext->setGraphicsRootSignatureAndPipeline(m_ssaoPipelineState);
-            graphicsContext->setRenderTarget(m_ssaoTexture);
-            graphicsContext->setViewport(D3D12_VIEWPORT{
-                .TopLeftX = 0.0f,
-                .TopLeftY = 0.0f,
-                .Width = static_cast<float>(width),
-                .Height = static_cast<float>(height),
-                .MinDepth = 0.0f,
-                .MaxDepth = 1.0f,
-            });
-
-            graphicsContext->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            graphicsContext->clearRenderTargetView(m_ssaoTexture, 1.0f);
-
+            graphicsContext->setComputeRootSignatureAndPipeline(m_ssaoPipelineState);
+                
             renderResources.randomRotationTextureIndex = m_randomRotationTexture.srvIndex;
             renderResources.ssaoBufferIndex = m_ssaoBuffer.cbvIndex;
+            renderResources.outputTextureIndex = m_ssaoTexture.uavIndex;                
 
-            graphicsContext->set32BitGraphicsConstants(&renderResources);
-
-            graphicsContext->setIndexBuffer(renderTargetIndexBuffer);
-            graphicsContext->drawIndexed(3u);
-
-            graphicsContext->addResourceBarrier(m_ssaoTexture.allocation.resource.Get(),
-                                                D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-            graphicsContext->executeResourceBarriers();
+            graphicsContext->set32BitComputeConstants(&renderResources);
+            
+            // NOTE : This idea of having a work group size of 96 was shared by DethRaid (https://github.com/DethRaid)
+            graphicsContext->dispatch(std::max(width / 8u, 1u), std::max(height / 12u, 1u), 1);
         }
+
+        graphicsContext->addResourceBarrier(m_ssaoTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        graphicsContext->executeResourceBarriers();
 
         // Blur the ssao texture.
         {
-            graphicsContext->setGraphicsRootSignatureAndPipeline(m_boxBlurPipelineState);
-            graphicsContext->setRenderTarget(m_blurSSAOTexture);
-            graphicsContext->setViewport(D3D12_VIEWPORT{
-                .TopLeftX = 0.0f,
-                .TopLeftY = 0.0f,
-                .Width = static_cast<float>(width),
-                .Height = static_cast<float>(height),
-                .MinDepth = 0.0f,
-                .MaxDepth = 1.0f,
-            });
-
-            graphicsContext->setPrimitiveTopologyLayout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            graphicsContext->clearRenderTargetView(m_blurSSAOTexture, 1.0f);
-
+            graphicsContext->setComputeRootSignatureAndPipeline(m_boxBlurPipelineState);
+           
             const interlop::BoxBlurRenderResources blurRenderResources = {
                 .textureIndex = m_ssaoTexture.srvIndex,
+                .outputTextureIndex = m_blurSSAOTexture.uavIndex,
             };
 
-            graphicsContext->set32BitGraphicsConstants(&blurRenderResources);
+            graphicsContext->set32BitComputeConstants(&blurRenderResources);
 
-            graphicsContext->setIndexBuffer(renderTargetIndexBuffer);
-            graphicsContext->drawIndexed(3u);
+            graphicsContext->dispatch(std::max(width / 8u, 1u), std::max(height / 4u, 1u), 1);
         }
-
-        // Transition blur texture back to pixel shader resource.
-        //  This is done in the sandbox file to batch resource barriers.      
-
-        // 
-        // graphicsContext->executeResourceBarriers();
     }
 } // namespace helios::rendering

@@ -20,7 +20,7 @@ namespace helios::rendering
       public:
         SSAOPass(gfx::GraphicsDevice* const graphicsDevice, const uint32_t width, const uint32_t height);
 
-        void render(gfx::GraphicsContext* const graphicsContext, const gfx::Buffer& renderTargetIndexBuffer, interlop::SSAORenderResources& renderResources, const uint32_t width, const uint32_t height);
+        void render(gfx::GraphicsContext* const graphicsContext, interlop::SSAORenderResources& renderResources, const uint32_t width, const uint32_t height);
 
       public:
         interlop::SSAOBuffer m_ssaoBufferData{};

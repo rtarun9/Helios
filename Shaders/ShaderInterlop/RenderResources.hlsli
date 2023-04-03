@@ -166,11 +166,13 @@ namespace interlop
         uint randomRotationTextureIndex;
         uint sceneBufferIndex;
         uint ssaoBufferIndex;
+        uint outputTextureIndex;
     };
 
     struct BoxBlurRenderResources
     {
         uint textureIndex;
+        uint outputTextureIndex;
     };
 
     struct BloomExtractRenderResources
