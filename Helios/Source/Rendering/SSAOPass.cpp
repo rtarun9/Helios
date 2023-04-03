@@ -50,9 +50,9 @@ namespace helios::rendering
         });
 
         m_ssaoBufferData.bias = 0.025f;
-        m_ssaoBufferData.radius = 2.562f;
-        m_ssaoBufferData.power = 1.312f;
-        m_ssaoBufferData.occlusionMultiplier = 1.219f;
+        m_ssaoBufferData.radius = 1.625f;
+        m_ssaoBufferData.power = 1.0f;
+        m_ssaoBufferData.occlusionMultiplier = 2.186f;
 
         // Create the random rotation texture (a 4/4 texture in range ([-1, 1], [-1, 1]).
         m_ssaoBufferData.noiseTextureWidth = 4.0f;
@@ -128,17 +128,8 @@ namespace helios::rendering
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
 
-        graphicsContext->addResourceBarrier(m_ssaoTexture.allocation.resource.Get(),
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                            D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-        graphicsContext->addResourceBarrier(m_blurSSAOTexture.allocation.resource.Get(),
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                            D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-        graphicsContext->executeResourceBarriers();
-
-        // Create the SSAO texture.
+        // Setup the SSAO texture.
         {
             graphicsContext->setGraphicsRootSignatureAndPipeline(m_ssaoPipelineState);
             graphicsContext->setRenderTarget(m_ssaoTexture);
@@ -198,11 +189,9 @@ namespace helios::rendering
         }
 
         // Transition blur texture back to pixel shader resource.
+        //  This is done in the sandbox file to batch resource barriers.      
 
-        graphicsContext->addResourceBarrier(m_blurSSAOTexture.allocation.resource.Get(),
-                                            D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-        graphicsContext->executeResourceBarriers();
+        // 
+        // graphicsContext->executeResourceBarriers();
     }
 } // namespace helios::rendering

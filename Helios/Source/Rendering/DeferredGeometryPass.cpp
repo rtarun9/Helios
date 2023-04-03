@@ -21,12 +21,11 @@ namespace helios::rendering
                 },
             .rtvFormats =
                 {
+                    DXGI_FORMAT_R8G8B8A8_UNORM,
                     DXGI_FORMAT_R16G16B16A16_FLOAT,
-                    DXGI_FORMAT_R16G16B16A16_FLOAT,
-                    DXGI_FORMAT_R16G16B16A16_FLOAT,
-                    DXGI_FORMAT_R16G16B16A16_FLOAT,
+                    DXGI_FORMAT_R8G8B8A8_UNORM,
                 },
-            .rtvCount = 4,
+            .rtvCount = 3,
             .pipelineName = L"Deferred Geometry Pass Pipeline",
         });
 
@@ -35,7 +34,7 @@ namespace helios::rendering
             .usage = gfx::TextureUsage::RenderTarget,
             .width = width,
             .height = height,
-            .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
+            .format = DXGI_FORMAT_R8G8B8A8_UNORM,
             .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass Albedo Texture",
         });
@@ -53,7 +52,7 @@ namespace helios::rendering
             .usage = gfx::TextureUsage::RenderTarget,
             .width = width,
             .height = height,
-            .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
+            .format = DXGI_FORMAT_R8G8B8A8_UNORM,
             .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass AO Metal Roughness Emissive Texture",
         });
@@ -69,14 +68,15 @@ namespace helios::rendering
             m_gBuffer.aoMetalRoughnessEmissiveRT,
         };
 
-        for (const auto& renderTarget : renderTargets)
-        {
-            graphicsContext->addResourceBarrier(renderTarget.allocation.resource.Get(),
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                                D3D12_RESOURCE_STATE_RENDER_TARGET);
-        }
+        // Setup of resource barriers done in the SandBox code.
+        // for (const auto& renderTarget : renderTargets)
+        // {
+        //     graphicsContext->addResourceBarrier(renderTarget.allocation.resource.Get(),
+        //                                         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        //                                         D3D12_RESOURCE_STATE_RENDER_TARGET);
+        // }
 
-        graphicsContext->executeResourceBarriers();
+        // graphicsContext->executeResourceBarriers();
 
         graphicsContext->setGraphicsRootSignatureAndPipeline(m_deferredGPassPipelineState);
         graphicsContext->setRenderTarget(renderTargets, depthBuffer);
@@ -97,14 +97,17 @@ namespace helios::rendering
         interlop::DeferredGPassRenderResources deferredGPassRenderResources{};
 
         scene.renderModels(graphicsContext, deferredGPassRenderResources);
+           
+        // Considering that the GBuffer will be used as SRV only for the shading pass, the barrier setup and execution is moved to the sandbox render function.
+        // The resource barriers are executed in the SandBox's render loop for batching barriers.
+        // Uncomment if barrier execution is to happen here.
+        // for (const auto& renderTarget : renderTargets)
+        // {
+        //     graphicsContext->addResourceBarrier(renderTarget.allocation.resource.Get(),
+        //                                         D3D12_RESOURCE_STATE_RENDER_TARGET,
+        //                                         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        // }
 
-        for (const auto& renderTarget : renderTargets)
-        {
-            graphicsContext->addResourceBarrier(renderTarget.allocation.resource.Get(),
-                                                D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        }
-
-        graphicsContext->executeResourceBarriers();
+        // graphicsContext->executeResourceBarriers();
     }
 } // namespace helios::renderpass

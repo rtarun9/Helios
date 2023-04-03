@@ -76,12 +76,6 @@ namespace helios::rendering
         m_bloomBuffer.update(&m_bloomBufferData);
 
         {
-            // Separate high intensity pixel's from the texture using the bloom extract pipeline.
-            graphicsContext->addResourceBarrier(m_extractionTexture.allocation.resource.Get(),
-                                                D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-                                                D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-            graphicsContext->executeResourceBarriers();
-
             graphicsContext->setComputeRootSignatureAndPipeline(m_extractionPipelineState);
 
             interlop::BloomExtractRenderResources renderResources = {

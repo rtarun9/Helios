@@ -74,11 +74,12 @@ namespace helios::rendering
         });
 
         const std::array<gfx::Texture, 0u> nullRtvTextures = {};
-
-        graphicsContext->addResourceBarrier(m_shadowDepthBuffer.allocation.resource.Get(),
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                            D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        graphicsContext->executeResourceBarriers();
+        
+        // This resource barrier can be batched (and done in the sandbox main code)
+        // graphicsContext->addResourceBarrier(m_shadowDepthBuffer.allocation.resource.Get(),
+        //                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        //                                     D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        // graphicsContext->executeResourceBarriers();
 
         graphicsContext->setGraphicsRootSignatureAndPipeline(m_shadowPassPipelineState);
         graphicsContext->clearDepthStencilView(m_shadowDepthBuffer);
@@ -93,9 +94,10 @@ namespace helios::rendering
 
         scene.renderModels(graphicsContext, shadowRenderResources);
 
-        graphicsContext->addResourceBarrier(m_shadowDepthBuffer.allocation.resource.Get(),
-                                            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                                            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        graphicsContext->executeResourceBarriers();
+        // This transition is not required till the shading passes, hence moved to the SandBox's render loop.
+        // graphicsContext->addResourceBarrier(m_shadowDepthBuffer.allocation.resource.Get(),
+        //                                     D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        //                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        // graphicsContext->executeResourceBarriers();
     }
 } // namespace helios::rendering

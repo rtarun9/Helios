@@ -79,6 +79,7 @@ PsOutput PsMain(VSOutput psInput)
     float3 emissive = getEmissive(psInput.textureCoord, output.albedoEmissive.xyz, materialBuffer.emissiveFactor, renderResources.emissiveTextureIndex, renderResources.emissiveTextureSamplerIndex);
 
     output.albedoEmissive = float4(output.albedoEmissive.xyz, emissive.r);
+   
 
     output.normalEmissive = float4(getNormal(psInput.textureCoord, renderResources.normalTextureIndex, renderResources.normalTextureSamplerIndex, psInput.normal, psInput.worldSpaceNormal, psInput.tbnMatrix), emissive.g);
     output.normalEmissive.xyz = mul(output.normalEmissive.xyz, psInput.viewMatrix);
