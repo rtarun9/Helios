@@ -6,26 +6,28 @@
 ConstantBuffer<interlop::BoxBlurRenderResources> renderResources : register(b0);
 
 [RootSignature(BindlessRootSignature)]
-[numthreads(8, 4, 1)]
+[numthreads(12, 8, 1)]
 void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
+    static const int BLUR_KERNEL_DIMENSIONS = 9u;
     Texture2D<float> tex = ResourceDescriptorHeap[renderResources.textureIndex];
-    uint width, height;
-    tex.GetDimensions(width, height);
+    float2 texDimensions;
+    tex.GetDimensions(texDimensions.x, texDimensions.y);
 
     RWTexture2D<float> outputTexture = ResourceDescriptorHeap[renderResources.outputTextureIndex];
 
-    const float2 pixelSize = float2(1.0f / width, 1.0f / height);
+    const float2 pixelSize = 1.0f / texDimensions;
     const float2 uv = (dispatchThreadID.xy + 0.5f) * pixelSize;
 
     float sum = 0.0f;
-    for (int x = -1; x <= 1; ++x)
+    [unroll(9)]
+    for (int k = 0; k < BLUR_KERNEL_DIMENSIONS; ++k)
     {
-        for (int y = -1; y <= 1; ++y)
-        {
-            const float2 offset = float2(float(x), float(y)) * pixelSize;
-            sum += tex.Sample(linearClampSampler, uv + offset).r;
-        }
+        float x = k / 3.0f;
+        float y = float(k % 3);
+
+        const float2 offset = float2(x, y) * pixelSize;
+        sum += tex.Sample(linearClampSampler, uv + offset).r;
     }
     
     outputTexture[dispatchThreadID.xy] = sum / 9.0f;

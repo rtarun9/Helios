@@ -75,7 +75,6 @@ namespace helios::gfx::ShaderCompiler
         }
         else
         {
-            compilationArguments.push_back(DXC_ARG_DEBUG);
             compilationArguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
         }
 

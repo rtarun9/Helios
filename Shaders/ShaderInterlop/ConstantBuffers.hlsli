@@ -28,11 +28,11 @@ namespace interlop
 {
     ConstantBufferStruct SceneBuffer
     {
-        float4x4 viewMatrix;
-        float4x4 projectionMatrix;
-        float4x4 inverseViewMatrix;
-        float4x4 inverseProjectionMatrix;
         float4x4 viewProjectionMatrix;
+        float4x4 projectionMatrix;
+        float4x4 inverseProjectionMatrix;
+        float4x4 viewMatrix;
+        float4x4 inverseViewMatrix;
     };
 
     ConstantBufferStruct TransformBuffer
@@ -124,19 +124,17 @@ namespace interlop
     };
 
     static const uint SAMPLE_VECTOR_COUNT = 32u;
+    static const uint NOISE_TEXTURE_DIMENSIONS  = 4u;
 
     ConstantBufferStruct SSAOBuffer
     {
+        float2 screenDimensions;
+        float2 noiseScaleDimensions; // Effectively screenDimensions / noiseTextureDimensions.
         float4 sampleVectors[SAMPLE_VECTOR_COUNT];
         float radius;
         float bias;
         float power;
         float occlusionMultiplier;
-        uint sampleVectorCount;
-        float noiseTextureWidth;
-        float noiseTextureHeight;
-        float screenWidth;
-        float screenHeight;
     };
 
     static const uint BLOOM_PASSES = 7u;

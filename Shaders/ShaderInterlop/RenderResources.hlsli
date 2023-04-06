@@ -119,6 +119,8 @@ namespace interlop
         uint blurredSSAOTextureIndex;
         
         uint depthTextureIndex;
+
+        uint outputTextureIndex;
     };
 
     struct CubeFromEquirectRenderResources

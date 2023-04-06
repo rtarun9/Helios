@@ -86,16 +86,16 @@ namespace helios::scene
         m_camera.update(deltaTime, input);
 
         const interlop::SceneBuffer sceneBufferData = {
-            .viewMatrix = m_camera.computeAndGetViewMatrix(),
-            .projectionMatrix =
-                math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
-            .inverseViewMatrix = math::XMMatrixInverse(nullptr, m_camera.computeAndGetViewMatrix()),
-            .inverseProjectionMatrix =
-                math::XMMatrixInverse(nullptr, math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov),
-                                                                              aspectRatio, m_nearPlane, m_farPlane)),
             .viewProjectionMatrix =
                 m_camera.computeAndGetViewMatrix() *
                 math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
+            .projectionMatrix =
+                math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov), aspectRatio, m_nearPlane, m_farPlane),
+            .inverseProjectionMatrix =
+                math::XMMatrixInverse(nullptr, math::XMMatrixPerspectiveFovLH(math::XMConvertToRadians(m_fov),
+                                                                              aspectRatio, m_nearPlane, m_farPlane)),
+            .viewMatrix = m_camera.computeAndGetViewMatrix(),
+            .inverseViewMatrix = math::XMMatrixInverse(nullptr, m_camera.computeAndGetViewMatrix()),
         };
 
         m_sceneBuffer.update(&sceneBufferData);

@@ -19,9 +19,7 @@ namespace helios::rendering
         std::uniform_real_distribution<float> minusOneToOneDistribution{-1.0f, 1.0f};
         std::default_random_engine generator{};
 
-        m_ssaoBufferData.sampleVectorCount = interlop::SAMPLE_VECTOR_COUNT;
-
-        for (const uint32_t i : std::views::iota(0u, m_ssaoBufferData.sampleVectorCount))
+        for (const uint32_t i : std::views::iota(0u, interlop::SAMPLE_VECTOR_COUNT))
         {
             math::XMVECTOR samplePosition = math::XMVector3Normalize(
                 math::XMVectorSet(minusOneToOneDistribution(generator), minusOneToOneDistribution(generator),
@@ -55,11 +53,10 @@ namespace helios::rendering
         m_ssaoBufferData.occlusionMultiplier = 1.311f;
 
         // Create the random rotation texture (a 4/4 texture in range ([-1, 1], [-1, 1]).
-        m_ssaoBufferData.noiseTextureWidth = 4.0f;
-        m_ssaoBufferData.noiseTextureHeight = 4.0f;
+        m_ssaoBufferData.noiseScaleDimensions = {width / static_cast<float>(interlop::NOISE_TEXTURE_DIMENSIONS), height / static_cast<float>(interlop::NOISE_TEXTURE_DIMENSIONS)};
 
-        std::array<math::XMFLOAT2, 16> randomRotationTextureData{};
-        for (const uint32_t i : std::views::iota(0u, 16u))
+        std::array<math::XMFLOAT2, interlop::NOISE_TEXTURE_DIMENSIONS * interlop::NOISE_TEXTURE_DIMENSIONS> randomRotationTextureData{};
+        for (const uint32_t i : std::views::iota(0u, randomRotationTextureData.size()))
         {
             randomRotationTextureData[i] =
                 math::XMFLOAT2(minusOneToOneDistribution(generator), minusOneToOneDistribution(generator));
@@ -68,8 +65,8 @@ namespace helios::rendering
         m_randomRotationTexture = graphicsDevice->createTexture(
             gfx::TextureCreationDesc{
                 .usage = gfx::TextureUsage::TextureFromData,
-                .width = 4u,
-                .height = 4u,
+                .width = interlop::NOISE_TEXTURE_DIMENSIONS,
+                .height = interlop::NOISE_TEXTURE_DIMENSIONS,
                 .format = DXGI_FORMAT_R8G8_SNORM,
                 .bytesPerPixel = 2u,
                 .name = L"Random Rotation Texture",
@@ -111,8 +108,8 @@ namespace helios::rendering
     void SSAOPass::render(gfx::GraphicsContext* const graphicsContext, interlop::SSAORenderResources& renderResources,
                           const uint32_t width, const uint32_t height)
     {
-        m_ssaoBufferData.screenWidth = width;
-        m_ssaoBufferData.screenHeight = height;
+        m_ssaoBufferData.screenDimensions = {static_cast<float>(width), static_cast<float>(height)};
+        m_ssaoBufferData.noiseScaleDimensions = {width / static_cast<float>(interlop::NOISE_TEXTURE_DIMENSIONS), height / static_cast<float>(interlop::NOISE_TEXTURE_DIMENSIONS)};
 
         m_ssaoBuffer.update(&m_ssaoBufferData);
 
@@ -125,9 +122,8 @@ namespace helios::rendering
             renderResources.outputTextureIndex = m_ssaoTexture.uavIndex;                
 
             graphicsContext->set32BitComputeConstants(&renderResources);
-            
-            // NOTE : This idea of having a work group size of 96 was shared by DethRaid (https://github.com/DethRaid)
-            graphicsContext->dispatch(std::max(width / 8u, 1u), std::max(height / 12u, 1u), 1);
+
+            graphicsContext->dispatch(std::max(width / 12u, 1u), std::max(height / 8u, 1u), 1);
         }
 
         graphicsContext->addResourceBarrier(m_ssaoTexture.allocation.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -144,7 +140,7 @@ namespace helios::rendering
 
             graphicsContext->set32BitComputeConstants(&blurRenderResources);
 
-            graphicsContext->dispatch(std::max(width / 8u, 1u), std::max(height / 4u, 1u), 1);
+            graphicsContext->dispatch(std::max(width / 12u, 1u), std::max(height / 8u, 1u), 1);
         }
     }
 } // namespace helios::rendering

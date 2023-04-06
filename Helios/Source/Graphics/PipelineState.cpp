@@ -105,9 +105,6 @@ namespace helios::gfx
                                     L"CsMain")
                 .shaderBlob;
 
-        // Primitive topology type specifies how the pipeline interprets geometry or hull shader input primitives.
-        // Basically, it sets up the rasterizer for the given primitive type. The primitive type must match with the IA
-        // Topology type.
         const D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {
             .pRootSignature = PipelineState::s_rootSignature.Get(),
             .CS = {.pShaderBytecode = computeShaderBlob->GetBufferPointer(),
