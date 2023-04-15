@@ -173,7 +173,7 @@ namespace helios::gfx
     {
         // Create descriptor heaps.
         m_cbvSrvUavDescriptorHeap = std::make_unique<DescriptorHeap>(
-            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048u, L"CBV SRV UAV Descriptor Heap");
+            m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10'000u, L"CBV SRV UAV Descriptor Heap");
 
         m_rtvDescriptorHeap = std::make_unique<DescriptorHeap>(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 50u,
                                                                L"RTV Descriptor Heap");

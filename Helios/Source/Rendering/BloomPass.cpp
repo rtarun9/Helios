@@ -70,22 +70,23 @@ namespace helios::rendering
         });
     }
 
-    void BloomPass::render(gfx::GraphicsContext* const graphicsContext, gfx::Texture& texture, const uint32_t width,
+    void BloomPass::render(gfx::GraphicsContext* const graphicsContext, gfx::Texture& shadingTexture, gfx::Texture& lightPassTexture, const uint32_t width,
                            const uint32_t height)
     {
         m_bloomBuffer.update(&m_bloomBufferData);
 
         {
-            graphicsContext->setComputeRootSignatureAndPipeline(m_extractionPipelineState);
+            graphicsContext->setComputePipelineState(m_extractionPipelineState);
 
             interlop::BloomExtractRenderResources renderResources = {
-                .inputTextureIndex = texture.srvIndex,
+                .inputShadingPassTextureIndex = shadingTexture.srvIndex,
+                .inputLightPassTextureIndex = lightPassTexture.srvIndex,
                 .outputTextureIndex = m_extractionTexture.uavIndex,
                 .bloomBufferIndex = m_bloomBuffer.cbvIndex,
             };
 
             graphicsContext->set32BitComputeConstants(&renderResources);
-            graphicsContext->dispatch(std::max((uint32_t)std::ceil(width / 8.0f), 1u),
+            graphicsContext->dispatch(std::max((uint32_t)std::ceil(width / 12.0f), 1u),
                                       std::max((uint32_t)std::ceil(height / 8.0f), 1u), 1);
             // Separate high intensity pixel's from the texture using the bloom extract pipeline.
             graphicsContext->addResourceBarrier(m_extractionTexture.allocation.resource.Get(),
@@ -97,7 +98,7 @@ namespace helios::rendering
         // Perform downsampling (karis average for first downsample and 13 bilinear taps for subsequence bloom down
         // sample passes.
         {
-            graphicsContext->setComputeRootSignatureAndPipeline(m_bloomDownSamplePipelineState);
+            graphicsContext->setComputePipelineState(m_bloomDownSamplePipelineState);
 
             for (const uint32_t i : std::views::iota(0u, interlop::BLOOM_PASSES))
             {
@@ -151,7 +152,7 @@ namespace helios::rendering
                 }
 
                 graphicsContext->set32BitComputeConstants(&bloomDownSampleRenderResources);
-                graphicsContext->dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u),
+                graphicsContext->dispatch(std::max((uint32_t)std::ceil(destinationWidth / 12.0f), 1u),
                                           std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1);
 
                 // Wait for all UAV accesses to be completed.
@@ -166,7 +167,7 @@ namespace helios::rendering
         // UpSample(D) = DownSample(D) + UpSample(E)
         // UpSample(C) = DownSample(C) + UpSample(D)
         {
-            graphicsContext->setComputeRootSignatureAndPipeline(m_bloomUpSamplePipelineState);
+            graphicsContext->setComputePipelineState(m_bloomUpSamplePipelineState);
 
             for (int32_t i = interlop::BLOOM_PASSES - 1; i >= 0; --i)
             {
@@ -199,7 +200,7 @@ namespace helios::rendering
                 };
 
                 graphicsContext->set32BitComputeConstants(&bloomUpSampleRenderResources);
-                graphicsContext->dispatch(std::max((uint32_t)std::ceil(destinationWidth / 8.0f), 1u),
+                graphicsContext->dispatch(std::max((uint32_t)std::ceil(destinationWidth / 12.0f), 1u),
                                           std::max((uint32_t)std::ceil(destinationHeight / 8.0f), 1u), 1);
 
                 // Wait for all UAV accesses to be completed.

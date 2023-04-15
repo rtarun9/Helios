@@ -49,9 +49,10 @@ float4 PsMain(VSOutput input) : SV_Target
     }
 
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[renderResources.renderTextureIndex];
+    Texture2D<float4> lightRenderTexture = ResourceDescriptorHeap[renderResources.lightRenderTextureIndex];
     Texture2D<float4> bloomTexture = ResourceDescriptorHeap[renderResources.bloomTextureIndex];
 
-    float3 color = renderTexture.Sample(linearWrapSampler, input.textureCoord).xyz;
+    float3 color = renderTexture.Sample(linearWrapSampler, input.textureCoord).xyz + lightRenderTexture.Sample(linearWrapSampler, input.textureCoord).xyz;
     const float3 bloomColor = (bloomTexture.Sample(linearWrapSampler, input.textureCoord).xyz * postProcessingBuffer.enableBloom);
 
     color = lerp(color, bloomColor, postProcessingBuffer.bloomStrength);

@@ -33,7 +33,7 @@ float3 average(const float3 sourceColorA, const float3 sourceColorB, const float
 
 
 [RootSignature(BindlessRootSignature)]
-[numthreads(8, 8, 1)] 
+[numthreads(12, 8, 1)] 
 void CsMain(uint3 dispatchThreadID: SV_DispatchThreadID) 
 {
 	Texture2D<float4> inputTexture = ResourceDescriptorHeap[renderResources.inputTextureIndex];

@@ -12,14 +12,14 @@ static const float INV_SAMPLES = 1.0f / (float)SAMPLES;
 // Reference : https://learnopengl.com/PBR/IBL/Diffuse-irradiance
 
 
-// This shader is used to comupte the diffuse part of the cook torrence BRDF by considering each cube map texel
+// This shader is used to compute the diffuse part of the cook torrence BRDF by considering each cube map texel
 // to be a light emitter. The diffuse part of the BRDF is only dependent on wi, the incoming light direction.
-// We want to precompute the diffuse irradiance map so that we can sample a texture, and recieve the irradiance along 
+// We want to precompute the diffuse irradiance map so that we can sample a texture, and receive the irradiance along 
 // the view direction w0. In this case, the view direction wo in the PBR shader will be the objects normal.
 // The integral to be computed is [integral over hemisphere at point p] (Li(wi, p) * n.wi)dwi. Li(wi, p) is the radiance along the direction
 // wi, which can be obtained by just sampling the cube map, and n.wi is the dot product between all such incoming light directions wi and the sampling vector n
 // over the hemisphere. Since this integral cannot be solved analytically, we use a quasi-montecarlo integration technique to compute it.
-// Using a low descripancy sequence (such as the Hammerley sequence), we get uniformally distributed sample points in range [0, 1].
+// Using a low discrepancy sequence (such as the Hammerley sequence), we get uniformly distributed sample points in range [0, 1].
 // Passing this into a function that returns samples from a hemisphere where z is between 0 and 1.
 // Since this hemisphere sampled vector is in its own coordinate form, similar to normal mapping we compute a change of basis matrix (or in this case just 
 // transform the coordinate) from its own local space to 'world space' (i.e the space where the sampling vector forms one of the orthonormal basis vectors).
@@ -74,7 +74,7 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     outputIrradianceMap.GetDimensions(textureWidth, textureHeight, textureDepth);
 
     // For each of the 6 cube faces, there will be threads which have the same 2d pixel coord. 
-    const float2 pixelCoords = (dispatchThreadID.xy) / textureWidth;
+    const float2 pixelCoords = (dispatchThreadID.xy + 0.5f) / float2(textureWidth, textureHeight);
 
     // Based on current texture pixel coord (and the dispatch's z parameter : or the number of groupz on the z axis
     // (hardcoded to 6), it will calculate the normalized samling direction which we use to sample into the cube map.
@@ -110,6 +110,6 @@ void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         irradiance += cubeMapTexture.SampleLevel(linearClampSampler, li, 0u).rgb * cosTheta;
     }
 
-    // As PDF is 1.0 / 2.0f * PI, There is a division by PI required to cancel out the PI. The PBR shader must hence divide the sampled irradiance by PI.
-    outputIrradianceMap[dispatchThreadID] = float4(irradiance * 2.0f * PI * INV_SAMPLES, 1.0f);
+    // PI cancels out as lambertian diffuse divides by PI.
+    outputIrradianceMap[dispatchThreadID] = float4(irradiance * 2.0f * INV_SAMPLES, 1.0f);
 }

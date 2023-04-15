@@ -40,6 +40,7 @@ namespace helios::scene
                     .vertexShaderPath = L"Shaders/Lights/Lights.hlsl",
                     .pixelShaderPath = L"Shaders/Lights/Lights.hlsl",
                 },
+            .rtvFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT},
             .pipelineName = L"Lights Pipeline",
         });
 
@@ -91,7 +92,7 @@ namespace helios::scene
     void Lights::render(const gfx::GraphicsContext* const graphicsContext,
                         interlop::LightRenderResources& lightRenderResources)
     {
-        graphicsContext->setGraphicsRootSignatureAndPipeline(m_lightPipelineState);
+        graphicsContext->setGraphicsPipelineState(m_lightPipelineState);
 
         lightRenderResources.lightBufferIndex = m_lightsBuffer.cbvIndex;
         lightRenderResources.transformBufferIndex = m_lightsInstanceBuffer.cbvIndex;

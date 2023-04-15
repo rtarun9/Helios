@@ -196,7 +196,7 @@ namespace helios::editor
                         ImGui::SliderFloat("Metallic Factor", &material[i].materialBufferData.metallicFactor, 0.0f,
                                            1.0f);
                         ImGui::SliderFloat("Emissive Factor", &material[i].materialBufferData.emissiveFactor, 0.0f,
-                                           2.0f);
+                                           10.0f);
                         ImGui::TreePop();
                     }
                 }

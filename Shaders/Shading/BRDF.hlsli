@@ -65,7 +65,30 @@ float smithGeometryFunction(const float3 normal, const float3 viewDirection, con
 }
 
 // BRDF = kD * diffuseBRDF + kS * specularBRDF. (Note : kS + kD = 1).
-float3 cookTorrenceBRDF(const float3 normal, const float3 viewDirection, const float3 pixelToLightDirection, const float3 albedo, const float roughnessFactor,
+
+float3 lambertianDiffuseBRDF(const float3 normal, const float3 viewDirection, const float3 pixelToLightDirection, const float3 albedo, const float roughnessFactor,
+            const float metallicFactor)
+{
+    const float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
+
+    const float3 f0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.xyz, metallicFactor);
+
+    // Using cook torrance BRDF for specular lighting.
+    const float3 fresnel = fresnelSchlickFunction(max(dot(viewDirection, halfWayVector), 0.0f), f0);
+    
+    float3 kS = fresnel;
+
+    // Metals have kD as 0.0f, so more metallic a surface is, closes kS ~ 1 and kD ~ 0.
+    // Using lambertian model for diffuse light now.
+    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - fresnel, float3(0.0f, 0.0f, 0.0f), metallicFactor);
+
+    const float3 diffuseBRDF = albedo / PI;
+
+    return kD * diffuseBRDF;
+}
+
+
+float3 cookTorrenceSpecularBRDF(const float3 normal, const float3 viewDirection, const float3 pixelToLightDirection, const float3 albedo, const float roughnessFactor,
             const float metallicFactor)
 {
     const float3 halfWayVector = normalize(viewDirection + pixelToLightDirection);
@@ -83,13 +106,5 @@ float3 cookTorrenceBRDF(const float3 normal, const float3 viewDirection, const f
         max(4.0f * saturate(dot(viewDirection, normal)) * saturate(dot(pixelToLightDirection, normal)),
             MIN_FLOAT_VALUE);
 
-    float3 kS = fresnel;
-
-    // Metals have kD as 0.0f, so more metallic a surface is, closes kS ~ 1 and kD ~ 0.
-    // Using lambertian model for diffuse light now.
-    float3 kD = lerp(float3(1.0f, 1.0f, 1.0f) - fresnel, float3(0.0f, 0.0f, 0.0f), metallicFactor);
-
-    const float3 diffuseBRDF = albedo / PI;
-
-    return (kD * diffuseBRDF + specularBRDF);
+    return specularBRDF;
 }

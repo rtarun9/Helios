@@ -93,7 +93,7 @@ namespace helios::scene
     void CubeMap::render(const gfx::GraphicsContext* const graphicsContext,
                          interlop::CubeMapRenderResources& renderResources)
     {
-        graphicsContext->setGraphicsRootSignatureAndPipeline(m_cubeMapPipelineState);
+        graphicsContext->setGraphicsPipelineState(m_cubeMapPipelineState);
 
         if (renderResources.textureIndex == INVALID_INDEX_U32)
         {

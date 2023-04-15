@@ -29,12 +29,14 @@ namespace helios::gfx
 
         // Configure pipeline / root signature related functions.
         void setGraphicsPipelineState(const PipelineState& pipelineState) const;
-        void setGraphicsRootSignature(const PipelineState& pipelineState) const;
+        void setGraphicsRootSignature() const;
         void setGraphicsRootSignatureAndPipeline(const PipelineState& pipelineState) const;
 
         void setIndexBuffer(const Buffer& buffer) const;
         void set32BitGraphicsConstants(const void* renderResources) const;
 
+        void setComputePipelineState(const PipelineState& pipelineState) const;
+        void setComputeRootSignature() const;
         void setComputeRootSignatureAndPipeline(const PipelineState& pipelineState) const;
         void set32BitComputeConstants(const void* renderResources) const;
 

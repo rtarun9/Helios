@@ -35,7 +35,7 @@ namespace helios::rendering
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R8G8B8A8_UNORM,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass Albedo Texture",
         });
 
@@ -44,7 +44,7 @@ namespace helios::rendering
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass Normal Emissive Texture",
         });
 
@@ -53,7 +53,7 @@ namespace helios::rendering
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R8G8B8A8_UNORM,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
             .name = L"Deferred Pass AO Metal Roughness Emissive Texture",
         });
     }
@@ -78,7 +78,7 @@ namespace helios::rendering
 
         // graphicsContext->executeResourceBarriers();
 
-        graphicsContext->setGraphicsRootSignatureAndPipeline(m_deferredGPassPipelineState);
+        graphicsContext->setGraphicsPipelineState(m_deferredGPassPipelineState);
         graphicsContext->setRenderTarget(renderTargets, depthBuffer);
         graphicsContext->setViewport(D3D12_VIEWPORT{
             .TopLeftX = 0.0f,

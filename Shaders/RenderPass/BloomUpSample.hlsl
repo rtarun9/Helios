@@ -9,7 +9,7 @@ ConstantBuffer<interlop::BloomUpSampleRenderResources> renderResources : registe
 // For upsampling, add the previous mip level with the current blurred level. Do this progressively until mip level 0 is reached.
 // The blurring is performed using a 3x3 tent filter (slide 111 of the cod next generation post processing presentation).
 [RootSignature(BindlessRootSignature)]
-[numthreads(8, 8, 1)] 
+[numthreads(12, 8, 1)] 
 void CsMain(uint3 dispatchThreadID: SV_DispatchThreadID) 
 {
 	Texture2D<float4> inputPreviousUpSampleTexture = ResourceDescriptorHeap[renderResources.inputPreviousUpSampleSrvIndex];

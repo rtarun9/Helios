@@ -93,7 +93,7 @@ namespace helios::rendering
             .width = width,
             .height = height,
             .format = DXGI_FORMAT_R32_FLOAT,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
             .name = L"SSAO Blur Texture",
         });
 
@@ -115,7 +115,7 @@ namespace helios::rendering
 
         // Setup the SSAO texture.
         {
-            graphicsContext->setComputeRootSignatureAndPipeline(m_ssaoPipelineState);
+            graphicsContext->setComputePipelineState(m_ssaoPipelineState);
                 
             renderResources.randomRotationTextureIndex = m_randomRotationTexture.srvIndex;
             renderResources.ssaoBufferIndex = m_ssaoBuffer.cbvIndex;
@@ -131,7 +131,7 @@ namespace helios::rendering
 
         // Blur the ssao texture.
         {
-            graphicsContext->setComputeRootSignatureAndPipeline(m_boxBlurPipelineState);
+            graphicsContext->setComputePipelineState(m_boxBlurPipelineState);
            
             const interlop::BoxBlurRenderResources blurRenderResources = {
                 .textureIndex = m_ssaoTexture.srvIndex,

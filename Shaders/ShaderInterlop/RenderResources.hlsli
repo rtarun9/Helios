@@ -64,6 +64,7 @@ namespace interlop
     {
         uint postProcessBufferIndex;
         uint renderTextureIndex;
+        uint lightRenderTextureIndex;
         uint ssaoTextureIndex;
         uint bloomTextureIndex;
     };
@@ -179,7 +180,8 @@ namespace interlop
 
     struct BloomExtractRenderResources
     {
-        uint inputTextureIndex;
+        uint inputShadingPassTextureIndex;
+        uint inputLightPassTextureIndex;
         uint outputTextureIndex;
 
         uint bloomBufferIndex;

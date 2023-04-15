@@ -27,7 +27,7 @@ namespace helios::rendering
             .width = SHADOW_MAP_DIMENSIONS,
             .height = SHADOW_MAP_DIMENSIONS,
             .format = DXGI_FORMAT_D32_FLOAT,
-            .optionalInitialState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            .optionalInitialState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
             .name = L"PCF Shadow Mapping Pass Depth Texture",
         });
 
@@ -81,7 +81,7 @@ namespace helios::rendering
         //                                     D3D12_RESOURCE_STATE_DEPTH_WRITE);
         // graphicsContext->executeResourceBarriers();
 
-        graphicsContext->setGraphicsRootSignatureAndPipeline(m_shadowPassPipelineState);
+        graphicsContext->setGraphicsPipelineState(m_shadowPassPipelineState);
         graphicsContext->clearDepthStencilView(m_shadowDepthBuffer);
         graphicsContext->setRenderTarget(nullRtvTextures, m_shadowDepthBuffer);
 

@@ -84,9 +84,9 @@ namespace helios::gfx
         m_commandList->SetPipelineState(pipelineState.m_pipelineStateObject.Get());
     }
 
-    void GraphicsContext::setGraphicsRootSignature(const PipelineState& pipelineState) const
+    void GraphicsContext::setGraphicsRootSignature() const
     {
-        m_commandList->SetGraphicsRootSignature(pipelineState.s_rootSignature.Get());
+        m_commandList->SetGraphicsRootSignature(PipelineState::s_rootSignature.Get());
     }
 
     void GraphicsContext::setGraphicsRootSignatureAndPipeline(const PipelineState& pipelineState) const
@@ -109,6 +109,15 @@ namespace helios::gfx
     void GraphicsContext::set32BitGraphicsConstants(const void* renderResources) const
     {
         m_commandList->SetGraphicsRoot32BitConstants(0u, NUMBER_32_BIT_CONSTANTS, renderResources, 0u);
+    }
+
+    void GraphicsContext::setComputePipelineState(const PipelineState& pipelineState) const
+    {
+        m_commandList->SetPipelineState(pipelineState.m_pipelineStateObject.Get());
+    }
+    void GraphicsContext::setComputeRootSignature() const
+    {
+        m_commandList->SetComputeRootSignature(PipelineState::s_rootSignature.Get());
     }
 
     void GraphicsContext::setComputeRootSignatureAndPipeline(const PipelineState& pipelineState) const

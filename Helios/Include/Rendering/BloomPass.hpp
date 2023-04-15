@@ -22,7 +22,7 @@ namespace helios::rendering
       public:
         BloomPass(gfx::GraphicsDevice* const graphicsDevice, const uint32_t width, const uint32_t height);
 
-        void render(gfx::GraphicsContext* const graphicsContext, gfx::Texture& texture, const uint32_t width,
+        void render(gfx::GraphicsContext* const graphicsContext, gfx::Texture& shadingTexture, gfx::Texture& lightPassTexture, const uint32_t width,
                     const uint32_t height);
 
       public:
