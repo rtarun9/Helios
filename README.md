@@ -5,14 +5,14 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 # Features
 * Bindless Rendering (Using SM 6.6's Resource / Sampler descriptor Heap).
 * Normal Mapping.
-* Physically based rendering (PBR).
+* Physically based rendering (PBR) [Lambertian Diffuse and Cook Torrence Specular BRDF].
 * Diffuse and Specular IBL.
 * Bloom (Based on the Call of Duty Next Generation Post Processing presentation).
 * Screen Space Ambient Occlusion (SSAO).
 * Blinn-Phong Shading.
 * Deferred Shading.
 * HDR and Tone Mapping.
-* OmniDirectional Shadow Mapping.
+* Shadow Mapping.
 * Instanced rendering.
 * Compute Shader mip map generation.
 * Multi-threaded asset loading.
@@ -26,7 +26,7 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 ![](Assets/Screenshots/IBL2.png)
 ![](Assets/Screenshots/IBL1.png)
 
-> Omni-directional Shadow Mapping (With PCF)
+> Shadow Mapping (With PCF)
 ![](Assets/Screenshots/PCFShadows1.png)
 
 > SSAO (Screen Space Ambient Occlusion)
@@ -50,6 +50,22 @@ An experimental C++20 & DX12 renderer made for learning and trying out various g
 # Showcase Video
 [Link : Click here, or on the Image below!](https://youtu.be/hKeVVCpzVhQ) \
 [![Youtube link](https://img.youtube.com/vi/hKeVVCpzVhQ/hqdefault.jpg)](https://youtu.be/hKeVVCpzVhQ)
+
+# Performance Metrics:
+> Current performance metrics after optimizations:
+![](Assets/Screenshots/PerformanceMetrics.png)
+
+> Pre-optimization performance metrics:
+![](Assets/Screenshots/OldPerformanceMetrics.png)
+
+# Optimization efforts:
+> Optimized for Turing Architecture NVIDIA GTX1650.
+
+* Multi-threaded command list recording.
+* Batching of resource barriers (as much as possible).
+* Rewrite shaders to reduce number of registers used (for the SSAO compute shader).
+* Switch several full screen passes to compute shaders (to be noted that Tiled rendering using full screen pixel shader does surpass compute shader performance, but if the optimal work group size is found, compute shader performance will be higher than pixel shader).
+* Reordered render loop to prevent unnecessary Compute to Graphics pipeline switches (which cause wait for idle's internally).
 
 # Third Party Libraries
 * [Dear ImGUI](https://github.com/ocornut/imgui)

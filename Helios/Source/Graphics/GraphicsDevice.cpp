@@ -195,7 +195,10 @@ namespace helios::gfx
         // Create graphics contexts (one per frame in flight).
         for (const uint32_t i : std::views::iota(0u, FRAMES_IN_FLIGHT))
         {
-            m_perFrameGraphicsContexts[i] = std::make_unique<GraphicsContext>(this);
+            for (auto& context : m_perFrameGraphicsContexts[i])
+            {
+                context = std::make_unique<GraphicsContext>(this);
+            }
         }
 
         m_copyContext = std::make_unique<CopyContext>(this);
@@ -266,7 +269,10 @@ namespace helios::gfx
 
     void GraphicsDevice::beginFrame()
     {
-        m_perFrameGraphicsContexts[m_currentFrameIndex]->reset();
+        for (auto& context : m_perFrameGraphicsContexts[m_currentFrameIndex])
+        {
+            context->reset();
+        }
     }
 
     void GraphicsDevice::present()
@@ -391,7 +397,6 @@ namespace helios::gfx
         }
         break;
         }
-
 
         // If texture created from file, load data (using stb_image currently) into a upload buffer and copy sub
         // resource data from a upload buffer into the GPU only texture.

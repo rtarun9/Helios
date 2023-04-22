@@ -9,7 +9,7 @@
 
 ConstantBuffer<interlop::PBRRenderResources> renderResources : register(b0);
 
-    [RootSignature(BindlessRootSignature)] [numThreads(12, 8, 1)] void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+    [RootSignature(BindlessRootSignature)] [numThreads(8, 12, 1)] void CsMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     ConstantBuffer<interlop::LightBuffer> lightBuffer = ResourceDescriptorHeap[renderResources.lightBufferIndex];
     ConstantBuffer<interlop::SceneBuffer> sceneBuffer = ResourceDescriptorHeap[renderResources.sceneBufferIndex];

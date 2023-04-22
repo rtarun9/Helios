@@ -77,7 +77,7 @@ namespace helios::gfx
             return m_swapchainBackBufferFormat;
         }
 
-        [[nodiscard]] std::unique_ptr<GraphicsContext>& getCurrentGraphicsContext()
+        [[nodiscard]] std::array<std::unique_ptr<GraphicsContext>, 5>& getCurrentGraphicsContexts()
         {
             return m_perFrameGraphicsContexts[m_currentFrameIndex];
         }
@@ -169,7 +169,9 @@ namespace helios::gfx
         std::unique_ptr<CommandQueue> m_copyCommandQueue{};
         std::unique_ptr<CommandQueue> m_computeCommandQueue{};
 
-        std::array<std::unique_ptr<GraphicsContext>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
+        // The 3 here is based on the main function render loop. A much much cleaner solution would involve
+        // a graphics context queue.
+        std::array<std::array<std::unique_ptr<GraphicsContext>, 5u>, FRAMES_IN_FLIGHT> m_perFrameGraphicsContexts{};
         std::unique_ptr<CopyContext> m_copyContext{};
         std::queue<std::unique_ptr<ComputeContext>> m_computeContextQueue{};
 
