@@ -84,6 +84,8 @@ cmake --build Build --config Release
 Alternatively open the folder in Visual Studio's open folder mode.
 + Run the `Setup.bat` file, which will install the DirectXAgility SDK and the DirectXShader Compiler. You will be asked to enter the build path, which was the same path you gave in cmake -S . -B 'BuildPath'. If you followed the commands above, BuildPath = Build.
 
+NOTE : Since a preview version of Agility SDK is currently being used, you need to enable Developer Mode for the application to run.
+
 # Controls
 + WASD -> Move camera.
 + Arrow keys -> Modify camera orientation.

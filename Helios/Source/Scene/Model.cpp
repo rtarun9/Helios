@@ -521,7 +521,7 @@ namespace helios::scene
             samplerCreationDesc.samplerDesc.MinLOD = 0.0f;
             samplerCreationDesc.samplerDesc.MipLODBias = 0.0f;
             samplerCreationDesc.samplerDesc.MaxAnisotropy = 16;
-            samplerCreationDesc.samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+            samplerCreationDesc.samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 
             m_samplers[index++] = graphicsDevice->createSampler(samplerCreationDesc);
         }

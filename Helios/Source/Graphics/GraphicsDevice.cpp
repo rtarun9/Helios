@@ -630,6 +630,8 @@ namespace helios::gfx
 
         m_device->CreateSampler(&samplerCreationDesc.samplerDesc, samplerDescriptorHandle.cpuDescriptorHandle);
 
+        m_samplerDescriptorHeap->offsetCurrentHandle();
+
         return sampler;
     }
 

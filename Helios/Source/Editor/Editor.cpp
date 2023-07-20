@@ -188,7 +188,7 @@ namespace helios::editor
                                 graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(
                                     material[i].albedoTexture.srvIndex);
 
-                            ImGui::Image((ImTextureID)(albedoSrvHandle.cpuDescriptorHandle.ptr), ImVec2(60, 60));
+                            ImGui::Image((ImTextureID)(albedoSrvHandle.gpuDescriptorHandle.ptr), ImVec2(60, 60));
                         }
 
                         ImGui::SliderFloat("Roughness Factor", &material[i].materialBufferData.roughnessFactor, 0.0f,
@@ -313,7 +313,7 @@ namespace helios::editor
         //         deferredGBuffer.aoMetalRoughnessEmissiveRT.srvIndex);
 
         ImGui::Begin("Albedo RT");
-        ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.cpuDescriptorHandle.ptr),
+        ImGui::Image((ImTextureID)(albedoEmissiveDescriptorHandle.gpuDescriptorHandle.ptr),
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
@@ -341,7 +341,7 @@ namespace helios::editor
             shadowMappingPass.m_shadowDepthBuffer.srvIndex);
 
         ImGui::Begin("Shadow Depth Map");
-        ImGui::Image((ImTextureID)(srvDescriptorHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+        ImGui::Image((ImTextureID)(srvDescriptorHandle.gpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
         ImGui::SliderFloat("Backoff distance", &shadowMappingPass.m_shadowBufferData.backOffDistance, 0.0f, 300.0f);
@@ -361,7 +361,7 @@ namespace helios::editor
                 ssaoPass.m_blurSSAOTexture.srvIndex);
 
         ImGui::Begin("SSAO Blur Texture");
-        ImGui::Image((ImTextureID)(blurSSAOTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+        ImGui::Image((ImTextureID)(blurSSAOTextureSrvDescriptorHandle.gpuDescriptorHandle.ptr),
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
@@ -385,7 +385,7 @@ namespace helios::editor
                 bloomPass.m_extractionTexture.srvIndex);
 
          ImGui::Begin("Bloom Extract Texture");
-         ImGui::Image((ImTextureID)(bloomExtractTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+         ImGui::Image((ImTextureID)(bloomExtractTextureSrvDescriptorHandle.gpuDescriptorHandle.ptr),
                       ImGui::GetMainViewport()->WorkSize);
          ImGui::End();
 
@@ -397,7 +397,7 @@ namespace helios::editor
                 bloomPass.m_bloomDownSampleTexture.srvIndex + bloomDownSampleMipIndex);
 
         ImGui::Begin("Bloom Downsample Texture");
-        ImGui::Image((ImTextureID)(bloomDownPassTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+        ImGui::Image((ImTextureID)(bloomDownPassTextureSrvDescriptorHandle.gpuDescriptorHandle.ptr),
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
@@ -409,7 +409,7 @@ namespace helios::editor
                 bloomPass.m_bloomUpSampleTexture.srvIndex + bloomUpSampleMipIndex);
 
         ImGui::Begin("Bloom UpSample Texture");
-        ImGui::Image((ImTextureID)(bloomUpSampleTextureSrvDescriptorHandle.cpuDescriptorHandle.ptr),
+        ImGui::Image((ImTextureID)(bloomUpSampleTextureSrvDescriptorHandle.gpuDescriptorHandle.ptr),
                      ImGui::GetWindowViewport()->WorkSize);
         ImGui::End();
 
@@ -436,7 +436,7 @@ namespace helios::editor
             graphicsDevice->getCbvSrvUavDescriptorHeap()->getDescriptorHandleFromIndex(renderTarget.srvIndex);
 
         ImGui::Begin("View Port");
-        ImGui::Image((ImTextureID)(rtvSrvHandle.cpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
+        ImGui::Image((ImTextureID)(rtvSrvHandle.gpuDescriptorHandle.ptr), ImGui::GetWindowViewport()->WorkSize);
 
         // Handling the drag-drop facility for GLTF models.
         if (ImGui::BeginDragDropTarget())
