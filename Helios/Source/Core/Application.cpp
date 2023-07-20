@@ -12,7 +12,7 @@ namespace helios::core
     // Setting the Agility SDK parameters.
     extern "C"
     {
-        __declspec(dllexport) extern const UINT D3D12SDKVersion = 602u;
+        __declspec(dllexport) extern const UINT D3D12SDKVersion = 711u;
     }
     extern "C"
     {

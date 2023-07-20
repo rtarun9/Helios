@@ -4,7 +4,7 @@ echo The build directory should math 'Cmake --build BuildDirectory'
 set /p BuildDirectory= Enter Build Directory Path (Relative to project root directory) : 
 echo Build Directory is: %BuildDirectory%
 
-powershell -Command "Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.602.0 -OutFile agility.zip"
+powershell -Command "Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.711.3-preview -OutFile agility.zip"
 powershell -Command "& {Expand-Archive agility.zip External/DirectXAgilitySDK}"
 
 xcopy External\DirectXAgilitySDK\build\native\bin\x64\* %BuildDirectory%\Bin\Debug\D3D12\
