@@ -307,7 +307,6 @@ namespace helios::scene
             const int indexByteStride = indexAccesor.ByteStride(indexBufferView);
             const uint8_t* indexes = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccesor.byteOffset;
 
-            
             {
                 const std::jthread vertexAttributesThread([&]() {
                     {
@@ -344,13 +343,11 @@ namespace helios::scene
                     {
                         if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                         {
-                            indices.emplace_back
-                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
+                            indices.emplace_back(reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
                         }
                         else if (indexAccesor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
                         {
-                            indices.emplace_back
-                                (reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
+                            indices.emplace_back(reinterpret_cast<uint16_t const*>(indexes + (i * indexByteStride))[0]);
                         }
                     }
                 });
@@ -658,18 +655,13 @@ namespace helios::scene
                 .usage = gfx::BufferUsage::ConstantBuffer,
                 .name = m_modelName + L"_MaterialBuffer" + std::to_wstring(index),
             });
-            
-            pbrMaterial.materialBufferData = {
-                .roughnessFactor = 1.0f,
-                .metallicFactor = 1.0f,
-                .emissiveFactor = 0.0f,
-                .albedoColor =
-                    math::XMFLOAT3{
-                        material.pbrMetallicRoughness.baseColorFactor[0],
-                        material.pbrMetallicRoughness.baseColorFactor[1],
-                        material.pbrMetallicRoughness.baseColorFactor[2],
-                    },
-            };
+
+            pbrMaterial.materialBufferData.roughnessFactor = 1.0f;
+            pbrMaterial.materialBufferData.metallicFactor = 1.0f;
+            pbrMaterial.materialBufferData.emissiveFactor = 0.0f,
+            pbrMaterial.materialBufferData.albedoColor = math::XMFLOAT3(
+                material.pbrMetallicRoughness.baseColorFactor[0], material.pbrMetallicRoughness.baseColorFactor[1],
+                material.pbrMetallicRoughness.baseColorFactor[2]);
 
             pbrMaterial.materialIndex = index;
             m_materials[index++] = std::move(pbrMaterial);
